@@ -33,12 +33,20 @@ export type GeneratedDraft = {
 
 /** What the generator returns: a draft, or the closest blueprints when the AI can't pick one or isn't available. */
 export type GeneratorResult =
-  | { kind: "draft"; draft: GeneratedDraft; left: number; /** Customer drafts: the saved draft that checkout turns into a contract. */ generationId?: string | undefined }
+  | {
+      kind: "draft";
+      draft: GeneratedDraft;
+      left: number;
+      /** Customer drafts: the saved draft that checkout turns into a contract. */ generationId?:
+        string | undefined;
+    }
   | { kind: "suggest"; suggestions: string[]; reason: string; left: number };
 
 /** The menu the AI picks from: one line per blueprint. */
 export function blueprintMenu(list: Blueprint[]): string {
-  return list.map((b) => `${b.id} | ${b.name} | ${b.category} | ${b.summary} Use when: ${b.whenToUse}`).join("\n");
+  return list
+    .map((b) => `${b.id} | ${b.name} | ${b.category} | ${b.summary} Use when: ${b.whenToUse}`)
+    .join("\n");
 }
 
 export const PICK_SYSTEM = `You match a music business deal to the best contract template.
@@ -69,8 +77,16 @@ export function fillSchema(bp: Blueprint, fieldKeys: string[]) {
   return {
     type: "object",
     properties: {
-      fields: { type: "object", properties: Object.fromEntries(fieldKeys.map((k) => [k, str])), required: fieldKeys },
-      parties: { type: "object", properties: Object.fromEntries(bp.roles.map((r) => [r, str])), required: [...bp.roles] },
+      fields: {
+        type: "object",
+        properties: Object.fromEntries(fieldKeys.map((k) => [k, str])),
+        required: fieldKeys,
+      },
+      parties: {
+        type: "object",
+        properties: Object.fromEntries(bp.roles.map((r) => [r, str])),
+        required: [...bp.roles],
+      },
       notCovered: { type: "array", items: str },
     },
     required: ["fields", "parties", "notCovered"],
@@ -79,11 +95,16 @@ export function fillSchema(bp: Blueprint, fieldKeys: string[]) {
 
 /** Fields the AI may fill. Company agreements keep Georgia law and the admin's own title. */
 export function fillableFields(bp: Blueprint, company: boolean) {
-  return bp.fields.filter((f) => !(company && (f.key === "governingLaw" || f.key === "signerTitle")));
+  return bp.fields.filter(
+    (f) => !(company && (f.key === "governingLaw" || f.key === "signerTitle")),
+  );
 }
 
 export function fillPrompt(scenario: string, bp: Blueprint, company: boolean): string {
-  const lines = fillableFields(bp, company).map((f) => `- ${f.key}: ${f.label}${f.required ? " (required)" : ""}. ${f.tip}${f.placeholder ? ` Example format: ${f.placeholder}` : ""}`);
+  const lines = fillableFields(bp, company).map(
+    (f) =>
+      `- ${f.key}: ${f.label}${f.required ? " (required)" : ""}. ${f.tip}${f.placeholder ? ` Example format: ${f.placeholder}` : ""}`,
+  );
   return `Template: ${bp.name}. ${bp.summary}
 Roles: ${bp.roles.join(" and ")}.
 Fields:
@@ -96,8 +117,17 @@ The deal, in the user's words:
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 /** The AI's answer, cleaned: only this blueprint's fields and roles, plain strings, nothing invented added back. */
-export function cleanDraft(bp: Blueprint, company: boolean, reason: string, raw: unknown): GeneratedDraft {
-  const r = (raw && typeof raw === "object" ? raw : {}) as { fields?: Record<string, unknown>; parties?: Record<string, unknown>; notCovered?: unknown };
+export function cleanDraft(
+  bp: Blueprint,
+  company: boolean,
+  reason: string,
+  raw: unknown,
+): GeneratedDraft {
+  const r = (raw && typeof raw === "object" ? raw : {}) as {
+    fields?: Record<string, unknown>;
+    parties?: Record<string, unknown>;
+    notCovered?: unknown;
+  };
   const fields: Record<string, string> = {};
   for (const f of fillableFields(bp, company)) {
     const v = clip(r.fields?.[f.key], f.multiline ? 2000 : 200);
@@ -109,8 +139,20 @@ export function cleanDraft(bp: Blueprint, company: boolean, reason: string, raw:
     // Models sometimes echo the role itself ("Producer") instead of a name; that isn't a name.
     if (v && v.toLowerCase() !== role.toLowerCase()) parties[role] = v;
   }
-  const notCovered = (Array.isArray(r.notCovered) ? r.notCovered : []).map((x) => clip(x, 160)).filter(Boolean).slice(0, 8);
-  const missing = bp.fields.filter((f) => f.required && !fields[f.key] && !f.value && f.key !== "effectiveDate" && !(company && f.key === "signerTitle")).map((f) => f.label);
+  const notCovered = (Array.isArray(r.notCovered) ? r.notCovered : [])
+    .map((x) => clip(x, 160))
+    .filter(Boolean)
+    .slice(0, 8);
+  const missing = bp.fields
+    .filter(
+      (f) =>
+        f.required &&
+        !fields[f.key] &&
+        !f.value &&
+        f.key !== "effectiveDate" &&
+        !(company && f.key === "signerTitle"),
+    )
+    .map((f) => f.label);
   return { blueprintId: bp.id, reason: clip(reason, 240), fields, parties, missing, notCovered };
 }
 
@@ -119,23 +161,39 @@ export function parseAiJson(response: unknown): unknown {
   if (response && typeof response === "object") return response;
   if (typeof response !== "string") return null;
   const text = response.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
-  try { return JSON.parse(text); } catch {
+  try {
+    return JSON.parse(text);
+  } catch {
     const m = /\{[\s\S]*\}/.exec(text);
-    try { return m ? JSON.parse(m[0]) : null; } catch { return null; }
+    try {
+      return m ? JSON.parse(m[0]) : null;
+    } catch {
+      return null;
+    }
   }
 }
 
 const WORD = /[a-z0-9]+/g;
-const STOP = new Set("a an and the i im my me we our for to of in on with is it that this be are was will they them their you your from at by as or".split(" "));
-const words = (s: string) => (s.toLowerCase().match(WORD) ?? []).filter((w) => w.length > 2 && !STOP.has(w));
+const STOP = new Set(
+  "a an and the i im my me we our for to of in on with is it that this be are was will they them their you your from at by as or".split(
+    " ",
+  ),
+);
+const words = (s: string) =>
+  (s.toLowerCase().match(WORD) ?? []).filter((w) => w.length > 2 && !STOP.has(w));
 
 /** Without the AI: the blueprints whose name, summary and terms share the most words with the description. */
 export function keywordPick(scenario: string, list: Blueprint[], n = 3): string[] {
   const want = new Set(words(scenario));
-  const scored = list.map((b) => {
-    const name = words(b.name), rest = words(`${b.summary} ${b.whenToUse} ${b.keyTerms.join(" ")}`);
-    const score = name.filter((w) => want.has(w)).length * 3 + new Set(rest.filter((w) => want.has(w))).size;
-    return { id: b.id, score };
-  }).filter((s) => s.score > 0).sort((a, b) => b.score - a.score);
+  const scored = list
+    .map((b) => {
+      const name = words(b.name),
+        rest = words(`${b.summary} ${b.whenToUse} ${b.keyTerms.join(" ")}`);
+      const score =
+        name.filter((w) => want.has(w)).length * 3 + new Set(rest.filter((w) => want.has(w))).size;
+      return { id: b.id, score };
+    })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score);
   return scored.slice(0, n).map((s) => s.id);
 }

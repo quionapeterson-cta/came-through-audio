@@ -32,14 +32,16 @@ export type ScriptVariable = (typeof SCRIPT_VARIABLES)[number];
 
 const REFUND_DAYS = 30;
 
-
 /**
  * The catalog itself is server-side (`support-scripts.server.ts`, read through `listSupportScripts`), so every helper here
  * takes the list it was given. Nothing in this module ships a script body to the browser.
  */
 
 /** Scripts for one department, or all of them, in catalog order. */
-export function scriptsFor(scripts: readonly SupportScript[], department: Department | "all"): SupportScript[] {
+export function scriptsFor(
+  scripts: readonly SupportScript[],
+  department: Department | "all",
+): SupportScript[] {
   return scripts.filter((s) => department === "all" || s.department === department);
 }
 
@@ -98,7 +100,12 @@ const SUGGESTED_BY_AREA: Record<string, string[]> = {
   "Split Sheets": ["support-need-detail", "support-received"],
   "Contracts & Blueprints": ["support-need-detail", "support-received"],
   "PDF Fill & Sign": ["support-need-detail", "support-received"],
-  "Account & billing": ["billing-duplicate-is-a-hold", "billing-refund-approved", "billing-card-declined", "billing-pause-is-not-cancel"],
+  "Account & billing": [
+    "billing-duplicate-is-a-hold",
+    "billing-refund-approved",
+    "billing-card-declined",
+    "billing-pause-is-not-cancel",
+  ],
   "Something else": ["support-received", "support-need-detail"],
 };
 
@@ -108,7 +115,10 @@ export function ticketArea(category: string): string {
 }
 
 /** The scripts worth putting first for this ticket's area, limited to the queue owner's member-facing wording. */
-export function suggestedScripts(scripts: readonly SupportScript[], category: string): SupportScript[] {
+export function suggestedScripts(
+  scripts: readonly SupportScript[],
+  category: string,
+): SupportScript[] {
   const owned = scriptsForTicket(scripts, category);
   const ids = SUGGESTED_BY_AREA[ticketArea(category)] ?? [];
   return ids
@@ -122,7 +132,9 @@ export function suggestedScripts(scripts: readonly SupportScript[], category: st
  * (founder, 2026-11-05), which is why a billing ticket never appears in Support's pile by accident.
  */
 export function ticketOwnerDepartment(category: string): "support" | "billing" {
-  return category.trim().toLowerCase().startsWith(BILLING_AREA.toLowerCase()) ? "billing" : "support";
+  return category.trim().toLowerCase().startsWith(BILLING_AREA.toLowerCase())
+    ? "billing"
+    : "support";
 }
 
 /** True when this category is Billing's to answer. Mirrors the RLS policy and the inbox routing. */
@@ -134,7 +146,10 @@ export function isBillingTicket(category: string): boolean {
  * The scripts to offer inside a ticket (founder, 2026-11-05): the queue owner's wording, one click from the message —
  * Billing's on a billing ticket, Support's otherwise. The whole catalog is still Admin → Support Scripts.
  */
-export function scriptsForTicket(scripts: readonly SupportScript[], category: string): SupportScript[] {
+export function scriptsForTicket(
+  scripts: readonly SupportScript[],
+  category: string,
+): SupportScript[] {
   return scriptsFor(scripts, ticketOwnerDepartment(category));
 }
 
@@ -142,7 +157,10 @@ export function scriptsForTicket(scripts: readonly SupportScript[], category: st
  * What a ticket fills in by itself: the member's first name, and the subject as the detail line. Everything else stays
  * a visible `{{placeholder}}`, so an unfilled amount is obvious before it is sent.
  */
-export function ticketScriptValues(ticket: { name: string; subject: string }): Record<string, string> {
+export function ticketScriptValues(ticket: {
+  name: string;
+  subject: string;
+}): Record<string, string> {
   const first = ticket.name.trim().split(/\s+/)[0] ?? "";
   const detail = ticket.subject.trim();
   return { ...(first ? { first_name: first } : {}), ...(detail ? { detail } : {}) };

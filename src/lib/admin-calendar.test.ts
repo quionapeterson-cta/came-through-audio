@@ -19,7 +19,8 @@ const access = (over: Partial<StaffAccess> = {}): StaffAccess => ({
   ...over,
 });
 
-const viewer = (over: Partial<StaffAccess> = {}, userId = "me") => calendarViewer(userId, access(over));
+const viewer = (over: Partial<StaffAccess> = {}, userId = "me") =>
+  calendarViewer(userId, access(over));
 
 const event = (over: Partial<AdminCalendarEvent> = {}): AdminCalendarEvent => ({
   id: "e1",
@@ -49,7 +50,9 @@ describe("Admin calendar visibility", () => {
     const financeEvent = event({ id: "e2", department: "finance" });
     expect(canSeeCalendarEvent(event(), support)).toBe(true);
     expect(canSeeCalendarEvent(financeEvent, support)).toBe(false);
-    expect(visibleCalendarEvents([event(), financeEvent], support).map((e) => e.id)).toEqual(["e1"]);
+    expect(visibleCalendarEvents([event(), financeEvent], support).map((e) => e.id)).toEqual([
+      "e1",
+    ]);
   });
 
   it("keeps a private entry with its owner only", () => {
@@ -58,30 +61,68 @@ describe("Admin calendar visibility", () => {
     expect(canSeeCalendarEvent(priv, viewer())).toBe(false);
     expect(canSeeCalendarEvent(mine, viewer())).toBe(true);
     // An entry you added stays yours even when it sits on a calendar you have since left.
-    expect(canSeeCalendarEvent(event({ department: "finance", owner_id: "me" }), viewer())).toBe(true);
+    expect(canSeeCalendarEvent(event({ department: "finance", owner_id: "me" }), viewer())).toBe(
+      true,
+    );
   });
 
   it("lets a department lead and a Project Manager read every team's calendar", () => {
     const financeEvent = event({ department: "finance" });
     expect(canSeeCalendarEvent(financeEvent, viewer({ role: "department_lead" }))).toBe(true);
-    expect(canSeeCalendarEvent(financeEvent, viewer({ role: "project_manager", departments: [], allTeams: true }))).toBe(true);
+    expect(
+      canSeeCalendarEvent(
+        financeEvent,
+        viewer({ role: "project_manager", departments: [], allTeams: true }),
+      ),
+    ).toBe(true);
   });
 
   it("keeps the launch calendar to the super admin", () => {
     const launch = event({ department: "launch" });
     expect(canSeeCalendarEvent(launch, viewer({ role: "department_lead" }))).toBe(false);
-    expect(canSeeCalendarEvent(launch, viewer({ role: "project_manager", departments: [], allTeams: true }))).toBe(false);
-    expect(canSeeCalendarEvent(launch, viewer({ role: "super_admin", departments: ["launch"], canManageStaff: true, allTeams: true }))).toBe(true);
+    expect(
+      canSeeCalendarEvent(
+        launch,
+        viewer({ role: "project_manager", departments: [], allTeams: true }),
+      ),
+    ).toBe(false);
+    expect(
+      canSeeCalendarEvent(
+        launch,
+        viewer({
+          role: "super_admin",
+          departments: ["launch"],
+          canManageStaff: true,
+          allTeams: true,
+        }),
+      ),
+    ).toBe(true);
   });
 
   it("gives deadlines to the department that owns them, and every team but launch to a Project Manager", () => {
     expect(canSeeTaskDeadline(task(), viewer())).toBe(true);
     expect(canSeeTaskDeadline(task({ department: "finance" }), viewer())).toBe(false);
     // A lead works their own bank; another department's tasks are not theirs.
-    expect(canSeeTaskDeadline(task({ department: "finance" }), viewer({ role: "department_lead" }))).toBe(false);
-    expect(canSeeTaskDeadline(task({ department: "finance" }), viewer({ role: "project_manager", departments: [], allTeams: true }))).toBe(true);
-    expect(canSeeTaskDeadline(task({ department: "launch" }), viewer({ role: "project_manager", departments: [], allTeams: true }))).toBe(false);
-    expect(visibleTaskDeadlines([task(), task({ id: "t2", department: "finance" })], viewer()).map((t) => t.id)).toEqual(["t1"]);
+    expect(
+      canSeeTaskDeadline(task({ department: "finance" }), viewer({ role: "department_lead" })),
+    ).toBe(false);
+    expect(
+      canSeeTaskDeadline(
+        task({ department: "finance" }),
+        viewer({ role: "project_manager", departments: [], allTeams: true }),
+      ),
+    ).toBe(true);
+    expect(
+      canSeeTaskDeadline(
+        task({ department: "launch" }),
+        viewer({ role: "project_manager", departments: [], allTeams: true }),
+      ),
+    ).toBe(false);
+    expect(
+      visibleTaskDeadlines([task(), task({ id: "t2", department: "finance" })], viewer()).map(
+        (t) => t.id,
+      ),
+    ).toEqual(["t1"]);
   });
 });
 
@@ -96,7 +137,13 @@ describe("Personal calendar feed", () => {
     const ics = buildCalendarFeedIcs({
       events: [
         event(),
-        event({ id: "e2", title: "Release day", starts_at: "2026-11-20T00:00:00.000Z", ends_at: null, all_day: true }),
+        event({
+          id: "e2",
+          title: "Release day",
+          starts_at: "2026-11-20T00:00:00.000Z",
+          ends_at: null,
+          all_day: true,
+        }),
       ],
       deadlines: [task()],
       now: new Date("2026-11-19T12:00:00.000Z"),
@@ -128,30 +175,66 @@ describe("Personal calendar feed", () => {
 
   it("keeps an all-day entry on the day that was picked east of Greenwich", () => {
     // Berlin is UTC+1 in November, so local midnight on the 20th is 23:00Z on the 19th: the member picked the 20th.
-    const entry = event({ title: "Release day", starts_at: "2026-11-19T23:00:00.000Z", ends_at: null, all_day: true });
-    const berlin = buildCalendarFeedIcs({ events: [entry], deadlines: [], now: new Date("2026-11-19T12:00:00.000Z"), timeZone: "Europe/Berlin" });
+    const entry = event({
+      title: "Release day",
+      starts_at: "2026-11-19T23:00:00.000Z",
+      ends_at: null,
+      all_day: true,
+    });
+    const berlin = buildCalendarFeedIcs({
+      events: [entry],
+      deadlines: [],
+      now: new Date("2026-11-19T12:00:00.000Z"),
+      timeZone: "Europe/Berlin",
+    });
     expect(berlin).toContain("DTSTART;VALUE=DATE:20261120");
     expect(berlin).toContain("DTEND;VALUE=DATE:20261121");
     expect(berlin).toContain("X-WR-TIMEZONE:Europe/Berlin");
 
     // Without a zone the same row keeps the UTC reading, so the fallback is predictable rather than shifted silently.
-    const utc = buildCalendarFeedIcs({ events: [entry], deadlines: [], now: new Date("2026-11-19T12:00:00.000Z"), timeZone: "UTC" });
+    const utc = buildCalendarFeedIcs({
+      events: [entry],
+      deadlines: [],
+      now: new Date("2026-11-19T12:00:00.000Z"),
+      timeZone: "UTC",
+    });
     expect(utc).toContain("DTSTART;VALUE=DATE:20261119");
   });
 
   it("uses the stored all-day date in every time zone instead of the instant", () => {
     // Local midnight on the 20th in Berlin is 23:00Z on the 19th; the stored date is what every viewer must see.
-    const entry = event({ title: "Release day", starts_at: "2026-11-19T23:00:00.000Z", ends_at: null, all_day: true, all_day_on: "2026-11-20" });
+    const entry = event({
+      title: "Release day",
+      starts_at: "2026-11-19T23:00:00.000Z",
+      ends_at: null,
+      all_day: true,
+      all_day_on: "2026-11-20",
+    });
     for (const timeZone of ["UTC", "Europe/Berlin", "America/Los_Angeles", "Pacific/Kiritimati"]) {
-      const ics = buildCalendarFeedIcs({ events: [entry], deadlines: [], now: new Date("2026-11-19T12:00:00.000Z"), timeZone });
+      const ics = buildCalendarFeedIcs({
+        events: [entry],
+        deadlines: [],
+        now: new Date("2026-11-19T12:00:00.000Z"),
+        timeZone,
+      });
       expect(ics, timeZone).toContain("DTSTART;VALUE=DATE:20261120");
       expect(ics, timeZone).toContain("DTEND;VALUE=DATE:20261121");
     }
   });
 
   it("ignores a malformed stored date and falls back to the reading in the subscriber's zone", () => {
-    const entry = event({ starts_at: "2026-11-19T23:00:00.000Z", ends_at: null, all_day: true, all_day_on: "2026-13-45" });
-    const ics = buildCalendarFeedIcs({ events: [entry], deadlines: [], now: new Date("2026-11-19T12:00:00.000Z"), timeZone: "Europe/Berlin" });
+    const entry = event({
+      starts_at: "2026-11-19T23:00:00.000Z",
+      ends_at: null,
+      all_day: true,
+      all_day_on: "2026-13-45",
+    });
+    const ics = buildCalendarFeedIcs({
+      events: [entry],
+      deadlines: [],
+      now: new Date("2026-11-19T12:00:00.000Z"),
+      timeZone: "Europe/Berlin",
+    });
     expect(ics).toContain("DTSTART;VALUE=DATE:20261120");
   });
 

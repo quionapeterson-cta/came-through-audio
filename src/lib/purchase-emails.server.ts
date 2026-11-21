@@ -8,7 +8,13 @@
  */
 import { resendKey } from "./collab-trial.server";
 import { BILLING_EMAIL, emailLayout, escapeHtml, SITE_URL } from "./email-layout";
-import { money, purchaseKind, purchaseLanding, purchasedPlan, receiptCopy } from "./purchase-receipt";
+import {
+  money,
+  purchaseKind,
+  purchaseLanding,
+  purchasedPlan,
+  receiptCopy,
+} from "./purchase-receipt";
 
 const FROM = `Came Through Audio Billing <${BILLING_EMAIL}>`;
 const REASON = "You're receiving this because you made a purchase from Came Through Audio.";
@@ -66,7 +72,13 @@ ${copy.paragraphs.map((p) => `<p style="font-size:15px;line-height:1.6">${escape
         // One id per checkout: a retried webhook can't send the same confirmation twice.
         "Idempotency-Key": `purchase-receipt-${i.sessionId}`,
       },
-      body: JSON.stringify({ from: FROM, to: [i.email], reply_to: BILLING_EMAIL, subject: copy.subject, html }),
+      body: JSON.stringify({
+        from: FROM,
+        to: [i.email],
+        reply_to: BILLING_EMAIL,
+        subject: copy.subject,
+        html,
+      }),
     });
     if (!res.ok) {
       console.error(`Purchase receipt failed [${res.status}]: ${await res.text()}`);

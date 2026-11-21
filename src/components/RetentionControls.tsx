@@ -1,17 +1,52 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CalendarClock, CreditCard, Leaf, PauseCircle, PlayCircle, RefreshCw, TriangleAlert, XCircle } from "lucide-react";
+import {
+  CalendarClock,
+  CreditCard,
+  Leaf,
+  PauseCircle,
+  PlayCircle,
+  RefreshCw,
+  TriangleAlert,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { confirmAction } from "@/components/ConfirmHost";
 import { openBilling, openCheckout } from "@/lib/checkout";
-import { keepCatalogOnFree, needMoreTime, resumeNow, setPlanCancelling } from "@/lib/retention.functions";
+import {
+  keepCatalogOnFree,
+  needMoreTime,
+  resumeNow,
+  setPlanCancelling,
+} from "@/lib/retention.functions";
 import { hasTier, PLAN_TIERS, refundDaysLeft, TIER_LABEL, type Tier } from "@/lib/plans";
 import { proratedRefundCents } from "@/lib/billing-console";
-import { canRenewEarly, currentPause, earlyRenewalTarget, extendedRenewal, inGrace, keptOnFree, offers, renewalDate, pauseSpan, VAULT_PRICE, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
+import {
+  canRenewEarly,
+  currentPause,
+  earlyRenewalTarget,
+  extendedRenewal,
+  inGrace,
+  keptOnFree,
+  offers,
+  renewalDate,
+  pauseSpan,
+  VAULT_PRICE,
+  type Lapse,
+  type Pause,
+  type PlanSub,
+} from "@/lib/retention";
 import { vaultTrialEnd } from "@/lib/vault-subscription";
 
-const longDate = (d: string | Date) => new Date(d).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+const longDate = (d: string | Date) =>
+  new Date(d).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 const money = (n: number) => `$${n.toFixed(2)}`;
 
 type Account = { sub: PlanSub | null; lapse: Lapse | null; pauses: Pause[]; onChanged: () => void };
@@ -29,64 +64,158 @@ function useRetention({ sub, lapse, pauses, onChanged }: Account) {
 
   async function act(fn: () => Promise<unknown>, done: string) {
     setBusy(true);
-    try { await fn(); toast.success(done); onChanged(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "That didn't go through. Contact support and we'll help right away."); }
-    finally { setBusy(false); }
+    try {
+      await fn();
+      toast.success(done);
+      onChanged();
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "That didn't go through. Contact support and we'll help right away.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function extend() {
-    const until = sub?.stripe_subscription_id ? extendedRenewal(sub) : lapse ? new Date(new Date(lapse.empty_after).getTime() + 30 * 86_400_000) : null;
+    const until = sub?.stripe_subscription_id
+      ? extendedRenewal(sub)
+      : lapse
+        ? new Date(new Date(lapse.empty_after).getTime() + 30 * 86_400_000)
+        : null;
     const plan = !!sub?.stripe_subscription_id;
-    if (!until || !(await confirmAction({ tone: "primary", action: "Give me 30 days", cancel: "Not now",
-      title: plan ? `Move your renewal to ${longDate(until)}?` : `Keep your catalog until ${longDate(until)}?`,
-      text: plan ? "30 more days with full access, free. Nothing is charged until then. Need more time can be used once every 12 months."
-        : "Your catalog stays read-only for 30 more days, so you can download it or renew. Need more time can be used once every 12 months." }))) return;
-    await act(() => needMoreTime(), plan ? `Your plan now renews on ${longDate(until)}.` : `Your catalog is kept until ${longDate(until)}.`);
+    if (
+      !until ||
+      !(await confirmAction({
+        tone: "primary",
+        action: "Give me 30 days",
+        cancel: "Not now",
+        title: plan
+          ? `Move your renewal to ${longDate(until)}?`
+          : `Keep your catalog until ${longDate(until)}?`,
+        text: plan
+          ? "30 more days with full access, free. Nothing is charged until then. Need more time can be used once every 12 months."
+          : "Your catalog stays read-only for 30 more days, so you can download it or renew. Need more time can be used once every 12 months.",
+      }))
+    )
+      return;
+    await act(
+      () => needMoreTime(),
+      plan
+        ? `Your plan now renews on ${longDate(until)}.`
+        : `Your catalog is kept until ${longDate(until)}.`,
+    );
   }
 
   async function keepFree() {
-    if (!(await confirmAction({ tone: "primary", action: "Keep it on Free", cancel: "Not now",
-      title: "Keep your catalog read-only on Free?",
-      text: "Nothing is emptied. Your songs, masters and artwork stay read-only, so you can view and download them, and you can start a paid plan whenever you're ready." }))) return;
-    await act(() => keepCatalogOnFree(), "Your catalog stays read-only on Free. Nothing is emptied.");
+    if (
+      !(await confirmAction({
+        tone: "primary",
+        action: "Keep it on Free",
+        cancel: "Not now",
+        title: "Keep your catalog read-only on Free?",
+        text: "Nothing is emptied. Your songs, masters and artwork stay read-only, so you can view and download them, and you can start a paid plan whenever you're ready.",
+      }))
+    )
+      return;
+    await act(
+      () => keepCatalogOnFree(),
+      "Your catalog stays read-only on Free. Nothing is emptied.",
+    );
   }
 
   async function resume() {
     if (!pause) return;
     const started = new Date(pause.starts_at) <= new Date();
-    if (!(await confirmAction({ tone: "primary", action: "Resume now", cancel: "Stay paused",
-      title: started ? "Resume your plan today?" : "Call off your pause?",
-      text: started
-        ? "This ends your pause; it doesn't cancel your plan. Your plan renews today for a fresh year and the card on file is charged. It also stops the Vault charge; the month in progress isn't refunded."
-        : `This ends your pause; it doesn't cancel your plan. Your plan renews on its original date, ${longDate(pause.starts_at)}, and no Vault charge is made.` }))) return;
-    await act(() => resumeNow(), started ? "Welcome back. Your plan is renewing now." : "Pause called off.");
+    if (
+      !(await confirmAction({
+        tone: "primary",
+        action: "Resume now",
+        cancel: "Stay paused",
+        title: started ? "Resume your plan today?" : "Call off your pause?",
+        text: started
+          ? "This ends your pause; it doesn't cancel your plan. Your plan renews today for a fresh year and the card on file is charged. It also stops the Vault charge; the month in progress isn't refunded."
+          : `This ends your pause; it doesn't cancel your plan. Your plan renews on its original date, ${longDate(pause.starts_at)}, and no Vault charge is made.`,
+      }))
+    )
+      return;
+    await act(
+      () => resumeNow(),
+      started ? "Welcome back. Your plan is renewing now." : "Pause called off.",
+    );
   }
 
   async function updateCard() {
-    try { await openBilling(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Billing couldn't open. Contact support and we'll help right away."); }
+    try {
+      await openBilling();
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Billing couldn't open. Contact support and we'll help right away.",
+      );
+    }
   }
 
   const pauseDialog = <PauseDialog open={pauseOpen} onOpenChange={setPauseOpen} sub={sub} />;
-  return { o, pause, busy, act, extend, keepFree, resume, updateCard, openPause: () => setPauseOpen(true), pauseDialog };
+  return {
+    o,
+    pause,
+    busy,
+    act,
+    extend,
+    keepFree,
+    resume,
+    updateCard,
+    openPause: () => setPauseOpen(true),
+    pauseDialog,
+  };
 }
 
 /** Plan B buttons: Need more time and Pause, when they're available. */
 function OfferButtons({ r }: { r: ReturnType<typeof useRetention> }) {
-  return <>
-    {r.o.canExtend && <Button variant="outline" disabled={r.busy} onClick={() => void r.extend()}><CalendarClock />Need more time</Button>}
-    {r.o.canPause && <Button variant="outline" disabled={r.busy} onClick={r.openPause}><PauseCircle />Pause</Button>}
-  </>;
+  return (
+    <>
+      {r.o.canExtend && (
+        <Button variant="outline" disabled={r.busy} onClick={() => void r.extend()}>
+          <CalendarClock />
+          Need more time
+        </Button>
+      )}
+      {r.o.canPause && (
+        <Button variant="outline" disabled={r.busy} onClick={r.openPause}>
+          <PauseCircle />
+          Pause
+        </Button>
+      )}
+    </>
+  );
 }
 
 /** While a renewal payment is failing: Update card first, then Need more time and Pause. */
-function FailingNotice({ r, children }: { r: ReturnType<typeof useRetention>; children?: ReactNode }) {
+function FailingNotice({
+  r,
+  children,
+}: {
+  r: ReturnType<typeof useRetention>;
+  children?: ReactNode;
+}) {
   return (
     <div className="flex w-full flex-wrap items-center gap-3 rounded-2xl border-2 border-primary bg-card p-4">
       <TriangleAlert className="h-6 w-6 shrink-0 text-primary" />
-      <p className="min-w-0 flex-1 text-sm"><span className="font-semibold">Your renewal payment didn't go through.</span>{" "}
-        <span className="text-muted-foreground">Update your card to keep your plan. You keep full access while Stripe retries. Need a little longer? Move your renewal back 30 days, or pause.</span></p>
-      <Button disabled={r.busy} onClick={() => void r.updateCard()}><CreditCard />Update card</Button>
+      <p className="min-w-0 flex-1 text-sm">
+        <span className="font-semibold">Your renewal payment didn't go through.</span>{" "}
+        <span className="text-muted-foreground">
+          Update your card to keep your plan. You keep full access while Stripe retries. Need a
+          little longer? Move your renewal back 30 days, or pause.
+        </span>
+      </p>
+      <Button disabled={r.busy} onClick={() => void r.updateCard()}>
+        <CreditCard />
+        Update card
+      </Button>
       <OfferButtons r={r} />
       {children}
     </div>
@@ -97,14 +226,27 @@ function FailingNotice({ r, children }: { r: ReturnType<typeof useRetention>; ch
 export function FailedRenewalBanner(props: Account) {
   const r = useRetention(props);
   if (!r.o.failing) return null;
-  return <div className="mb-6"><FailingNotice r={r}>{r.pauseDialog}</FailingNotice></div>;
+  return (
+    <div className="mb-6">
+      <FailingNotice r={r}>{r.pauseDialog}</FailingNotice>
+    </div>
+  );
 }
 
 /** Legacy countdown offers. The 30-day emptying is retired, so there is no window after a plan ends to offer them in. */
 export function GraceOffers(props: Account) {
   const r = useRetention(props);
   if (!inGrace(props.lapse) || props.sub?.stripe_subscription_id) return null;
-  return <><Button variant="outline" disabled={r.busy} onClick={() => void r.keepFree()}><Leaf />Keep it on Free</Button><OfferButtons r={r} />{r.pauseDialog}</>;
+  return (
+    <>
+      <Button variant="outline" disabled={r.busy} onClick={() => void r.keepFree()}>
+        <Leaf />
+        Keep it on Free
+      </Button>
+      <OfferButtons r={r} />
+      {r.pauseDialog}
+    </>
+  );
 }
 
 /**
@@ -126,11 +268,25 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
     const renews = sub && renewalDate(sub);
     const price = PLAN_TIERS.find((p) => p.tier === tier)?.price;
     if (!renews || !price) return;
-    if (!(await confirmAction({ tone: "primary", action: `Pay ${price} and renew`, cancel: "Not now",
-      title: `Renew ${TIER_LABEL[tier]} now?`,
-      text: `You'll pay ${price} today (plus tax where it applies) for your next year. You keep the time you have left, so your plan runs until ${longDate(earlyRenewalTarget(renews))}, with nothing charged on ${longDate(renews)}. Refundable within 30 days of today.` }))) return;
-    try { await openCheckout({ kind: "renew" }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open. Contact support and we'll help right away."); }
+    if (
+      !(await confirmAction({
+        tone: "primary",
+        action: `Pay ${price} and renew`,
+        cancel: "Not now",
+        title: `Renew ${TIER_LABEL[tier]} now?`,
+        text: `You'll pay ${price} today (plus tax where it applies) for your next year. You keep the time you have left, so your plan runs until ${longDate(earlyRenewalTarget(renews))}, with nothing charged on ${longDate(renews)}. Refundable within 30 days of today.`,
+      }))
+    )
+      return;
+    try {
+      await openCheckout({ kind: "renew" });
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Checkout could not open. Contact support and we'll help right away.",
+      );
+    }
   }
   // The renewal reminder emails link here with ?renew=1.
   useEffect(() => {
@@ -142,29 +298,91 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
   return (
     <>
       {r.o.failing && <FailingNotice r={r} />}
-      {pause && <p className="w-full rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
-        <PauseCircle className="mr-1 inline h-4 w-4 text-primary" />
-        {new Date(pause.starts_at) > new Date() ? `Paused from ${longDate(pause.starts_at)}, for as long as you need.` : "Your plan is paused, for as long as you need."}{" "}
-        <span className="text-muted-foreground">Your catalog is read-only and your downloads still work; the paid tools wait until you resume.</span>
-      </p>}
-      {kept && <p className="w-full rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
-        Your catalog is read-only on Free and will not be emptied. Start a paid plan whenever you are ready and pick up
-        exactly where you left off.
-      </p>}
-      {ended && !kept && <>
-        <p className="w-full text-sm text-muted-foreground">Your plan ended. Your catalog is read-only on Free and nothing is emptied; start a paid plan whenever you are ready.</p>
-        <Button variant="outline" disabled={r.busy} onClick={() => void r.keepFree()}><Leaf />Keep it on Free</Button>
-        <OfferButtons r={r} />
-      </>}
-      {renewable && <Button variant="outline" disabled={r.busy} onClick={() => void renewNow()}><RefreshCw />Renew now</Button>}
-      {pause && <Button disabled={r.busy} onClick={() => void r.resume()}><PlayCircle />Resume now</Button>}
-      {sub?.stripe_subscription_id && !sub.cancel_at_period_end && !pause && <Button variant="ghost" disabled={r.busy} onClick={() => setCancelOpen(true)}><XCircle />Cancel plan</Button>}
-      {sub?.cancel_at_period_end && <Button variant="outline" disabled={r.busy} onClick={() => void r.act(() => setPlanCancelling({ data: { cancel: false } }), "Your plan will renew as usual.")}>Keep my plan</Button>}
+      {pause && (
+        <p className="w-full rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+          <PauseCircle className="mr-1 inline h-4 w-4 text-primary" />
+          {new Date(pause.starts_at) > new Date()
+            ? `Paused from ${longDate(pause.starts_at)}, for as long as you need.`
+            : "Your plan is paused, for as long as you need."}{" "}
+          <span className="text-muted-foreground">
+            Your catalog is read-only and your downloads still work; the paid tools wait until you
+            resume.
+          </span>
+        </p>
+      )}
+      {kept && (
+        <p className="w-full rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+          Your catalog is read-only on Free and will not be emptied. Start a paid plan whenever you
+          are ready and pick up exactly where you left off.
+        </p>
+      )}
+      {ended && !kept && (
+        <>
+          <p className="w-full text-sm text-muted-foreground">
+            Your plan ended. Your catalog is read-only on Free and nothing is emptied; start a paid
+            plan whenever you are ready.
+          </p>
+          <Button variant="outline" disabled={r.busy} onClick={() => void r.keepFree()}>
+            <Leaf />
+            Keep it on Free
+          </Button>
+          <OfferButtons r={r} />
+        </>
+      )}
+      {renewable && (
+        <Button variant="outline" disabled={r.busy} onClick={() => void renewNow()}>
+          <RefreshCw />
+          Renew now
+        </Button>
+      )}
+      {pause && (
+        <Button disabled={r.busy} onClick={() => void r.resume()}>
+          <PlayCircle />
+          Resume now
+        </Button>
+      )}
+      {sub?.stripe_subscription_id && !sub.cancel_at_period_end && !pause && (
+        <Button variant="ghost" disabled={r.busy} onClick={() => setCancelOpen(true)}>
+          <XCircle />
+          Cancel plan
+        </Button>
+      )}
+      {sub?.cancel_at_period_end && (
+        <Button
+          variant="outline"
+          disabled={r.busy}
+          onClick={() =>
+            void r.act(
+              () => setPlanCancelling({ data: { cancel: false } }),
+              "Your plan will renew as usual.",
+            )
+          }
+        >
+          Keep my plan
+        </Button>
+      )}
 
       {r.pauseDialog}
-      <CancelPlanDialog open={cancelOpen} onOpenChange={setCancelOpen} tier={tier} sub={sub} offers={r.o} paused={!!pause}
-        onExtend={() => { setCancelOpen(false); void r.extend(); }} onPause={() => { setCancelOpen(false); r.openPause(); }}
-        onCancelled={() => { setCancelOpen(false); account.onChanged(); }} />
+      <CancelPlanDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        tier={tier}
+        sub={sub}
+        offers={r.o}
+        paused={!!pause}
+        onExtend={() => {
+          setCancelOpen(false);
+          void r.extend();
+        }}
+        onPause={() => {
+          setCancelOpen(false);
+          r.openPause();
+        }}
+        onCancelled={() => {
+          setCancelOpen(false);
+          account.onChanged();
+        }}
+      />
     </>
   );
 }
@@ -173,7 +391,15 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
  * Pause for as long as they need (founder, 2026-11-21). The Vault fee is $1.99 a month, billed monthly while the pause
  * runs: a pause that waits for a renewal date charges nothing today, and resuming is what stops the charge.
  */
-function PauseDialog({ open, onOpenChange, sub }: { open: boolean; onOpenChange: (o: boolean) => void; sub: PlanSub | null }) {
+function PauseDialog({
+  open,
+  onOpenChange,
+  sub,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  sub: PlanSub | null;
+}) {
   const [busy, setBusy] = useState(false);
   const span = pauseSpan(sub);
   // Stripe will not defer a trial by less than 48 hours, so a pause closer than that starts (and bills) now.
@@ -184,28 +410,56 @@ function PauseDialog({ open, onOpenChange, sub }: { open: boolean; onOpenChange:
     if (paying.current) return;
     paying.current = true;
     setBusy(true);
-    try { onOpenChange(false); await openCheckout({ kind: "vault" }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open. Contact support and we'll help right away."); }
-    finally { paying.current = false; setBusy(false); }
+    try {
+      onOpenChange(false);
+      await openCheckout({ kind: "vault" });
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Checkout could not open. Contact support and we'll help right away.",
+      );
+    } finally {
+      paying.current = false;
+      setBusy(false);
+    }
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Pause your plan</DialogTitle>
-          <DialogDescription>No plan charge while you're paused, for as long as you need. Your catalog is kept safe and read-only: view and download your masters, artwork and PDFs, no adding or editing. Nothing is emptied.</DialogDescription>
+          <DialogDescription>
+            No plan charge while you're paused, for as long as you need. Your catalog is kept safe
+            and read-only: view and download your masters, artwork and PDFs, no adding or editing.
+            Nothing is emptied.
+          </DialogDescription>
         </DialogHeader>
         <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
-          <b>Pausing is not cancelling.</b> It stops the plan charge for as long as the pause lasts, and when you resume
-          your plan renews from that day for a fresh year. If you meant to stop paying for good, cancel your plan
-          instead: <b>Cancel plan</b> in Profile, before or after pausing.
+          <b>Pausing is not cancelling.</b> It stops the plan charge for as long as the pause lasts,
+          and when you resume your plan renews from that day for a fresh year. If you meant to stop
+          paying for good, cancel your plan instead: <b>Cancel plan</b> in Profile, before or after
+          pausing.
         </p>
-        <p className="text-sm">Paused from <b>{longDate(span.starts)}</b>, for as long as you need.{sub?.stripe_subscription_id ? " Resume any time in Profile." : " Renew whenever you're ready to keep your catalog."}</p>
-        <p className="text-xs text-muted-foreground">Vault fee: {money(VAULT_PRICE)} a month while you're paused, charged monthly and stopped the moment you resume. There's no end date. The month in progress isn't refunded if you resume early. Pause can be used once every 12 months.</p>
+        <p className="text-sm">
+          Paused from <b>{longDate(span.starts)}</b>, for as long as you need.
+          {sub?.stripe_subscription_id
+            ? " Resume any time in Profile."
+            : " Renew whenever you're ready to keep your catalog."}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Vault fee: {money(VAULT_PRICE)} a month while you're paused, charged monthly and stopped
+          the moment you resume. There's no end date. The month in progress isn't refunded if you
+          resume early. Pause can be used once every 12 months.
+        </p>
         <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Not now</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Not now
+          </Button>
           <Button disabled={busy} onClick={() => void pay()}>
-            {deferred ? `Start the pause · first charge ${longDate(span.starts)}` : `Start the pause · ${money(VAULT_PRICE)} today`}
+            {deferred
+              ? `Start the pause · first charge ${longDate(span.starts)}`
+              : `Start the pause · ${money(VAULT_PRICE)} today`}
           </Button>
         </div>
       </DialogContent>
@@ -214,39 +468,84 @@ function PauseDialog({ open, onOpenChange, sub }: { open: boolean; onOpenChange:
 }
 
 /** Before cancelling: Need more time, Pause, a cheaper plan, then Cancel anyway. Offers not available right now are left out. */
-function CancelPlanDialog({ open, onOpenChange, tier, sub, offers: o, paused, onExtend, onPause, onCancelled }: {
-  open: boolean; onOpenChange: (o: boolean) => void; tier: Tier; sub: PlanSub | null; offers: ReturnType<typeof offers>;
-  paused: boolean; onExtend: () => void; onPause: () => void; onCancelled: () => void;
+function CancelPlanDialog({
+  open,
+  onOpenChange,
+  tier,
+  sub,
+  offers: o,
+  paused,
+  onExtend,
+  onPause,
+  onCancelled,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  tier: Tier;
+  sub: PlanSub | null;
+  offers: ReturnType<typeof offers>;
+  paused: boolean;
+  onExtend: () => void;
+  onPause: () => void;
+  onCancelled: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const ends = sub?.current_period_end;
   // Past the 30-day window a cancellation still comes with the unused part of the year (founder, 2026-11-05).
-  const priceCents = Math.round(Number((PLAN_TIERS.find((p) => p.tier === tier)?.price ?? "$0").replace(/[^0-9.]/g, "")) * 100);
-  const prorated = sub?.current_period_start ? proratedRefundCents({ paidCents: priceCents, paidAt: sub.current_period_start }) : 0;
+  const priceCents = Math.round(
+    Number((PLAN_TIERS.find((p) => p.tier === tier)?.price ?? "$0").replace(/[^0-9.]/g, "")) * 100,
+  );
+  const prorated = sub?.current_period_start
+    ? proratedRefundCents({ paidCents: priceCents, paidAt: sub.current_period_start })
+    : 0;
   const pastWindow = !!sub?.current_period_start && refundDaysLeft(sub.current_period_start) === 0;
   async function switchToPlus() {
     setBusy(true);
-    try { await openCheckout({ kind: "plan", priceId: "catalog_plus_yearly" }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Plans couldn't open. Contact support and we'll help right away."); }
-    finally { setBusy(false); }
+    try {
+      await openCheckout({ kind: "plan", priceId: "catalog_plus_yearly" });
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Plans couldn't open. Contact support and we'll help right away.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
   async function cancel() {
     setBusy(true);
     try {
       const res = await setPlanCancelling({ data: { cancel: true } });
-      toast.success(res?.pauseEnded && res.immediate
-        ? "Cancelled. Your pause has ended, the Vault charge is stopped, and your account is on Free."
-        : res?.pauseEnded
-          ? `Cancelled. Your pause has ended and the Vault charge is stopped; you keep full access until ${ends ? longDate(ends) : "the end of your year"}.`
-          : ends ? `Cancelled. You keep full access until ${longDate(ends)}.` : "Cancelled.");
+      toast.success(
+        res?.pauseEnded && res.immediate
+          ? "Cancelled. Your pause has ended, the Vault charge is stopped, and your account is on Free."
+          : res?.pauseEnded
+            ? `Cancelled. Your pause has ended and the Vault charge is stopped; you keep full access until ${ends ? longDate(ends) : "the end of your year"}.`
+            : ends
+              ? `Cancelled. You keep full access until ${longDate(ends)}.`
+              : "Cancelled.",
+      );
       onCancelled();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Cancelling didn't go through. Contact support and we'll help right away."); }
-    finally { setBusy(false); }
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Cancelling didn't go through. Contact support and we'll help right away.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
   const offer = (title: string, text: string, label: string, onClick: () => void) => (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-4">
-      <div className="min-w-0 flex-1"><div className="font-semibold">{title}</div><div className="text-sm text-muted-foreground">{text}</div></div>
-      <Button disabled={busy} onClick={onClick}>{label}</Button>
+      <div className="min-w-0 flex-1">
+        <div className="font-semibold">{title}</div>
+        <div className="text-sm text-muted-foreground">{text}</div>
+      </div>
+      <Button disabled={busy} onClick={onClick}>
+        {label}
+      </Button>
     </div>
   );
   return (
@@ -254,25 +553,56 @@ function CancelPlanDialog({ open, onOpenChange, tier, sub, offers: o, paused, on
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Before you go</DialogTitle>
-          <DialogDescription>{paused
-          ? "Cancelling now ends your pause and stops the Vault charge today; your account moves to Free. Your catalog stays read-only and nothing is emptied, so you can still download everything or start a paid plan whenever you're ready."
-          : ends ? `If you cancel, you keep full access until ${longDate(ends)}. Then the account moves to Free: your catalog stays read-only and nothing is emptied, so you can download everything or start a paid plan whenever you're ready.` : "If you cancel, the account moves to Free: your catalog stays read-only and nothing is emptied."}</DialogDescription>
+          <DialogDescription>
+            {paused
+              ? "Cancelling now ends your pause and stops the Vault charge today; your account moves to Free. Your catalog stays read-only and nothing is emptied, so you can still download everything or start a paid plan whenever you're ready."
+              : ends
+                ? `If you cancel, you keep full access until ${longDate(ends)}. Then the account moves to Free: your catalog stays read-only and nothing is emptied, so you can download everything or start a paid plan whenever you're ready.`
+                : "If you cancel, the account moves to Free: your catalog stays read-only and nothing is emptied."}
+          </DialogDescription>
         </DialogHeader>
         {pastWindow && prorated > 0 && (
           <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
-            You're past the first 30 days, so cancelling still comes with the unused part of your year: about{" "}
-            <b>{money(prorated / 100)}</b>. Ask when you cancel (just reply to the confirmation email) and Billing sends it
-            back to the card you paid with.
+            You're past the first 30 days, so cancelling still comes with the unused part of your
+            year: about <b>{money(prorated / 100)}</b>. Ask when you cancel (just reply to the
+            confirmation email) and Billing sends it back to the card you paid with.
           </p>
         )}
         <div className="space-y-3">
-          {o.canExtend && offer("Need more time?", "Move your renewal back 30 days, free, with full access.", "Get 30 days", onExtend)}
-          {o.canPause && offer("Take a break", `Pause for as long as you need, billed monthly and stopped the moment you resume. No plan charge, catalog kept safe, downloads still work. Vault fee ${money(VAULT_PRICE)} a month.`, "Pause", onPause)}
-          {hasTier(tier, "collaborate") && offer(`Switch to ${TIER_LABEL.plus}`, "Keep your catalog, embedding and split sheets for $24.99 a year.", "Switch", () => void switchToPlus())}
+          {o.canExtend &&
+            offer(
+              "Need more time?",
+              "Move your renewal back 30 days, free, with full access.",
+              "Get 30 days",
+              onExtend,
+            )}
+          {o.canPause &&
+            offer(
+              "Take a break",
+              `Pause for as long as you need, billed monthly and stopped the moment you resume. No plan charge, catalog kept safe, downloads still work. Vault fee ${money(VAULT_PRICE)} a month.`,
+              "Pause",
+              onPause,
+            )}
+          {hasTier(tier, "collaborate") &&
+            offer(
+              `Switch to ${TIER_LABEL.plus}`,
+              "Keep your catalog, embedding and split sheets for $24.99 a year.",
+              "Switch",
+              () => void switchToPlus(),
+            )}
         </div>
         <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Keep my plan</Button>
-          <Button variant="ghost" disabled={busy} onClick={() => void cancel()} className="text-destructive">Cancel anyway</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Keep my plan
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void cancel()}
+            className="text-destructive"
+          >
+            Cancel anyway
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

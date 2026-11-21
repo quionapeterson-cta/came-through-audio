@@ -1,7 +1,14 @@
 import { z } from "zod";
 import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
 import { CONTRACT_LOOKUP_KEY } from "@/lib/contract-generator";
-import { ARTIST_SEAT_PRICES, assistanceItems, assistanceType, PRICE_TIER, SEAT_MAX, SEAT_TIER } from "@/lib/plans";
+import {
+  ARTIST_SEAT_PRICES,
+  assistanceItems,
+  assistanceType,
+  PRICE_TIER,
+  SEAT_MAX,
+  SEAT_TIER,
+} from "@/lib/plans";
 import { PACKAGES, TRACKS_PER_KEY, packageSongs } from "@/lib/proof";
 import { ASSISTANCE_AGENCIES, MAX_NEW_SONGS, newSongKeys } from "@/lib/registration";
 import { VAULT_LOOKUP_KEY } from "@/lib/retention";
@@ -10,49 +17,67 @@ import { VAULT_LOOKUP_KEY } from "@/lib/retention";
  * What the browser may ask to buy. Prices, quantities and the buyer are never taken from the browser: the server
  * turns this into Stripe line items (by lookup key) and attaches the signed-in user's ID itself.
  */
-export const checkoutInput = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("plan"), priceId: z.enum(Object.keys(PRICE_TIER) as [string, ...string[]]) }),
-  z.object({
-    kind: z.literal("ai"),
-    package: z.enum(PACKAGES.map((p) => p.id) as [string, ...string[]]),
-    trackIds: z.array(z.string().uuid()).max(20).optional(),
-  }),
-  // Pause: the Vault fee, $1.99 a month for as long as the member needs, billed monthly and stopped on Resume
-  // (founder, 2026-11-21, replacing the 1–3 month length of 2026-11-20). There is no length to choose.
-  z.object({ kind: z.literal("vault") }),
-  // Personal Branding: its own yearly subscription, one per kit (founder, 2026-11-19, replacing the one-time
-  // twelve-month purchase). It renews until the member cancels, so the kit never lapses for someone who wants it.
-  // `kitId` names the kit this year is for, so the link is exact rather than guessed (founder, 2026-11-19).
-  z.object({ kind: z.literal("branding"), kitId: z.string().uuid().optional() }),
-  // One generated contract, $3.99 on any plan: the server checks the draft is the buyer's own and not yet paid.
-  z.object({ kind: z.literal("contract"), generationId: z.string().uuid() }),
-  // Renew now: next year's plan paid early. The server reads the plan and price from the user's own subscription.
-  z.object({ kind: z.literal("renew") }),
-  // Add-on artist seats (founder, 2026-11-04): their own yearly subscription, so they never replace the owner's plan.
-  // Artists can be on different tiers, so one purchase carries a count per tier: one subscription, one seat row each.
-  z.object({
-    kind: z.literal("seat"),
-    seats: z.object({
-      plus: z.number().int().min(0).max(SEAT_MAX).default(0),
-      collaborate: z.number().int().min(0).max(SEAT_MAX).default(0),
-      management: z.number().int().min(0).max(SEAT_MAX).default(0),
+export const checkoutInput = z
+  .discriminatedUnion("kind", [
+    z.object({
+      kind: z.literal("plan"),
+      priceId: z.enum(Object.keys(PRICE_TIER) as [string, ...string[]]),
     }),
-  }),
-  // The artist on a seat takes the seat's plan over (founder, 2026-11-08): an ordinary plan at the seat's tier, with
-  // its first charge waiting for the seat's paid period to end. The seat ID is checked server-side, never trusted here.
-  z.object({ kind: z.literal("seat_handoff"), seatId: z.string().uuid() }),
-  z.object({
-    kind: z.literal("expert"),
-    // Catalog songs picked, plus songs that aren't in the catalog yet (PLAN-registration-intake §1–2).
-    trackIds: z.array(z.string().uuid()).max(200).default([]),
-    newSongs: z.array(z.object({ title: z.string().trim().min(1).max(120), artist: z.string().trim().max(80) })).max(MAX_NEW_SONGS).default([]),
-    agencies: z.array(z.enum(ASSISTANCE_AGENCIES)).min(1).max(ASSISTANCE_AGENCIES.length),
-  }),
-])
-  .refine((a) => a.kind !== "seat" || ARTIST_SEAT_PRICES.some((s) => a.seats[s.tier] > 0), { message: "Pick at least one artist seat." })
-  .refine((a) => a.kind !== "ai" || (a.trackIds?.length ?? 0) <= packageSongs(a.package), { message: "Pick a bigger package for that many songs." })
-  .refine((a) => a.kind !== "expert" || new Set(a.trackIds).size + a.newSongs.length > 0, { message: "Choose at least one song." })
-  .refine((a) => a.kind !== "expert" || !(a.agencies.includes("ASCAP") && a.agencies.includes("BMI")), { message: "Songwriters can only belong to one PRO. Choose ASCAP or BMI." });
+    z.object({
+      kind: z.literal("ai"),
+      package: z.enum(PACKAGES.map((p) => p.id) as [string, ...string[]]),
+      trackIds: z.array(z.string().uuid()).max(20).optional(),
+    }),
+    // Pause: the Vault fee, $1.99 a month for as long as the member needs, billed monthly and stopped on Resume
+    // (founder, 2026-11-21, replacing the 1–3 month length of 2026-11-20). There is no length to choose.
+    z.object({ kind: z.literal("vault") }),
+    // Personal Branding: its own yearly subscription, one per kit (founder, 2026-11-19, replacing the one-time
+    // twelve-month purchase). It renews until the member cancels, so the kit never lapses for someone who wants it.
+    // `kitId` names the kit this year is for, so the link is exact rather than guessed (founder, 2026-11-19).
+    z.object({ kind: z.literal("branding"), kitId: z.string().uuid().optional() }),
+    // One generated contract, $3.99 on any plan: the server checks the draft is the buyer's own and not yet paid.
+    z.object({ kind: z.literal("contract"), generationId: z.string().uuid() }),
+    // Renew now: next year's plan paid early. The server reads the plan and price from the user's own subscription.
+    z.object({ kind: z.literal("renew") }),
+    // Add-on artist seats (founder, 2026-11-04): their own yearly subscription, so they never replace the owner's plan.
+    // Artists can be on different tiers, so one purchase carries a count per tier: one subscription, one seat row each.
+    z.object({
+      kind: z.literal("seat"),
+      seats: z.object({
+        plus: z.number().int().min(0).max(SEAT_MAX).default(0),
+        collaborate: z.number().int().min(0).max(SEAT_MAX).default(0),
+        management: z.number().int().min(0).max(SEAT_MAX).default(0),
+      }),
+    }),
+    // The artist on a seat takes the seat's plan over (founder, 2026-11-08): an ordinary plan at the seat's tier, with
+    // its first charge waiting for the seat's paid period to end. The seat ID is checked server-side, never trusted here.
+    z.object({ kind: z.literal("seat_handoff"), seatId: z.string().uuid() }),
+    z.object({
+      kind: z.literal("expert"),
+      // Catalog songs picked, plus songs that aren't in the catalog yet (PLAN-registration-intake §1–2).
+      trackIds: z.array(z.string().uuid()).max(200).default([]),
+      newSongs: z
+        .array(
+          z.object({ title: z.string().trim().min(1).max(120), artist: z.string().trim().max(80) }),
+        )
+        .max(MAX_NEW_SONGS)
+        .default([]),
+      agencies: z.array(z.enum(ASSISTANCE_AGENCIES)).min(1).max(ASSISTANCE_AGENCIES.length),
+    }),
+  ])
+  .refine((a) => a.kind !== "seat" || ARTIST_SEAT_PRICES.some((s) => a.seats[s.tier] > 0), {
+    message: "Pick at least one artist seat.",
+  })
+  .refine((a) => a.kind !== "ai" || (a.trackIds?.length ?? 0) <= packageSongs(a.package), {
+    message: "Pick a bigger package for that many songs.",
+  })
+  .refine((a) => a.kind !== "expert" || new Set(a.trackIds).size + a.newSongs.length > 0, {
+    message: "Choose at least one song.",
+  })
+  .refine(
+    (a) => a.kind !== "expert" || !(a.agencies.includes("ASCAP") && a.agencies.includes("BMI")),
+    { message: "Songwriters can only belong to one PRO. Choose ASCAP or BMI." },
+  );
 export type CheckoutInput = z.infer<typeof checkoutInput>;
 
 export type CheckoutPlan = {
@@ -73,41 +98,83 @@ export type CheckoutPlan = {
 export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan {
   if (input.kind === "renew") throw new Error("Renew now is priced from the subscription itself.");
   // A handoff is priced from the seat row (its tier and renewal date), which only the server can read.
-  if (input.kind === "seat_handoff") throw new Error("A seat handoff is priced from the seat itself.");
+  if (input.kind === "seat_handoff")
+    throw new Error("A seat handoff is priced from the seat itself.");
   if (input.kind === "plan") {
-    return { mode: "subscription", items: [{ lookupKey: input.priceId, quantity: 1 }], metadata: { userId }, managed: true };
+    return {
+      mode: "subscription",
+      items: [{ lookupKey: input.priceId, quantity: 1 }],
+      metadata: { userId },
+      managed: true,
+    };
   }
   if (input.kind === "seat") {
     // The seats' own subscription: the webhook records them on artist_seats, never on the owner's plan. One line per
     // tier, so a mixed purchase is one payment and each artist's row still knows its own tier.
-    const items = ARTIST_SEAT_PRICES.filter((s) => input.seats[s.tier] > 0).map((s) => ({ lookupKey: s.lookupKey, quantity: input.seats[s.tier] }));
+    const items = ARTIST_SEAT_PRICES.filter((s) => input.seats[s.tier] > 0).map((s) => ({
+      lookupKey: s.lookupKey,
+      quantity: input.seats[s.tier],
+    }));
     const total = items.reduce((n, i) => n + i.quantity, 0);
-    return { mode: "subscription", items, metadata: { userId, kind: "seat", seats: String(total) }, managed: true };
+    return {
+      mode: "subscription",
+      items,
+      metadata: { userId, kind: "seat", seats: String(total) },
+      managed: true,
+    };
   }
   if (input.kind === "vault") {
     // Its own monthly subscription: one line, billed once a month for as long as the pause runs. When the pause starts is
     // added by the server (payments.functions), which is the only place that knows it; there is no end date to add.
-    return { mode: "subscription", items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: 1 }], metadata: { userId, kind: "vault" }, managed: true };
+    return {
+      mode: "subscription",
+      items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: 1 }],
+      metadata: { userId, kind: "vault" },
+      managed: true,
+    };
   }
   if (input.kind === "contract") {
-    return { mode: "payment", items: [{ lookupKey: CONTRACT_LOOKUP_KEY, quantity: 1 }], metadata: { userId, kind: "contract", generation: input.generationId }, returnTab: "learn", managed: true };
+    return {
+      mode: "payment",
+      items: [{ lookupKey: CONTRACT_LOOKUP_KEY, quantity: 1 }],
+      metadata: { userId, kind: "contract", generation: input.generationId },
+      returnTab: "learn",
+      managed: true,
+    };
   }
   if (input.kind === "branding") {
     // A yearly subscription per kit (founder, 2026-11-19): the price is $13.99 a year and it renews by itself, so the
     // kit it pays for never quietly lapses. The subscription is filed on `purchases` one paid year at a time, so a
     // refund still ends the kit and a plan change still can't touch it.
     return {
-      mode: "subscription", items: [{ lookupKey: BRANDING_LOOKUP_KEY, quantity: 1 }],
-      metadata: { userId, kind: "branding", ...(input.kitId ? { kitId: input.kitId } : {}) }, returnTab: "profile", managed: true,
+      mode: "subscription",
+      items: [{ lookupKey: BRANDING_LOOKUP_KEY, quantity: 1 }],
+      metadata: { userId, kind: "branding", ...(input.kitId ? { kitId: input.kitId } : {}) },
+      returnTab: "profile",
+      managed: true,
     };
   }
   if (input.kind === "ai") {
     // Singles are bought per song (1–3); the other packages are one price for up to their song count.
-    const songs = input.package === "Single" ? Math.max(1, input.trackIds?.length ?? 0) : packageSongs(input.package);
+    const songs =
+      input.package === "Single"
+        ? Math.max(1, input.trackIds?.length ?? 0)
+        : packageSongs(input.package);
     return {
       mode: "payment",
-      items: [{ lookupKey: `ai_protection_${input.package.toLowerCase()}`, quantity: input.package === "Single" ? songs : 1 }],
-      metadata: { userId, kind: "ai", package: input.package, songs: String(songs), ...trackKeys(input.trackIds ?? []) },
+      items: [
+        {
+          lookupKey: `ai_protection_${input.package.toLowerCase()}`,
+          quantity: input.package === "Single" ? songs : 1,
+        },
+      ],
+      metadata: {
+        userId,
+        kind: "ai",
+        package: input.package,
+        songs: String(songs),
+        ...trackKeys(input.trackIds ?? []),
+      },
       returnTab: "protect",
       managed: true,
     };
@@ -117,11 +184,20 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
   const type = assistanceType(songs);
   // Stripe needs one line per price; the $14.99 setup price can appear twice (base + small extended block).
   const merged = new Map<string, number>();
-  for (const i of assistanceItems(type, songs, input.agencies.length)) merged.set(i.priceId, (merged.get(i.priceId) ?? 0) + i.quantity);
+  for (const i of assistanceItems(type, songs, input.agencies.length))
+    merged.set(i.priceId, (merged.get(i.priceId) ?? 0) + i.quantity);
   return {
     mode: "payment",
     items: [...merged].map(([lookupKey, quantity]) => ({ lookupKey, quantity })),
-    metadata: { userId, kind: "expert", type, songs: String(songs), agencies: input.agencies.join(" | "), ...trackKeys(trackIds), ...newSongKeys(input.newSongs) },
+    metadata: {
+      userId,
+      kind: "expert",
+      type,
+      songs: String(songs),
+      agencies: input.agencies.join(" | "),
+      ...trackKeys(trackIds),
+      ...newSongKeys(input.newSongs),
+    },
     returnTab: "health",
     managed: false,
   };
@@ -130,12 +206,15 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
 /** tracks_1, tracks_2…: comma-separated catalog song IDs, read back by paidTrackIds. */
 function trackKeys(ids: string[]): Record<string, string> {
   const out: Record<string, string> = {};
-  for (let i = 0; i < ids.length; i += TRACKS_PER_KEY) out[`tracks_${i / TRACKS_PER_KEY + 1}`] = ids.slice(i, i + TRACKS_PER_KEY).join(",");
+  for (let i = 0; i < ids.length; i += TRACKS_PER_KEY)
+    out[`tracks_${i / TRACKS_PER_KEY + 1}`] = ids.slice(i, i + TRACKS_PER_KEY).join(",");
   return out;
 }
 
-const iso = (unix: number | null | undefined) => (unix ? new Date(unix * 1000).toISOString() : null);
-const idOf = (v: string | { id: string } | null | undefined) => (typeof v === "string" ? v : v?.id ?? null);
+const iso = (unix: number | null | undefined) =>
+  unix ? new Date(unix * 1000).toISOString() : null;
+const idOf = (v: string | { id: string } | null | undefined) =>
+  typeof v === "string" ? v : (v?.id ?? null);
 
 /** The parts of a Stripe subscription the app reads. Period dates sit on the item in newer API versions. */
 export type StripeSubscriptionLike = {
@@ -148,11 +227,22 @@ export type StripeSubscriptionLike = {
   ended_at?: number | null;
   current_period_start?: number | null;
   current_period_end?: number | null;
-  items: { data: { price: { lookup_key?: string | null; product: string | { id: string } }; quantity?: number | null; current_period_start?: number | null; current_period_end?: number | null }[] };
+  items: {
+    data: {
+      price: { lookup_key?: string | null; product: string | { id: string } };
+      quantity?: number | null;
+      current_period_start?: number | null;
+      current_period_end?: number | null;
+    }[];
+  };
 };
 
 /** A subscriptions row from a Stripe subscription, or null when it isn't one of our plans. */
-export function subscriptionRow(sub: StripeSubscriptionLike, env: "sandbox" | "live", deleted = false) {
+export function subscriptionRow(
+  sub: StripeSubscriptionLike,
+  env: "sandbox" | "live",
+  deleted = false,
+) {
   const item = sub.items.data[0];
   const priceId = item?.price.lookup_key;
   // A seat is a subscription too, but it is not a plan: the webhook files it on artist_seats instead.
@@ -165,7 +255,9 @@ export function subscriptionRow(sub: StripeSubscriptionLike, env: "sandbox" | "l
     status: deleted ? "canceled" : sub.status,
     current_period_start: iso(item.current_period_start ?? sub.current_period_start),
     // An ended subscription stops access when it ends, not at the end of the period it was cancelled in.
-    current_period_end: deleted ? iso(sub.ended_at) ?? new Date().toISOString() : iso(item.current_period_end ?? sub.current_period_end),
+    current_period_end: deleted
+      ? (iso(sub.ended_at) ?? new Date().toISOString())
+      : iso(item.current_period_end ?? sub.current_period_end),
     cancel_at_period_end: !!sub.cancel_at_period_end || !!sub.cancel_at,
     environment: env,
     updated_at: new Date().toISOString(),
@@ -174,11 +266,22 @@ export function subscriptionRow(sub: StripeSubscriptionLike, env: "sandbox" | "l
 
 /** A purchases row from a completed one-time Checkout Session, or null when it isn't a paid one-time buy. */
 export function purchaseRow(
-  session: { id: string; mode: string; payment_status: string; metadata?: Record<string, string> | null },
+  session: {
+    id: string;
+    mode: string;
+    payment_status: string;
+    metadata?: Record<string, string> | null;
+  },
   env: "sandbox" | "live",
 ) {
   const md = session.metadata ?? {};
-  if (session.mode !== "payment" || session.payment_status !== "paid" || !md["userId"] || !md["kind"]) return null;
+  if (
+    session.mode !== "payment" ||
+    session.payment_status !== "paid" ||
+    !md["userId"] ||
+    !md["kind"]
+  )
+    return null;
   const { priceIds = "", managed_payments: _managed, ...details } = md;
   return {
     user_id: md["userId"],

@@ -10,51 +10,406 @@ export const TERMS: LegalDoc = {
   doc: "terms",
   title: "Terms of Service",
   updated: "November 21, 2026",
-  intro: <p>Welcome to Came Through Audio. By accessing or continuing to use our website, internal portal, dashboard tools, or metadata encoding engines (collectively, the "Service"), you agree to be bound by these Terms of Service. The Service is operated by Came Through Audio, LLC ("Came Through Audio", "Came Through", "Came Thru", "CTA", "CTAudio", "Company", "we", "us", or "our"). When you use the Service, you are contracting with Came Through Audio, LLC.</p>,
+  intro: (
+    <p>
+      Welcome to Came Through Audio. By accessing or continuing to use our website, internal portal,
+      dashboard tools, or metadata encoding engines (collectively, the "Service"), you agree to be
+      bound by these Terms of Service. The Service is operated by Came Through Audio, LLC ("Came
+      Through Audio", "Came Through", "Came Thru", "CTA", "CTAudio", "Company", "we", "us", or
+      "our"). When you use the Service, you are contracting with Came Through Audio, LLC.
+    </p>
+  ),
   sections: [
-        { heading: "1. The Service", body: <p>Came Through Audio provides tools for musicians to embed metadata into audio files, organize a music catalog, run royalty health checks, create split sheets, generate creation-proof certificates through the AI Protection Hub, and access educational content. Royalty Health scores, share converters and earnings calculators are estimates to help you plan and register. They are not financial, legal or tax advice, agencies decide the final amounts, and Came Through Audio is not responsible for decisions made on these estimates or for differences between them and what you are paid.</p> },
-        { heading: "2. Payment Processing and Merchant of Record", body: <>
-          <p>Payments are processed by Stripe. Subscriptions and AI Protection Hub packages are sold through Link, Stripe's checkout service, which acts as the merchant of record for those orders. Your receipt will say "Sold through Link," and your card statement will show a charge beginning with LINK.COM*. Link calculates and collects any sales tax, VAT or GST, sends your receipts and invoices, and answers payment questions.</p>
-          <p>Expert Registration Assistance and other services delivered by our team are sold directly by Came Through Audio, LLC, with payment processed by Stripe. Sales tax is added at checkout where required.</p>
-          <p>Came Through Audio, LLC remains responsible for the service itself: platform operation, digital delivery, customer support and storage of your assets. You can cancel from Profile → Cancel plan, and manage your card and invoices from Profile → Manage billing, or at <a className="text-primary underline" href="https://link.com" target="_blank" rel="noreferrer">link.com</a> for purchases sold through Link.</p>
-        </> },
-        { heading: "3. Accounts, Security and Data Accuracy", body: <p>You must be of legal age (or have authority to bind your organization) to register. You are responsible for keeping your login credentials confidential and for all activity under your account. You agree to provide current, complete, and accurate legal names for all track writers, composers, and producers. Using stage pseudonyms or false information within legal attestation modules is prohibited.</p> },
-        { heading: "4. Acceptable Use", body: <p>You must not misuse the Service, including by: using it unlawfully; committing fraud or sending spam; uploading content that infringes anyone's intellectual property; distributing malware, probing, scraping, or interfering with the Service's security; bypassing checkout screens or forging transaction tokens; or exceeding file limits (such as the 5 to 60 second length for DAW Session and Draft History proof videos).</p> },
-        { heading: "5. Your Content", body: <p>You retain all copyright ownership of the audio, masters, lyrics, and cover art you upload. You grant Came Through Audio a limited, non-exclusive license to host, process, hash, and embed metadata into your files solely to provide the features you request. We do not claim ownership, distribution, or licensing rights over your music.</p> },
-        { heading: "6. Our Intellectual Property", body: <p>Came Through Audio and its licensors retain all ownership of the Service, including its software, documentation, design, and branding. You may not copy, reverse engineer, resell, or redistribute the Service.</p> },
-        { heading: "7. No Legal, Financial or Tax Advice", body: <p>Came Through Audio is an independent record label offering label services; using the Service doesn't sign you to the label or create a recording, publishing or management agreement. Came Through Audio is not a law firm, accountant, financial adviser, publisher, collection society or distributor. Contract blueprints, the Contract Generator, guides, cheat sheets, the FAQ, Royalty Health scores and reports, converters and calculators are general information and tools. Using them doesn't create an attorney-client or any other professional relationship. Talk to a qualified music attorney, accountant or adviser about your situation before you rely on them.</p> },
-        { heading: "8. No Affiliation", body: <p>Came Through Audio is independent. We are not affiliated with, endorsed by or acting for ASCAP, BMI, SESAC, GMR, The MLC, SoundExchange, the Harry Fox Agency, PPL, any other collection society, the U.S. Copyright Office or any streaming service or store. Their names and marks belong to their owners and are used only to describe where your information goes.</p> },
-        { heading: "9. Contracts, Split Sheets and the Contract Generator", body: <>
-          <p>Contracts and split sheets you make here are agreements between you and the other people who sign them. Came Through Audio is not a party to them, doesn't negotiate or check their terms, ownership or splits, and isn't responsible for whether they are enforceable, how they are used or what happens if someone doesn't honor them. You choose the terms and are responsible for them.</p>
-          <p>The Contract Generator puts drafts together automatically from what you type, using our blueprints. Drafts can contain mistakes or miss terms your deal needs: read every word and have an attorney review it before you sign. Electronic signatures are recorded with a time stamp and verification hash as described in each document; you are responsible for making sure electronic signing is acceptable for your agreement where you live.</p>
-        </> },
-        { heading: "10. Metadata, Registrations and Agency Exports", body: <p>You are responsible for the accuracy and completeness of everything you enter, embed, export or ask us to register, including titles, writers, splits, publishers, codes and ownership, and for having every right needed for the audio, artwork and lyrics you upload. Stores, streaming services and other platforms may remove or change embedded metadata. "Registration Ready" and health scores mean required details are filled in, not that they are correct. Agency exports follow each agency's template as we understand it; agencies can change their requirements and decide on their own what they accept, match and pay. We do not guarantee any registration, match, payment or royalty amount. Expert Registration Assistance is also governed by the Registration Authorization you sign.</p> },
-        { heading: "11. AI Protection Hub Certificates", body: <p>AI Protection certificates are made to help you show proof. A certificate records fingerprints of the files you provide, your sworn attestation and an independent Bitcoin timestamp. It is evidence that those files existed in that exact form by that date. It is not proof of ownership or authorship, not a copyright registration, not legal advice and not a guarantee against AI training, imitation, infringement, claims or takedowns; courts and platforms decide how much weight it gets. Your attestation is your own statement and must be true. Keep your original files unchanged. Came Through Audio isn't a party to your disputes and doesn't investigate, take sides or act as a witness; anyone can check a certificate themselves on our verify page. If we receive a valid subpoena or court order about a certificate, we respond as the law requires. For the strongest legal protection, register your work with the U.S. Copyright Office.</p> },
-        { heading: "12. Your Branding and Materials", body: <p>When you use Personal Branding or upload logos, names, taglines, fonts, photos or other materials, you confirm you own them or have permission to use them, and you are responsible for the documents you send with them.</p> },
-        { heading: "13. Third-Party Services", body: <p>The Service relies on outside providers, including Stripe and Link for payment processing, and third-party infrastructure and service providers for cloud hosting and edge delivery, database and authentication, transactional email and independent Bitcoin timestamping. We aren't responsible for their availability, errors or policies, and your use of their services may also be governed by their own terms.</p> },
-        { heading: "14. Disputes Between Users", body: <p>Disagreements between collaborators, co-writers, producers, signers or anyone else you work with through the Service are between you and them. Came Through Audio doesn't decide who owns what, isn't required to step in and isn't responsible for the outcome, though we may share records you are entitled to, such as signed documents and their time stamps.</p> },
-        { heading: "15. Indemnification", body: <p>To the extent the law allows, you agree to defend and hold harmless Came Through Audio, LLC and its owners, team and providers from claims, losses and costs (including reasonable legal fees) that come from your content, the information you provide, your agreements with other people, your branding materials or your breach of these terms.</p> },
-        { heading: "16. Service Availability and Limitation of Liability", body: <p>We work to keep the Service reliable, but we do not guarantee it will be uninterrupted or error-free. To the fullest extent permitted by law, the Service is provided "as is" without implied warranties, and our total liability is limited to the fees you paid in the 12 months before the claim. To the fullest extent permitted by law, Came Through Audio is not liable for lost or uncollected royalties, lost profits or opportunities, rejected or delayed registrations, lost data, or any indirect, incidental, special or consequential damages, even if we were told they were possible. Nothing limits liability for fraud, death, or personal injury where the law does not allow it.</p> },
-        { heading: "17. Suspension and Termination", body: <p>We may suspend or terminate your access for material breach of these terms, non-payment, security or fraud risk, or repeated or serious policy violations. You may close your account at any time and download your data before doing so. An account with no sign-in for two years is scheduled for deletion: we email you several times before the date. Signing in during that notice keeps the account on the Free plan, and a paid plan also keeps the stored files; without one, the files stored for the account and its catalog entries are deleted on the date. An account with no sign-in at all is deleted with its files, and we email that address once afterwards so a new account can be started at any time. A plan ending never deletes the account or its catalog.</p> },
-        { heading: "18. Need more time and Pause", body: <p>Once every 12 months you may move your renewal back 30 days at no charge. Separately, once every 12 months you may pause your plan for as long as you need, for a Vault fee of $1.99 per month. The fee is billed monthly for as long as the pause runs and stops the moment you resume; there is no end date and no later month is charged. Resuming ends the pause, not the plan, and your plan renews from that day for a fresh year. The month in progress is not refunded if you end the pause early. While paused your catalog is read-only and is not emptied, and you can still download your masters, artwork and PDFs; embedding, uploads, new or edited catalog entries, split sheets, contracts and the other paid tools wait until you resume. Pausing is not cancelling; cancelling the plan while paused does end the pause and stops the Vault fee at once. If a monthly Vault fee cannot be collected after the payment provider's retries, the pause ends and the account moves to the Free plan.</p> },
-        { heading: "19. Governing Law", body: <p>These terms are governed by the laws of the State of Georgia, United States, without regard to conflict-of-law principles. Legal actions arising under these terms shall be brought exclusively in courts located in Georgia.</p> },
-        { heading: "20. Badges, Awards and Share Cards", body: <p>Badges, awards, status eagles and share cards celebrate your progress in the Service. They have no cash value, aren't transferable and aren't a payment, prize or reward. Earning one doesn't confirm any registration, ownership or rights, and we may change, rename or retire badge artwork and the conditions for earning them at any time.</p> },
-        { heading: "21. Contact", body: <p>Questions? Email <a className="text-primary underline" href="mailto:legal@camethroughaudio.com">legal@camethroughaudio.com</a>.</p> },
-        { heading: "22. Artist Seats", body: <>
-          <p>An account may buy an artist seat and invite another person to it. The invited artist accepts the seat once, with the email address it was sent to. A seat does not create a separate agreement: the terms accepted when an account is created govern it, and accepting a seat confirms that.</p>
-          <p><b>What the invited artist agrees to.</b> While the seat is live, the account that bought it may view and edit the invited artist's catalog, split sheets and profile defaults; view, upload and replace that artist's catalog files; and read that artist's contracts, the people named on them and their signature records. The invited artist confirms they have the right to share the information in their catalog and on their split sheets, including co-writers' names, PRO affiliations, IPI numbers and splits.</p>
-          <p><b>Who sends a contract.</b> A seat lets the account holder read contracts. It never lets them send one, sign one, change a signature or remove a signed record. Only the invited artist can send a contract under their own name, and only the artist starts that request. Everyone asked to sign is told, before signing, that the artist's seat holder can read the contract and who signed it.</p>
-          <p><b>Ownership does not move.</b> The invited artist keeps every right in their songs, masters, artwork, lyrics and agreements. Edits the account holder makes are made for the invited artist and belong to the invited artist. The permission described above lasts only while the seat is live.</p>
-          <p><b>How long a seat lasts.</b> A seat runs for the period the account holder paid for. The invited artist cannot cancel or shorten it and cannot withdraw the access described above while it runs; the account holder decides whether to renew it and may end it at any time. When a seat ends, the account holder's access ends and the invited artist's account continues at whatever plan that artist holds. The artist's account, songs and files are theirs and are not deleted because a seat ended.</p>
-          <p><b>The account holder's responsibilities.</b> The account holder is responsible for what they do with what they can see, for keeping it confidential, and for using it only for the work the seat is for. They must not publish, sell, reuse or share the invited artist's material, contracts or personal information, or use it to contact co-writers about other business. Came Through Audio does not direct that use and is not a party to any arrangement between the account holder and the invited artist.</p>
-          <p><b>No other deal.</b> A seat is not a sale of the account, and not a recording, publishing, management or employment agreement, or a claim to anything the invited artist creates.</p>
-        </> },
-        { heading: "23. Fair Use Policy & System Security Safeguards", body: <>
-          <p>Came Through Audio offers "Unlimited" features across select membership tiers (including, without limitation, unlimited catalog entries, split sheets, contracts, blueprints, and royalty health checks) to support the genuine, day-to-day creative and administrative needs of individual artists, songwriters, producers, and authorized representatives.</p>
-          <p>To protect email deliverability, prevent recipient spam, safeguard our community, and maintain platform security, all "Unlimited" services are subject to reasonable technical rate limits and anti-abuse controls. These safeguards include, without limitation, daily outbound invitation thresholds, limits on how many times the same invitation may be sent, daily limits on invitations to the same recipient email address, and daily caps on company correspondence.</p>
-          <p>"Unlimited" refers to the absence of fixed monthly or annual feature caps for normal, human-operated personal or agency use—it does not permit automated scripts, bots, bulk unsolicited messaging, account sharing, or activity that places an unreasonable load on our infrastructure. Came Through Audio reserves the right, in its sole discretion and without prior notice, to adjust technical rate limits, monitor usage patterns, temporarily throttle high-volume requests, or suspend accounts that exhibit abnormal activity, suspected fraud, or conduct that threatens the security and performance of the service.</p>
-        </> },
-      ],
+    {
+      heading: "1. The Service",
+      body: (
+        <p>
+          Came Through Audio provides tools for musicians to embed metadata into audio files,
+          organize a music catalog, run royalty health checks, create split sheets, generate
+          creation-proof certificates through the AI Protection Hub, and access educational content.
+          Royalty Health scores, share converters and earnings calculators are estimates to help you
+          plan and register. They are not financial, legal or tax advice, agencies decide the final
+          amounts, and Came Through Audio is not responsible for decisions made on these estimates
+          or for differences between them and what you are paid.
+        </p>
+      ),
+    },
+    {
+      heading: "2. Payment Processing and Merchant of Record",
+      body: (
+        <>
+          <p>
+            Payments are processed by Stripe. Subscriptions and AI Protection Hub packages are sold
+            through Link, Stripe's checkout service, which acts as the merchant of record for those
+            orders. Your receipt will say "Sold through Link," and your card statement will show a
+            charge beginning with LINK.COM*. Link calculates and collects any sales tax, VAT or GST,
+            sends your receipts and invoices, and answers payment questions.
+          </p>
+          <p>
+            Expert Registration Assistance and other services delivered by our team are sold
+            directly by Came Through Audio, LLC, with payment processed by Stripe. Sales tax is
+            added at checkout where required.
+          </p>
+          <p>
+            Came Through Audio, LLC remains responsible for the service itself: platform operation,
+            digital delivery, customer support and storage of your assets. You can cancel from
+            Profile → Cancel plan, and manage your card and invoices from Profile → Manage billing,
+            or at{" "}
+            <a
+              className="text-primary underline"
+              href="https://link.com"
+              target="_blank"
+              rel="noreferrer"
+            >
+              link.com
+            </a>{" "}
+            for purchases sold through Link.
+          </p>
+        </>
+      ),
+    },
+    {
+      heading: "3. Accounts, Security and Data Accuracy",
+      body: (
+        <p>
+          You must be of legal age (or have authority to bind your organization) to register. You
+          are responsible for keeping your login credentials confidential and for all activity under
+          your account. You agree to provide current, complete, and accurate legal names for all
+          track writers, composers, and producers. Using stage pseudonyms or false information
+          within legal attestation modules is prohibited.
+        </p>
+      ),
+    },
+    {
+      heading: "4. Acceptable Use",
+      body: (
+        <p>
+          You must not misuse the Service, including by: using it unlawfully; committing fraud or
+          sending spam; uploading content that infringes anyone's intellectual property;
+          distributing malware, probing, scraping, or interfering with the Service's security;
+          bypassing checkout screens or forging transaction tokens; or exceeding file limits (such
+          as the 5 to 60 second length for DAW Session and Draft History proof videos).
+        </p>
+      ),
+    },
+    {
+      heading: "5. Your Content",
+      body: (
+        <p>
+          You retain all copyright ownership of the audio, masters, lyrics, and cover art you
+          upload. You grant Came Through Audio a limited, non-exclusive license to host, process,
+          hash, and embed metadata into your files solely to provide the features you request. We do
+          not claim ownership, distribution, or licensing rights over your music.
+        </p>
+      ),
+    },
+    {
+      heading: "6. Our Intellectual Property",
+      body: (
+        <p>
+          Came Through Audio and its licensors retain all ownership of the Service, including its
+          software, documentation, design, and branding. You may not copy, reverse engineer, resell,
+          or redistribute the Service.
+        </p>
+      ),
+    },
+    {
+      heading: "7. No Legal, Financial or Tax Advice",
+      body: (
+        <p>
+          Came Through Audio is an independent record label offering label services; using the
+          Service doesn't sign you to the label or create a recording, publishing or management
+          agreement. Came Through Audio is not a law firm, accountant, financial adviser, publisher,
+          collection society or distributor. Contract blueprints, the Contract Generator, guides,
+          cheat sheets, the FAQ, Royalty Health scores and reports, converters and calculators are
+          general information and tools. Using them doesn't create an attorney-client or any other
+          professional relationship. Talk to a qualified music attorney, accountant or adviser about
+          your situation before you rely on them.
+        </p>
+      ),
+    },
+    {
+      heading: "8. No Affiliation",
+      body: (
+        <p>
+          Came Through Audio is independent. We are not affiliated with, endorsed by or acting for
+          ASCAP, BMI, SESAC, GMR, The MLC, SoundExchange, the Harry Fox Agency, PPL, any other
+          collection society, the U.S. Copyright Office or any streaming service or store. Their
+          names and marks belong to their owners and are used only to describe where your
+          information goes.
+        </p>
+      ),
+    },
+    {
+      heading: "9. Contracts, Split Sheets and the Contract Generator",
+      body: (
+        <>
+          <p>
+            Contracts and split sheets you make here are agreements between you and the other people
+            who sign them. Came Through Audio is not a party to them, doesn't negotiate or check
+            their terms, ownership or splits, and isn't responsible for whether they are
+            enforceable, how they are used or what happens if someone doesn't honor them. You choose
+            the terms and are responsible for them.
+          </p>
+          <p>
+            The Contract Generator puts drafts together automatically from what you type, using our
+            blueprints. Drafts can contain mistakes or miss terms your deal needs: read every word
+            and have an attorney review it before you sign. Electronic signatures are recorded with
+            a time stamp and verification hash as described in each document; you are responsible
+            for making sure electronic signing is acceptable for your agreement where you live.
+          </p>
+        </>
+      ),
+    },
+    {
+      heading: "10. Metadata, Registrations and Agency Exports",
+      body: (
+        <p>
+          You are responsible for the accuracy and completeness of everything you enter, embed,
+          export or ask us to register, including titles, writers, splits, publishers, codes and
+          ownership, and for having every right needed for the audio, artwork and lyrics you upload.
+          Stores, streaming services and other platforms may remove or change embedded metadata.
+          "Registration Ready" and health scores mean required details are filled in, not that they
+          are correct. Agency exports follow each agency's template as we understand it; agencies
+          can change their requirements and decide on their own what they accept, match and pay. We
+          do not guarantee any registration, match, payment or royalty amount. Expert Registration
+          Assistance is also governed by the Registration Authorization you sign.
+        </p>
+      ),
+    },
+    {
+      heading: "11. AI Protection Hub Certificates",
+      body: (
+        <p>
+          AI Protection certificates are made to help you show proof. A certificate records
+          fingerprints of the files you provide, your sworn attestation and an independent Bitcoin
+          timestamp. It is evidence that those files existed in that exact form by that date. It is
+          not proof of ownership or authorship, not a copyright registration, not legal advice and
+          not a guarantee against AI training, imitation, infringement, claims or takedowns; courts
+          and platforms decide how much weight it gets. Your attestation is your own statement and
+          must be true. Keep your original files unchanged. Came Through Audio isn't a party to your
+          disputes and doesn't investigate, take sides or act as a witness; anyone can check a
+          certificate themselves on our verify page. If we receive a valid subpoena or court order
+          about a certificate, we respond as the law requires. For the strongest legal protection,
+          register your work with the U.S. Copyright Office.
+        </p>
+      ),
+    },
+    {
+      heading: "12. Your Branding and Materials",
+      body: (
+        <p>
+          When you use Personal Branding or upload logos, names, taglines, fonts, photos or other
+          materials, you confirm you own them or have permission to use them, and you are
+          responsible for the documents you send with them.
+        </p>
+      ),
+    },
+    {
+      heading: "13. Third-Party Services",
+      body: (
+        <p>
+          The Service relies on outside providers, including Stripe and Link for payment processing,
+          and third-party infrastructure and service providers for cloud hosting and edge delivery,
+          database and authentication, transactional email and independent Bitcoin timestamping. We
+          aren't responsible for their availability, errors or policies, and your use of their
+          services may also be governed by their own terms.
+        </p>
+      ),
+    },
+    {
+      heading: "14. Disputes Between Users",
+      body: (
+        <p>
+          Disagreements between collaborators, co-writers, producers, signers or anyone else you
+          work with through the Service are between you and them. Came Through Audio doesn't decide
+          who owns what, isn't required to step in and isn't responsible for the outcome, though we
+          may share records you are entitled to, such as signed documents and their time stamps.
+        </p>
+      ),
+    },
+    {
+      heading: "15. Indemnification",
+      body: (
+        <p>
+          To the extent the law allows, you agree to defend and hold harmless Came Through Audio,
+          LLC and its owners, team and providers from claims, losses and costs (including reasonable
+          legal fees) that come from your content, the information you provide, your agreements with
+          other people, your branding materials or your breach of these terms.
+        </p>
+      ),
+    },
+    {
+      heading: "16. Service Availability and Limitation of Liability",
+      body: (
+        <p>
+          We work to keep the Service reliable, but we do not guarantee it will be uninterrupted or
+          error-free. To the fullest extent permitted by law, the Service is provided "as is"
+          without implied warranties, and our total liability is limited to the fees you paid in the
+          12 months before the claim. To the fullest extent permitted by law, Came Through Audio is
+          not liable for lost or uncollected royalties, lost profits or opportunities, rejected or
+          delayed registrations, lost data, or any indirect, incidental, special or consequential
+          damages, even if we were told they were possible. Nothing limits liability for fraud,
+          death, or personal injury where the law does not allow it.
+        </p>
+      ),
+    },
+    {
+      heading: "17. Suspension and Termination",
+      body: (
+        <p>
+          We may suspend or terminate your access for material breach of these terms, non-payment,
+          security or fraud risk, or repeated or serious policy violations. You may close your
+          account at any time and download your data before doing so. An account with no sign-in for
+          two years is scheduled for deletion: we email you several times before the date. Signing
+          in during that notice keeps the account on the Free plan, and a paid plan also keeps the
+          stored files; without one, the files stored for the account and its catalog entries are
+          deleted on the date. An account with no sign-in at all is deleted with its files, and we
+          email that address once afterwards so a new account can be started at any time. A plan
+          ending never deletes the account or its catalog.
+        </p>
+      ),
+    },
+    {
+      heading: "18. Need more time and Pause",
+      body: (
+        <p>
+          Once every 12 months you may move your renewal back 30 days at no charge. Separately, once
+          every 12 months you may pause your plan for as long as you need, for a Vault fee of $1.99
+          per month. The fee is billed monthly for as long as the pause runs and stops the moment
+          you resume; there is no end date and no later month is charged. Resuming ends the pause,
+          not the plan, and your plan renews from that day for a fresh year. The month in progress
+          is not refunded if you end the pause early. While paused your catalog is read-only and is
+          not emptied, and you can still download your masters, artwork and PDFs; embedding,
+          uploads, new or edited catalog entries, split sheets, contracts and the other paid tools
+          wait until you resume. Pausing is not cancelling; cancelling the plan while paused does
+          end the pause and stops the Vault fee at once. If a monthly Vault fee cannot be collected
+          after the payment provider's retries, the pause ends and the account moves to the Free
+          plan.
+        </p>
+      ),
+    },
+    {
+      heading: "19. Governing Law",
+      body: (
+        <p>
+          These terms are governed by the laws of the State of Georgia, United States, without
+          regard to conflict-of-law principles. Legal actions arising under these terms shall be
+          brought exclusively in courts located in Georgia.
+        </p>
+      ),
+    },
+    {
+      heading: "20. Badges, Awards and Share Cards",
+      body: (
+        <p>
+          Badges, awards, status eagles and share cards celebrate your progress in the Service. They
+          have no cash value, aren't transferable and aren't a payment, prize or reward. Earning one
+          doesn't confirm any registration, ownership or rights, and we may change, rename or retire
+          badge artwork and the conditions for earning them at any time.
+        </p>
+      ),
+    },
+    {
+      heading: "21. Contact",
+      body: (
+        <p>
+          Questions? Email{" "}
+          <a className="text-primary underline" href="mailto:legal@camethroughaudio.com">
+            legal@camethroughaudio.com
+          </a>
+          .
+        </p>
+      ),
+    },
+    {
+      heading: "22. Artist Seats",
+      body: (
+        <>
+          <p>
+            An account may buy an artist seat and invite another person to it. The invited artist
+            accepts the seat once, with the email address it was sent to. A seat does not create a
+            separate agreement: the terms accepted when an account is created govern it, and
+            accepting a seat confirms that.
+          </p>
+          <p>
+            <b>What the invited artist agrees to.</b> While the seat is live, the account that
+            bought it may view and edit the invited artist's catalog, split sheets and profile
+            defaults; view, upload and replace that artist's catalog files; and read that artist's
+            contracts, the people named on them and their signature records. The invited artist
+            confirms they have the right to share the information in their catalog and on their
+            split sheets, including co-writers' names, PRO affiliations, IPI numbers and splits.
+          </p>
+          <p>
+            <b>Who sends a contract.</b> A seat lets the account holder read contracts. It never
+            lets them send one, sign one, change a signature or remove a signed record. Only the
+            invited artist can send a contract under their own name, and only the artist starts that
+            request. Everyone asked to sign is told, before signing, that the artist's seat holder
+            can read the contract and who signed it.
+          </p>
+          <p>
+            <b>Ownership does not move.</b> The invited artist keeps every right in their songs,
+            masters, artwork, lyrics and agreements. Edits the account holder makes are made for the
+            invited artist and belong to the invited artist. The permission described above lasts
+            only while the seat is live.
+          </p>
+          <p>
+            <b>How long a seat lasts.</b> A seat runs for the period the account holder paid for.
+            The invited artist cannot cancel or shorten it and cannot withdraw the access described
+            above while it runs; the account holder decides whether to renew it and may end it at
+            any time. When a seat ends, the account holder's access ends and the invited artist's
+            account continues at whatever plan that artist holds. The artist's account, songs and
+            files are theirs and are not deleted because a seat ended.
+          </p>
+          <p>
+            <b>The account holder's responsibilities.</b> The account holder is responsible for what
+            they do with what they can see, for keeping it confidential, and for using it only for
+            the work the seat is for. They must not publish, sell, reuse or share the invited
+            artist's material, contracts or personal information, or use it to contact co-writers
+            about other business. Came Through Audio does not direct that use and is not a party to
+            any arrangement between the account holder and the invited artist.
+          </p>
+          <p>
+            <b>No other deal.</b> A seat is not a sale of the account, and not a recording,
+            publishing, management or employment agreement, or a claim to anything the invited
+            artist creates.
+          </p>
+        </>
+      ),
+    },
+    {
+      heading: "23. Fair Use Policy & System Security Safeguards",
+      body: (
+        <>
+          <p>
+            Came Through Audio offers "Unlimited" features across select membership tiers
+            (including, without limitation, unlimited catalog entries, split sheets, contracts,
+            blueprints, and royalty health checks) to support the genuine, day-to-day creative and
+            administrative needs of individual artists, songwriters, producers, and authorized
+            representatives.
+          </p>
+          <p>
+            To protect email deliverability, prevent recipient spam, safeguard our community, and
+            maintain platform security, all "Unlimited" services are subject to reasonable technical
+            rate limits and anti-abuse controls. These safeguards include, without limitation, daily
+            outbound invitation thresholds, limits on how many times the same invitation may be
+            sent, daily limits on invitations to the same recipient email address, and daily caps on
+            company correspondence.
+          </p>
+          <p>
+            "Unlimited" refers to the absence of fixed monthly or annual feature caps for normal,
+            human-operated personal or agency use—it does not permit automated scripts, bots, bulk
+            unsolicited messaging, account sharing, or activity that places an unreasonable load on
+            our infrastructure. Came Through Audio reserves the right, in its sole discretion and
+            without prior notice, to adjust technical rate limits, monitor usage patterns,
+            temporarily throttle high-volume requests, or suspend accounts that exhibit abnormal
+            activity, suspected fraud, or conduct that threatens the security and performance of the
+            service.
+          </p>
+        </>
+      ),
+    },
+  ],
 };
 
 export const PRIVACY: LegalDoc = {
@@ -62,55 +417,318 @@ export const PRIVACY: LegalDoc = {
   title: "Privacy Policy",
   updated: "October 27, 2026",
   sections: [
-        { heading: "1. Who We Are", body: <p>Came Through Audio, LLC ("Came Through Audio", "Came Through", "Came Thru", "CTA", "we" or "us") is the data controller for the personal information, account profiles, lyrics, track metadata identifiers (ISRC, UPC, ISWC), and file hashes you provide on our platform. Contact: <a className="text-primary underline" href="mailto:legal@camethroughaudio.com">legal@camethroughaudio.com</a>.</p> },
-        { heading: "2. Data We Collect", body: <ul className="list-disc space-y-1 pl-5">
+    {
+      heading: "1. Who We Are",
+      body: (
+        <p>
+          Came Through Audio, LLC ("Came Through Audio", "Came Through", "Came Thru", "CTA", "we" or
+          "us") is the data controller for the personal information, account profiles, lyrics, track
+          metadata identifiers (ISRC, UPC, ISWC), and file hashes you provide on our platform.
+          Contact:{" "}
+          <a className="text-primary underline" href="mailto:legal@camethroughaudio.com">
+            legal@camethroughaudio.com
+          </a>
+          .
+        </p>
+      ),
+    },
+    {
+      heading: "2. Data We Collect",
+      body: (
+        <ul className="list-disc space-y-1 pl-5">
           <li>Account data: stage name, legal name, email, login credentials.</li>
-          <li>Music data: track details, contributor legal names, splits, identifiers, lyrics, audio, cover art, and session recordings.</li>
+          <li>
+            Music data: track details, contributor legal names, splits, identifiers, lyrics, audio,
+            cover art, and session recordings.
+          </li>
           <li>Support messages you send us.</li>
-          <li>Technical data: IP address, device and browser identifiers, and usage information.</li>
-        </ul> },
-        { heading: "3. How We Use It and Why", body: <ul className="list-disc space-y-1 pl-5">
-          <li>Creating your account and providing the Service — embedding metadata, organizing your catalog, generating certificates and split sheets (contract performance).</li>
-          <li>Verifying your production timeline with SHA-256 session hashes (contract performance).</li>
+          <li>
+            Technical data: IP address, device and browser identifiers, and usage information.
+          </li>
+        </ul>
+      ),
+    },
+    {
+      heading: "3. How We Use It and Why",
+      body: (
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            Creating your account and providing the Service — embedding metadata, organizing your
+            catalog, generating certificates and split sheets (contract performance).
+          </li>
+          <li>
+            Verifying your production timeline with SHA-256 session hashes (contract performance).
+          </li>
           <li>Security, fraud prevention, and improving the Service (legitimate interests).</li>
-          <li>Customer support (contract performance) and product updates or marketing where you have agreed (consent).</li>
+          <li>
+            Customer support (contract performance) and product updates or marketing where you have
+            agreed (consent).
+          </li>
           <li>Meeting legal requirements (legal obligation).</li>
-        </ul> },
-        { heading: "4. Payments and Stripe", body: <p>Payments are processed by Stripe and, for purchases sold through Link, by Link as merchant of record. Your card and billing details go directly to Stripe and Link, which handle them under their own privacy policies (<a className="text-primary underline" href="https://stripe.com/privacy" target="_blank" rel="noreferrer">stripe.com/privacy</a>, <a className="text-primary underline" href="https://link.com/privacy" target="_blank" rel="noreferrer">link.com/privacy</a>). We receive only what we need to give you access: your name, email address, what you bought, the amount, and your subscription status. We never see or store your full card or bank numbers.</p> },
-        { heading: "5. Who We Share Data With", body: <>
-          <p>We share data only with the providers that run the Service, grouped by what they do:</p>
+        </ul>
+      ),
+    },
+    {
+      heading: "4. Payments and Stripe",
+      body: (
+        <p>
+          Payments are processed by Stripe and, for purchases sold through Link, by Link as merchant
+          of record. Your card and billing details go directly to Stripe and Link, which handle them
+          under their own privacy policies (
+          <a
+            className="text-primary underline"
+            href="https://stripe.com/privacy"
+            target="_blank"
+            rel="noreferrer"
+          >
+            stripe.com/privacy
+          </a>
+          ,{" "}
+          <a
+            className="text-primary underline"
+            href="https://link.com/privacy"
+            target="_blank"
+            rel="noreferrer"
+          >
+            link.com/privacy
+          </a>
+          ). We receive only what we need to give you access: your name, email address, what you
+          bought, the amount, and your subscription status. We never see or store your full card or
+          bank numbers.
+        </p>
+      ),
+    },
+    {
+      heading: "5. Who We Share Data With",
+      body: (
+        <>
+          <p>
+            We share data only with the providers that run the Service, grouped by what they do:
+          </p>
           <ul className="list-disc space-y-1 pl-5">
-            <li><b>Cloud hosting and edge network providers</b> — to serve the site and run the Service.</li>
-            <li><b>Database and authentication infrastructure providers</b> — to store your account, catalog and files, and to keep you signed in.</li>
-            <li><b>Transactional email and communication delivery services</b> — to send you the messages the Service produces.</li>
-            <li><b>Stripe and Link</b> — to process payments, as described above.</li>
+            <li>
+              <b>Cloud hosting and edge network providers</b> — to serve the site and run the
+              Service.
+            </li>
+            <li>
+              <b>Database and authentication infrastructure providers</b> — to store your account,
+              catalog and files, and to keep you signed in.
+            </li>
+            <li>
+              <b>Transactional email and communication delivery services</b> — to send you the
+              messages the Service produces.
+            </li>
+            <li>
+              <b>Stripe and Link</b> — to process payments, as described above.
+            </li>
           </ul>
-          <p>We also share data with professional advisers such as lawyers and accountants, and with authorities where required by law. We do not sell your data.</p>
-        </> },
-        { heading: "6. Retention", body: <p>We keep your data while your account is active so you can download your masters, cover art, lyrics, and certificates at any time. A plan ending never removes your catalog: the account moves to the Free plan, your songs, masters and artwork stay read-only, and you can download everything and start a paid plan whenever you are ready. An account with no sign-in for two years is scheduled for deletion, after several email reminders. Signing in during that notice keeps the account on the Free plan; a paid plan also keeps the stored files, and without one those files (masters, artwork and anything else in storage) and the catalog entries are deleted on the date. An account that never signs in is deleted with its files. After a deletion we email that address once, so a new account can be started at any time. Signed and unsigned split sheets, contracts, AI Protection certificates, blueprints and Working On stay with the account on the Free plan for as long as it exists; they are removed only if the account itself is deleted. When data is no longer needed, or after you close your account, we delete or anonymise it unless we must keep it by law.</p> },
-        { heading: "7. Security", body: <p>We use appropriate technical and organisational measures, including encryption in transit, access controls that limit each account to its own records (except where an artist has accepted a seat and allowed that account access, which is granted deliberately and recorded), and secure cloud storage.</p> },
-        { heading: "8. Your Rights", body: <p>Depending on where you live, you may have the right to access, correct, delete, restrict, or export your data, to object to processing, and to withdraw consent. Email us to make a request; you may also complain to your local data protection authority. If your data is transferred outside your country, we rely on appropriate safeguards such as standard contractual clauses.</p> },
-        { heading: "9. Cookies", body: <p>We use essential cookies and local storage to keep you signed in and the Service working. We do not use advertising cookies. You can clear cookies in your browser settings, though you may then need to sign in again.</p> },
-        { heading: "10. Artist Seats", body: <>
-          <p>When an artist accepts an artist seat, the account that bought the seat can see and edit that artist's catalog, split sheets and profile defaults, see their catalog files, and read their contracts, the people named on them and signature records. This is part of the terms an account accepts when it is created, and accepting the seat confirms it.</p>
-          <p>We treat the account holder as an independent controller of what they can see through a seat, not as our processor: they decide what to do with it, and their own obligations apply. We keep a record of when a seat was accepted, and the artist's access cannot be withdrawn by the artist while the seat runs.</p>
-          <p>A seat never gives the account holder AI Protection certificates, registration records, payment details or support messages, and never lets them send, sign or alter a contract. Ending a seat does not delete the artist's account or catalog.</p>
-        </> },
-      ],
+          <p>
+            We also share data with professional advisers such as lawyers and accountants, and with
+            authorities where required by law. We do not sell your data.
+          </p>
+        </>
+      ),
+    },
+    {
+      heading: "6. Retention",
+      body: (
+        <p>
+          We keep your data while your account is active so you can download your masters, cover
+          art, lyrics, and certificates at any time. A plan ending never removes your catalog: the
+          account moves to the Free plan, your songs, masters and artwork stay read-only, and you
+          can download everything and start a paid plan whenever you are ready. An account with no
+          sign-in for two years is scheduled for deletion, after several email reminders. Signing in
+          during that notice keeps the account on the Free plan; a paid plan also keeps the stored
+          files, and without one those files (masters, artwork and anything else in storage) and the
+          catalog entries are deleted on the date. An account that never signs in is deleted with
+          its files. After a deletion we email that address once, so a new account can be started at
+          any time. Signed and unsigned split sheets, contracts, AI Protection certificates,
+          blueprints and Working On stay with the account on the Free plan for as long as it exists;
+          they are removed only if the account itself is deleted. When data is no longer needed, or
+          after you close your account, we delete or anonymise it unless we must keep it by law.
+        </p>
+      ),
+    },
+    {
+      heading: "7. Security",
+      body: (
+        <p>
+          We use appropriate technical and organisational measures, including encryption in transit,
+          access controls that limit each account to its own records (except where an artist has
+          accepted a seat and allowed that account access, which is granted deliberately and
+          recorded), and secure cloud storage.
+        </p>
+      ),
+    },
+    {
+      heading: "8. Your Rights",
+      body: (
+        <p>
+          Depending on where you live, you may have the right to access, correct, delete, restrict,
+          or export your data, to object to processing, and to withdraw consent. Email us to make a
+          request; you may also complain to your local data protection authority. If your data is
+          transferred outside your country, we rely on appropriate safeguards such as standard
+          contractual clauses.
+        </p>
+      ),
+    },
+    {
+      heading: "9. Cookies",
+      body: (
+        <p>
+          We use essential cookies and local storage to keep you signed in and the Service working.
+          We do not use advertising cookies. You can clear cookies in your browser settings, though
+          you may then need to sign in again.
+        </p>
+      ),
+    },
+    {
+      heading: "10. Artist Seats",
+      body: (
+        <>
+          <p>
+            When an artist accepts an artist seat, the account that bought the seat can see and edit
+            that artist's catalog, split sheets and profile defaults, see their catalog files, and
+            read their contracts, the people named on them and signature records. This is part of
+            the terms an account accepts when it is created, and accepting the seat confirms it.
+          </p>
+          <p>
+            We treat the account holder as an independent controller of what they can see through a
+            seat, not as our processor: they decide what to do with it, and their own obligations
+            apply. We keep a record of when a seat was accepted, and the artist's access cannot be
+            withdrawn by the artist while the seat runs.
+          </p>
+          <p>
+            A seat never gives the account holder AI Protection certificates, registration records,
+            payment details or support messages, and never lets them send, sign or alter a contract.
+            Ending a seat does not delete the artist's account or catalog.
+          </p>
+        </>
+      ),
+    },
+  ],
 };
 
 export const REFUNDS: LegalDoc = {
   doc: "refunds",
   title: "Refund Policy",
   updated: "November 21, 2026",
-  intro: <p>We want you to have complete peace of mind when organizing your music. We offer a 30-day refund window, structured as follows.</p>,
+  intro: (
+    <p>
+      We want you to have complete peace of mind when organizing your music. We offer a 30-day
+      refund window, structured as follows.
+    </p>
+  ),
   sections: [
-        { heading: "Plans (Catalog Plus, Catalog & Collaborate, Catalog Management)", body: <p>If you are unsatisfied with your annual plan, you may request a full refund within 30 days of your order date. When you switch to a higher plan, you pay only the prorated difference at the time of the switch. A refund ends the plan right away, and the account then moves to the Free plan: a plan ending never empties or deletes your catalog, so your masters, cover art, lyrics and catalog PDF stay available, read-only, and you can start a paid plan whenever you're ready. Signed split sheets, signed contracts and AI Protection certificates are kept. If you renew early with Renew now, your new year starts the day your current paid plan ends, so you never lose time you already paid for, and you may request a full refund within 30 days of that payment. Your plan then stays as it was, renewing on its original date. An account with no sign-in for two years is scheduled for deletion after several email reminders: signing in during that notice keeps the account on Free, and a paid plan keeps the stored files and catalog too.</p> },
-        { heading: "AI Protection Hub Packages", body: <p>Individual packages — Single ($2.99 per song, up to 3), EP up to 6 songs ($9.99), Album up to 12 songs ($16.99), and Album+ up to 20 songs ($24.99) — are eligible for a refund within 30 days of purchase, provided the proof certificate has not yet been generated. Once the PDF Proof Certificate, validation QR code, or timestamp has been produced, the digital service is considered delivered.</p> },
-        { heading: "Personal Branding Add-on ($13.99 per year, per kit)", body: <><p>You may request a full refund of a kit within 30 days of a yearly payment. A refund ends that kit right away: new documents go back to the Came Through Audio header, and documents you already downloaded or sent keep the branding they were made with.</p><p>Each kit you pay for is its own yearly subscription, and it renews itself until you cancel it. Cancelling leaves the kit working until the end of the year you have already paid for. Cancelling or refunding your plan, including inside the 30-day window, doesn't end a paid kit or shorten its year. The one kit included with Catalog Management was never paid for on its own, so it follows the plan's terms above.</p></> },
-        { heading: "Contract Generator ($3.99 per contract)", body: <p>You may request a full refund within 30 days of purchase. If the contract hasn't been sent for signature yet, a refund locks it again. A contract that was already sent stays available to the people asked to sign it, so their signatures and records stay valid.</p> },
-        { heading: "Pause (Vault fee, $1.99 per month)", body: <p>A pause is not a plan and not a purchase of one: it stops the plan charge for as long as you need it to, once every 12 months, while the Vault fee of $1.99 per month covers your catalog and downloads. The fee is billed monthly for as long as the pause runs and stops the moment you resume; there is no end date, so no later month is charged. If you resume, the month in progress is not refunded and the next month's charge is stopped, and your plan renews from that day for a fresh year. A pause that never starts charges nothing, and any fee taken for one is refunded. Pausing is not cancelling. If a monthly Vault fee cannot be collected after the payment provider's retries, the pause ends and the account moves to the Free plan. While paused your catalog is read-only and is not emptied, your masters, artwork and PDFs stay downloadable, and the paid tools wait until you resume.</p> },
-        { heading: "Expert Registration Assistance", body: <p>You may request a full refund within 30 days of purchase, as long as our team hasn't started work on your registrations. Once work has started, the service is considered delivered.</p> },
-        { heading: "How to Request a Refund", body: <p>Email <a className="text-primary underline" href="mailto:billing@camethroughaudio.com">billing@camethroughaudio.com</a> with the email on your account and what you bought. Approved refunds go back to your original payment method, usually within 5–10 business days. For purchases sold through Link, you can also ask Link support at <a className="text-primary underline" href="https://support.link.com" target="_blank" rel="noreferrer">support.link.com</a>.</p> },
-      ],
+    {
+      heading: "Plans (Catalog Plus, Catalog & Collaborate, Catalog Management)",
+      body: (
+        <p>
+          If you are unsatisfied with your annual plan, you may request a full refund within 30 days
+          of your order date. When you switch to a higher plan, you pay only the prorated difference
+          at the time of the switch. A refund ends the plan right away, and the account then moves
+          to the Free plan: a plan ending never empties or deletes your catalog, so your masters,
+          cover art, lyrics and catalog PDF stay available, read-only, and you can start a paid plan
+          whenever you're ready. Signed split sheets, signed contracts and AI Protection
+          certificates are kept. If you renew early with Renew now, your new year starts the day
+          your current paid plan ends, so you never lose time you already paid for, and you may
+          request a full refund within 30 days of that payment. Your plan then stays as it was,
+          renewing on its original date. An account with no sign-in for two years is scheduled for
+          deletion after several email reminders: signing in during that notice keeps the account on
+          Free, and a paid plan keeps the stored files and catalog too.
+        </p>
+      ),
+    },
+    {
+      heading: "AI Protection Hub Packages",
+      body: (
+        <p>
+          Individual packages — Single ($2.99 per song, up to 3), EP up to 6 songs ($9.99), Album up
+          to 12 songs ($16.99), and Album+ up to 20 songs ($24.99) — are eligible for a refund
+          within 30 days of purchase, provided the proof certificate has not yet been generated.
+          Once the PDF Proof Certificate, validation QR code, or timestamp has been produced, the
+          digital service is considered delivered.
+        </p>
+      ),
+    },
+    {
+      heading: "Personal Branding Add-on ($13.99 per year, per kit)",
+      body: (
+        <>
+          <p>
+            You may request a full refund of a kit within 30 days of a yearly payment. A refund ends
+            that kit right away: new documents go back to the Came Through Audio header, and
+            documents you already downloaded or sent keep the branding they were made with.
+          </p>
+          <p>
+            Each kit you pay for is its own yearly subscription, and it renews itself until you
+            cancel it. Cancelling leaves the kit working until the end of the year you have already
+            paid for. Cancelling or refunding your plan, including inside the 30-day window, doesn't
+            end a paid kit or shorten its year. The one kit included with Catalog Management was
+            never paid for on its own, so it follows the plan's terms above.
+          </p>
+        </>
+      ),
+    },
+    {
+      heading: "Contract Generator ($3.99 per contract)",
+      body: (
+        <p>
+          You may request a full refund within 30 days of purchase. If the contract hasn't been sent
+          for signature yet, a refund locks it again. A contract that was already sent stays
+          available to the people asked to sign it, so their signatures and records stay valid.
+        </p>
+      ),
+    },
+    {
+      heading: "Pause (Vault fee, $1.99 per month)",
+      body: (
+        <p>
+          A pause is not a plan and not a purchase of one: it stops the plan charge for as long as
+          you need it to, once every 12 months, while the Vault fee of $1.99 per month covers your
+          catalog and downloads. The fee is billed monthly for as long as the pause runs and stops
+          the moment you resume; there is no end date, so no later month is charged. If you resume,
+          the month in progress is not refunded and the next month's charge is stopped, and your
+          plan renews from that day for a fresh year. A pause that never starts charges nothing, and
+          any fee taken for one is refunded. Pausing is not cancelling. If a monthly Vault fee
+          cannot be collected after the payment provider's retries, the pause ends and the account
+          moves to the Free plan. While paused your catalog is read-only and is not emptied, your
+          masters, artwork and PDFs stay downloadable, and the paid tools wait until you resume.
+        </p>
+      ),
+    },
+    {
+      heading: "Expert Registration Assistance",
+      body: (
+        <p>
+          You may request a full refund within 30 days of purchase, as long as our team hasn't
+          started work on your registrations. Once work has started, the service is considered
+          delivered.
+        </p>
+      ),
+    },
+    {
+      heading: "How to Request a Refund",
+      body: (
+        <p>
+          Email{" "}
+          <a className="text-primary underline" href="mailto:billing@camethroughaudio.com">
+            billing@camethroughaudio.com
+          </a>{" "}
+          with the email on your account and what you bought. Approved refunds go back to your
+          original payment method, usually within 5–10 business days. For purchases sold through
+          Link, you can also ask Link support at{" "}
+          <a
+            className="text-primary underline"
+            href="https://support.link.com"
+            target="_blank"
+            rel="noreferrer"
+          >
+            support.link.com
+          </a>
+          .
+        </p>
+      ),
+    },
+  ],
 };

@@ -48,7 +48,9 @@ export const VAULT_TRIAL_MIN_MS = 48 * 60 * 60 * 1000;
 export function vaultTrialEnd(starts: string | Date, now = new Date()): number | null {
   const at = new Date(starts);
   if (Number.isNaN(at.getTime())) return null;
-  return at.getTime() - now.getTime() >= VAULT_TRIAL_MIN_MS ? Math.floor(at.getTime() / 1000) : null;
+  return at.getTime() - now.getTime() >= VAULT_TRIAL_MIN_MS
+    ? Math.floor(at.getTime() / 1000)
+    : null;
 }
 
 /** The parts of a plan's Stripe subscription the pause rules read. */
@@ -65,12 +67,16 @@ export function pauseTrialTopUpEnd(now = new Date()): number {
  * on a subscription it no longer treats as trialing, which is how a paused plan used to end up charged for a year it
  * could not use — and then charged again on Resume.
  */
-export function pauseTrialAction(i: PausePlanTrial, now = new Date()): "top-up" | "leave" | "lapsed" {
+export function pauseTrialAction(
+  i: PausePlanTrial,
+  now = new Date(),
+): "top-up" | "leave" | "lapsed" {
   if (i.status === "trialing") {
     const topUpAt = Math.floor(addDays(now, PAUSE_TRIAL_TOPUP_DAYS).getTime() / 1000);
     return i.trialEnd == null || i.trialEnd < topUpAt ? "top-up" : "leave";
   }
-  if (["active", "past_due", "unpaid", "canceled", "incomplete_expired"].includes(i.status)) return "lapsed";
+  if (["active", "past_due", "unpaid", "canceled", "incomplete_expired"].includes(i.status))
+    return "lapsed";
   return "leave";
 }
 
@@ -137,7 +143,14 @@ export type VaultPriceLike = {
 export function vaultPriceShapeProblem(price: VaultPriceLike): string | null {
   if (price.type === "recurring" && price.recurring?.interval === "month") return null;
   const interval = price.recurring?.interval;
-  const every = interval === "year" ? "yearly" : interval === "week" ? "weekly" : interval === "day" ? "daily" : interval;
+  const every =
+    interval === "year"
+      ? "yearly"
+      : interval === "week"
+        ? "weekly"
+        : interval === "day"
+          ? "daily"
+          : interval;
   const held =
     price.type === "recurring"
       ? every
@@ -155,7 +168,10 @@ export function vaultPriceShapeProblem(price: VaultPriceLike): string | null {
  * second pause subscription beside the first one, so checkout refuses before Stripe is called. The message is here so the
  * guard and its test can never disagree.
  */
-export function pauseCheckoutRefusal(i: { livePause?: boolean; liveSubscription?: boolean }): string | null {
+export function pauseCheckoutRefusal(i: {
+  livePause?: boolean;
+  liveSubscription?: boolean;
+}): string | null {
   if (!i.livePause && !i.liveSubscription) return null;
   return "You already have a pause. Resume it from Profile before starting another.";
 }

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ACCEPT_STEPS, inviteBlocker, INVITE_STEPS, looksLikeEmail, STAFF_EMAIL_RULE } from "./staff-invites";
+import {
+  ACCEPT_STEPS,
+  inviteBlocker,
+  INVITE_STEPS,
+  looksLikeEmail,
+  STAFF_EMAIL_RULE,
+} from "./staff-invites";
 
 describe("inviting staff", () => {
   it("refuses a member account's email and says what to do instead", () => {
@@ -9,11 +15,15 @@ describe("inviting staff", () => {
   });
 
   it("refuses an address already on the team", () => {
-    expect(inviteBlocker({ email: "lead@camethroughaudio.com", memberAccount: false, onTeam: true })).toMatch(/already on the team/i);
+    expect(
+      inviteBlocker({ email: "lead@camethroughaudio.com", memberAccount: false, onTeam: true }),
+    ).toMatch(/already on the team/i);
   });
 
   it("lets a plain new work address through", () => {
-    expect(inviteBlocker({ email: "new@camethroughaudio.com", memberAccount: false, onTeam: false })).toBeNull();
+    expect(
+      inviteBlocker({ email: "new@camethroughaudio.com", memberAccount: false, onTeam: false }),
+    ).toBeNull();
   });
 
   it("states the rule and both step lists, so the page and the email cannot drift", () => {

@@ -15,7 +15,8 @@ export const BRANDING_DAYS = 365;
 export const BRAND_FONTS: string[] = FONT_GROUPS.flatMap((g) => g.fonts);
 export type BrandFont = string;
 /** Header font files in public/fonts: medium for the tagline, bold for the name (one file for single-weight fonts). */
-export const fontFile = (f: BrandFont, weight: "medium" | "bold") => `${f.replace(/ /g, "")}-${weight === "bold" || SINGLE_WEIGHT.has(f) ? "Bold" : "Medium"}`;
+export const fontFile = (f: BrandFont, weight: "medium" | "bold") =>
+  `${f.replace(/ /g, "")}-${weight === "bold" || SINGLE_WEIGHT.has(f) ? "Bold" : "Medium"}`;
 
 /** Contract layouts a kit can use (founder, 2026-10-27). */
 export const KIT_STYLES = [
@@ -24,10 +25,22 @@ export const KIT_STYLES = [
   { id: "banner", label: "Banner", hint: "A solid color band across the top." },
   { id: "minimal", label: "Minimal", hint: "No header band; your logo small in the footer." },
   // Four that set the page, not just the header (founder, 2026-11-07).
-  { id: "label", label: "Label", hint: "Centred: logo above a short rule, your name and tagline under it." },
-  { id: "ticket", label: "Ticket", hint: "Your header in a thin box with punched notches, like a tear-off stub." },
+  {
+    id: "label",
+    label: "Label",
+    hint: "Centred: logo above a short rule, your name and tagline under it.",
+  },
+  {
+    id: "ticket",
+    label: "Ticket",
+    hint: "Your header in a thin box with punched notches, like a tear-off stub.",
+  },
   { id: "frame", label: "Frame", hint: "A thin colour frame around the whole first page." },
-  { id: "editorial", label: "Editorial", hint: "Your name large on the left, your tagline in the right column." },
+  {
+    id: "editorial",
+    label: "Editorial",
+    hint: "Your name large on the left, your tagline in the right column.",
+  },
 ] as const;
 export type KitStyle = (typeof KIT_STYLES)[number]["id"];
 const isStyle = (v: unknown): v is KitStyle => KIT_STYLES.some((s) => s.id === v);
@@ -86,7 +99,17 @@ export type KitOptions = {
    */
   logoNudge: number;
 };
-export const DEFAULT_KIT_OPTIONS: KitOptions = { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded", logoAlign: "left", logoSnap: "middle", logoNudge: 0 };
+export const DEFAULT_KIT_OPTIONS: KitOptions = {
+  watermark: false,
+  cover: false,
+  signature: "line",
+  accent: null,
+  titleColor: null,
+  corners: "rounded",
+  logoAlign: "left",
+  logoSnap: "middle",
+  logoNudge: 0,
+};
 
 /** Saved options, cleaned: unknown values fall back to the defaults. */
 export function kitOptions(v: unknown): KitOptions {
@@ -95,8 +118,12 @@ export function kitOptions(v: unknown): KitOptions {
     watermark: o["watermark"] === true,
     cover: o["cover"] === true,
     signature: o["signature"] === "box" ? "box" : "line",
-    accent: typeof o["accent"] === "string" && isHex(o["accent"]) ? o["accent"].toUpperCase() : null,
-    titleColor: typeof o["titleColor"] === "string" && isHex(o["titleColor"]) ? o["titleColor"].toUpperCase() : null,
+    accent:
+      typeof o["accent"] === "string" && isHex(o["accent"]) ? o["accent"].toUpperCase() : null,
+    titleColor:
+      typeof o["titleColor"] === "string" && isHex(o["titleColor"])
+        ? o["titleColor"].toUpperCase()
+        : null,
     corners: o["corners"] === "square" ? "square" : "rounded",
     logoAlign: o["logoAlign"] === "right" ? "right" : "left",
     logoSnap: o["logoSnap"] === "top" ? "top" : o["logoSnap"] === "bottom" ? "bottom" : "middle",
@@ -135,9 +162,19 @@ export const HEADING = {
  * The member's fine movement is added last, and the whole thing is kept inside the header: never off the page, never
  * into the document title drawn at 42 mm.
  */
-export function logoTop(o: { snap: LogoSnap; nudge: number; height: number; hasTagline: boolean }): number {
+export function logoTop(o: {
+  snap: LogoSnap;
+  nudge: number;
+  height: number;
+  hasTagline: boolean;
+}): number {
   const band = o.hasTagline ? HEADING.withTagline : HEADING.nameOnly;
-  const y = o.snap === "top" ? band.top : o.snap === "bottom" ? band.bottom - o.height : band.centre - o.height / 2;
+  const y =
+    o.snap === "top"
+      ? band.top
+      : o.snap === "bottom"
+        ? band.bottom - o.height
+        : band.centre - o.height / 2;
   return Math.max(6, Math.min(38 - o.height, y + logoNudgeValue(o.nudge)));
 }
 
@@ -149,7 +186,20 @@ export type BrandUse = "splits" | "contracts" | "lyrics" | "catalog";
 
 /** New kits start in Arial, a neutral font that fits any brand (founder, 2026-10-27); Poppins is ours. */
 export const DEFAULT_KIT_FONT = "Arial";
-export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], colorSets: [], font: DEFAULT_KIT_FONT, logoPath: null, logoPaths: [], showFooter: true, style: "classic", headerColor: null, paidKey: null, options: { ...DEFAULT_KIT_OPTIONS } });
+export const emptyKit = (name = ""): BrandKit => ({
+  name,
+  tagline: "",
+  colors: [],
+  colorSets: [],
+  font: DEFAULT_KIT_FONT,
+  logoPath: null,
+  logoPaths: [],
+  showFooter: true,
+  style: "classic",
+  headerColor: null,
+  paidKey: null,
+  options: { ...DEFAULT_KIT_OPTIONS },
+});
 
 export const isHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v);
 
@@ -160,10 +210,28 @@ export function hexRgb(v: string): [number, number, number] {
 }
 
 /** A kit row from the database, cleaned: bad colors and unknown fonts are dropped instead of breaking a PDF. */
-export function kitFromRow(r: { id?: string | null; name?: string | null; tagline?: string | null; colors?: string[] | null; font?: string | null; logo_path?: string | null; logo_paths?: string[] | null; show_footer?: boolean | null; style?: string | null; header_color?: string | null; options?: unknown; color_sets?: unknown; paid_key?: string | null } | null): BrandKit | null {
+export function kitFromRow(
+  r: {
+    id?: string | null;
+    name?: string | null;
+    tagline?: string | null;
+    colors?: string[] | null;
+    font?: string | null;
+    logo_path?: string | null;
+    logo_paths?: string[] | null;
+    show_footer?: boolean | null;
+    style?: string | null;
+    header_color?: string | null;
+    options?: unknown;
+    color_sets?: unknown;
+    paid_key?: string | null;
+  } | null,
+): BrandKit | null {
   if (!r) return null;
   // A kit saved before logo versions existed keeps its single logo as the first version.
-  const saved = (Array.isArray(r.logo_paths) ? r.logo_paths : []).filter((p): p is string => typeof p === "string" && !!p);
+  const saved = (Array.isArray(r.logo_paths) ? r.logo_paths : []).filter(
+    (p): p is string => typeof p === "string" && !!p,
+  );
   const active = r.logo_path || null;
   return {
     ...(r.id && { id: r.id }),
@@ -182,7 +250,12 @@ export function kitFromRow(r: { id?: string | null; name?: string | null; taglin
   };
 }
 
-type BrandingPurchase = { id?: string; kind: string; created_at: string; details: Record<string, string> };
+type BrandingPurchase = {
+  id?: string;
+  kind: string;
+  created_at: string;
+  details: Record<string, string>;
+};
 
 /**
  * When one paid kit year ends, in milliseconds. Stripe's own `period_end` is what the money bought, so it wins; the
@@ -197,7 +270,9 @@ const yearEnd = (p: BrandingPurchase): number => {
 
 /** Each paid year of a kit's subscription is one kit for one year (founder, 2026-10-27: $13.99 per kit per year). */
 const activeBuys = (purchases: BrandingPurchase[], now: Date) =>
-  purchases.filter((p) => p.kind === "branding" && !p.details["refunded_at"]).map(yearEnd)
+  purchases
+    .filter((p) => p.kind === "branding" && !p.details["refunded_at"])
+    .map(yearEnd)
     .filter((t) => Number.isFinite(t) && t > now.getTime());
 
 /** The year a kit is in right now: when it ends, and whether another one follows it. */
@@ -207,10 +282,16 @@ export type BrandPeriod = { until: Date; renews: boolean };
  * The kit's current year, or null when none is active now. `renews` is false once the subscription has been cancelled,
  * so the page can say the kit ends instead of promising a renewal (founder, 2026-11-19).
  */
-export function brandingPeriod(purchases: BrandingPurchase[], now = new Date()): BrandPeriod | null {
+export function brandingPeriod(
+  purchases: BrandingPurchase[],
+  now = new Date(),
+): BrandPeriod | null {
   const years = purchases
     .filter((p) => p.kind === "branding" && !p.details["refunded_at"])
-    .map((p) => ({ until: yearEnd(p), renews: p.details["renews"] !== "no" && !p.details["canceled_at"] }))
+    .map((p) => ({
+      until: yearEnd(p),
+      renews: p.details["renews"] !== "no" && !p.details["canceled_at"],
+    }))
     .filter((y) => Number.isFinite(y.until) && y.until > now.getTime());
   if (!years.length) return null;
   // The year that runs latest decides when access ends, and whether another one follows it.
@@ -242,7 +323,10 @@ export function kitYearKey(p: BrandingPurchase): string | null {
 export function activeKitKeys(purchases: BrandingPurchase[], now = new Date()): Set<string> {
   const keys = purchases
     .filter((p) => p.kind === "branding" && !p.details["refunded_at"])
-    .filter((p) => { const end = yearEnd(p); return Number.isFinite(end) && end > now.getTime(); })
+    .filter((p) => {
+      const end = yearEnd(p);
+      return Number.isFinite(end) && end > now.getTime();
+    })
     .map((p) => kitYearKey(p) ?? "")
     .filter(Boolean);
   return new Set(keys);
@@ -257,7 +341,10 @@ export type KitLinkLike = { id?: string | null; paidKey?: string | null };
  * kit they have: there is nothing to choose, and leaving it unlinked would charge them for a kit that can't print.
  * More than one kit is a choice, so this returns null and the member picks (or the purchase names the kit).
  */
-export function autoBindKit(kits: KitLinkLike[], paid: Set<string>): { kitId: string; key: string } | null {
+export function autoBindKit(
+  kits: KitLinkLike[],
+  paid: Set<string>,
+): { kitId: string; key: string } | null {
   if (kits.length !== 1) return null;
   const kit = kits[0]!;
   if (!kit.id) return null;
@@ -279,11 +366,18 @@ export function autoBindKit(kits: KitLinkLike[], paid: Set<string>): { kitId: st
  * only picked when a running year has no unlinked kit to name: that is the member who renewed from the locked screen,
  * where no kit could be named, and leaving their own kit locked after paying would be the worse answer.
  */
-export function usableKits<T extends KitLinkLike>(kits: T[], allowance: number, included: boolean, paid: Set<string>): T[] {
+export function usableKits<T extends KitLinkLike>(
+  kits: T[],
+  allowance: number,
+  included: boolean,
+  paid: Set<string>,
+): T[] {
   const slots = Math.max(0, allowance);
   if (!slots) return [];
   const chosen: T[] = [];
-  const take = (k: T | undefined) => { if (k && chosen.length < slots && !chosen.includes(k)) chosen.push(k); };
+  const take = (k: T | undefined) => {
+    if (k && chosen.length < slots && !chosen.includes(k)) chosen.push(k);
+  };
   const isPaid = (k: T) => !!k.paidKey && paid.has(k.paidKey);
   const linked = kits.filter(isPaid).length;
   // The included kit is the oldest one, linked or not: the kit a document falls back to stays the same.
@@ -315,14 +409,18 @@ export function brandAccess(tier: Tier, addOnUntil: Date | null): Record<BrandUs
 }
 
 /** A kit is worth drawing once it has a name or a logo; otherwise the Came Through Audio header stays. */
-export const kitReady = (k: Pick<BrandKit, "name" | "logoPath"> | null) => !!k && (!!k.name || !!k.logoPath);
+export const kitReady = (k: Pick<BrandKit, "name" | "logoPath"> | null) =>
+  !!k && (!!k.name || !!k.logoPath);
 
 /**
  * How readable a colour is, the WCAG way (founder, 2026-11-06): relative luminance, then the contrast ratio between two
  * colours. The page a PDF prints on is white, so that is what the editor checks against.
  */
 export function luminance(hex: string): number {
-  const [r, g, b] = hexRgb(hex).map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }) as [number, number, number];
+  const [r, g, b] = hexRgb(hex).map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  }) as [number, number, number];
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -338,16 +436,30 @@ export const CONTRAST_MIN = 4.5;
 export const CONTRAST_LARGE = 3;
 
 /** A colour that will be hard to read where it is drawn. A warning only: any colour can still be saved. */
-export type ContrastWarning = { field: "name" | "tagline" | "sectionTitles" | "documentTitle"; label: string; hex: string; ratio: number; severe: boolean };
+export type ContrastWarning = {
+  field: "name" | "tagline" | "sectionTitles" | "documentTitle";
+  label: string;
+  hex: string;
+  ratio: number;
+  severe: boolean;
+};
 
 /**
  * Which of the kit's colours will be hard to read on the white page (founder, 2026-11-06). A banner puts the name and
  * tagline on a band of their first colour, where the PDF picks readable text automatically, so only the section titles
  * are checked for that style.
  */
-export function contrastWarnings(kit: Pick<BrandKit, "colors" | "headerColor" | "style" | "options">, page = "#FFFFFF"): ContrastWarning[] {
+export function contrastWarnings(
+  kit: Pick<BrandKit, "colors" | "headerColor" | "style" | "options">,
+  page = "#FFFFFF",
+): ContrastWarning[] {
   const out: ContrastWarning[] = [];
-  const check = (field: ContrastWarning["field"], label: string, value: string | null | undefined, min: number) => {
+  const check = (
+    field: ContrastWarning["field"],
+    label: string,
+    value: string | null | undefined,
+    min: number,
+  ) => {
     if (!value || !isHex(value)) return;
     const ratio = contrastRatio(value, page);
     if (ratio >= min) return;
@@ -360,7 +472,8 @@ export function contrastWarnings(kit: Pick<BrandKit, "colors" | "headerColor" | 
   check("sectionTitles", "Your section titles", kit.headerColor, CONTRAST_MIN);
   // The document title is 24 pt bold, so it may go to the large-text ratio.
   check("documentTitle", "Your document title", kit.options.titleColor, CONTRAST_LARGE);
-  if (kit.options.accent) check("sectionTitles", "Your second accent colour", kit.options.accent, CONTRAST_LARGE);
+  if (kit.options.accent)
+    check("sectionTitles", "Your second accent colour", kit.options.accent, CONTRAST_LARGE);
   return out;
 }
 
@@ -384,7 +497,9 @@ export function kitColorSets(v: unknown): ColorSet[] {
     const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
     const name = typeof o["name"] === "string" ? o["name"].trim().slice(0, COLOR_SET_NAME_MAX) : "";
     const colors = (Array.isArray(o["colors"]) ? o["colors"] : [])
-      .filter((c): c is string => typeof c === "string" && isHex(c)).map((c) => c.toUpperCase()).slice(0, MAX_SET_COLORS);
+      .filter((c): c is string => typeof c === "string" && isHex(c))
+      .map((c) => c.toUpperCase())
+      .slice(0, MAX_SET_COLORS);
     if (!name || !colors.length) continue;
     if (out.some((s) => s.name.toLowerCase() === name.toLowerCase())) continue;
     out.push({ name, colors });
@@ -394,15 +509,25 @@ export function kitColorSets(v: unknown): ColorSet[] {
 }
 
 /** Saves a palette under its name, replacing one already saved under that name; the newest set sits last. */
-export function withColorSet(sets: ColorSet[], raw: { name: string; colors: string[] }): ColorSet[] {
+export function withColorSet(
+  sets: ColorSet[],
+  raw: { name: string; colors: string[] },
+): ColorSet[] {
   const name = raw.name.trim().slice(0, COLOR_SET_NAME_MAX);
-  const colors = raw.colors.filter(isHex).map((c) => c.toUpperCase()).slice(0, MAX_SET_COLORS);
+  const colors = raw.colors
+    .filter(isHex)
+    .map((c) => c.toUpperCase())
+    .slice(0, MAX_SET_COLORS);
   if (!name || !colors.length) return sets;
-  return [...sets.filter((s) => s.name.toLowerCase() !== name.toLowerCase()), { name, colors }].slice(-MAX_COLOR_SETS);
+  return [
+    ...sets.filter((s) => s.name.toLowerCase() !== name.toLowerCase()),
+    { name, colors },
+  ].slice(-MAX_COLOR_SETS);
 }
 
 /** Deletes a saved palette by its name. */
-export const withoutColorSet = (sets: ColorSet[], name: string): ColorSet[] => sets.filter((s) => s.name !== name);
+export const withoutColorSet = (sets: ColorSet[], name: string): ColorSet[] =>
+  sets.filter((s) => s.name !== name);
 
 /* ----------------------------------------------------------------------------------------------------------------
  * Undo and redo in the kit editor (founder, 2026-11-07): whole-kit snapshots, so a restyle can be taken back without
@@ -414,19 +539,33 @@ export type KitHistory = { past: BrandKit[]; future: BrandKit[] };
 export const emptyHistory = (): KitHistory => ({ past: [], future: [] });
 
 /** Records the kit as it was before a change and makes that change the newest one: redo starts fresh. */
-export const recordHistory = (h: KitHistory, previous: BrandKit): KitHistory =>
-  ({ past: [...h.past, previous].slice(-HISTORY_LIMIT), future: [] });
+export const recordHistory = (h: KitHistory, previous: BrandKit): KitHistory => ({
+  past: [...h.past, previous].slice(-HISTORY_LIMIT),
+  future: [],
+});
 
 /** One step back, or null when there is nothing to go back to. The kit being left becomes the next redo. */
-export function undoHistory(h: KitHistory, current: BrandKit): { history: KitHistory; kit: BrandKit } | null {
+export function undoHistory(
+  h: KitHistory,
+  current: BrandKit,
+): { history: KitHistory; kit: BrandKit } | null {
   const previous = h.past[h.past.length - 1];
   if (!previous) return null;
-  return { history: { past: h.past.slice(0, -1), future: [current, ...h.future].slice(0, HISTORY_LIMIT) }, kit: previous };
+  return {
+    history: { past: h.past.slice(0, -1), future: [current, ...h.future].slice(0, HISTORY_LIMIT) },
+    kit: previous,
+  };
 }
 
 /** One step forward again, or null when nothing was undone. */
-export function redoHistory(h: KitHistory, current: BrandKit): { history: KitHistory; kit: BrandKit } | null {
+export function redoHistory(
+  h: KitHistory,
+  current: BrandKit,
+): { history: KitHistory; kit: BrandKit } | null {
   const next = h.future[0];
   if (!next) return null;
-  return { history: { past: [...h.past, current].slice(-HISTORY_LIMIT), future: h.future.slice(1) }, kit: next };
+  return {
+    history: { past: [...h.past, current].slice(-HISTORY_LIMIT), future: h.future.slice(1) },
+    kit: next,
+  };
 }

@@ -3,7 +3,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { BILLING_EMAIL, emailLayout, escapeHtml, INFO_EMAIL, SUPPORT_EMAIL } from "./email-layout";
 import { ESCALATION_DEPARTMENTS } from "./escalation-departments";
-import { sendMemberReplyNotice, sendTicketReceivedEmail, sendTicketReplyEmail } from "./support-emails";
+import {
+  sendMemberReplyNotice,
+  sendTicketReceivedEmail,
+  sendTicketReplyEmail,
+} from "./support-emails";
 import { BILLING_AREA, TICKET_CATEGORIES } from "./support-topics";
 import { formatStaffDisplayName } from "./staff-display";
 import {
@@ -55,43 +59,80 @@ export const submitSupportTicket = createServerFn({ method: "POST" })
 async function storeTicket(data: TicketInput & { userId?: string }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count } = await supabaseAdmin.from("support_tickets").select("id", { count: "exact", head: true })
-    .eq("email", data.email).gte("created_at", since);
+  const { count } = await supabaseAdmin
+    .from("support_tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("email", data.email)
+    .gte("created_at", since);
   if ((count ?? 0) >= 5) throw new Error("Too many messages — please try again in an hour.");
-  const { data: row, error } = await supabaseAdmin.from("support_tickets").insert({
-    kind: data.kind, name: data.name, email: data.email, category: data.category, subject: data.subject, message: data.message,
-    // The account that opened it: what the member's own Support tab and the thread policies key on.
-    user_id: data.userId ?? null,
-  }).select("id").single();
+  const { data: row, error } = await supabaseAdmin
+    .from("support_tickets")
+    .insert({
+      kind: data.kind,
+      name: data.name,
+      email: data.email,
+      category: data.category,
+      subject: data.subject,
+      message: data.message,
+      // The account that opened it: what the member's own Support tab and the thread policies key on.
+      user_id: data.userId ?? null,
+    })
+    .select("id")
+    .single();
   if (error || !row) throw new Error("We couldn't send your message. Please try again.");
 
   const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
   if (key) {
     const label = data.kind === "support" ? "Support Ticket" : "Contact Message";
-    const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">New ${label}</p>
+    const html = emailLayout(
+      `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">New ${label}</p>
 <h1 style="font-size:22px;margin:8px 0 16px">${escapeHtml(data.subject)}</h1>
 <p style="font-size:14px;margin:0"><b>From:</b> ${escapeHtml(data.name)} (${escapeHtml(data.email)})<br/><b>Category:</b> ${escapeHtml(data.category)}</p>
 <p style="font-size:15px;line-height:1.6;white-space:pre-wrap">${escapeHtml(data.message)}</p>`,
-      { hideAddress: true, reason: "You're receiving this staff notice because a new message was submitted on the Came Through Audio website." });
+      {
+        hideAddress: true,
+        reason:
+          "You're receiving this staff notice because a new message was submitted on the Came Through Audio website.",
+      },
+    );
     // Billing questions go to billing@, support tickets to support@, Contact Us messages to info@.
-    const inbox = data.category.startsWith(BILLING_AREA) ? BILLING_EMAIL : data.kind === "support" ? SUPPORT_EMAIL : INFO_EMAIL;
+    const inbox = data.category.startsWith(BILLING_AREA)
+      ? BILLING_EMAIL
+      : data.kind === "support"
+        ? SUPPORT_EMAIL
+        : INFO_EMAIL;
     await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `ticket-${row.id}` },
-      body: JSON.stringify({ from: "Came Through Audio <collaborate@camethroughaudio.com>", to: [inbox], reply_to: data.email, subject: `[${label}] ${data.subject}`, html }),
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `ticket-${row.id}`,
+      },
+      body: JSON.stringify({
+        from: "Came Through Audio <collaborate@camethroughaudio.com>",
+        to: [inbox],
+        reply_to: data.email,
+        subject: `[${label}] ${data.subject}`,
+        html,
+      }),
     }).catch((e) => console.error("Ticket notify failed", e));
   }
   // The member's own copy of "we have it": a ticket used to sit silent until a staff reply arrived. Never fails the
   // submit — the row is already saved, and the queue still shows it.
-  await sendTicketReceivedEmail({ id: row.id, kind: data.kind, name: data.name, email: data.email, category: data.category, subject: data.subject })
-    .catch((e) => console.error("Ticket receipt failed", e));
+  await sendTicketReceivedEmail({
+    id: row.id,
+    kind: data.kind,
+    name: data.name,
+    email: data.email,
+    category: data.category,
+    subject: data.subject,
+  }).catch((e) => console.error("Ticket receipt failed", e));
   return { ok: true };
 }
 
 type ScopeContext = {
   supabase: {
     rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown }>;
-    from: (table: string) => any;
   };
   userId: string;
   claims?: unknown;
@@ -133,7 +174,9 @@ async function readScope(context: ScopeContext): Promise<ReadScope> {
   const scope = await staffScope(context);
   if (scope) return scope;
   if (await escalationLead(context)) return "escalated";
-  throw new Error("Tickets are for Support, Billing, and the lead of a department a thread was escalated to.");
+  throw new Error(
+    "Tickets are for Support, Billing, and the lead of a department a thread was escalated to.",
+  );
 }
 
 async function ticketScope(context: ScopeContext): Promise<"all" | "billing"> {
@@ -162,10 +205,15 @@ export const listTickets = createServerFn({ method: "GET" })
 /** Support, or Billing on a billing ticket: change ticket status. */
 export const updateTicketStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid(), status: z.enum(TICKET_STATUSES) }).parse(d))
+  .inputValidator((d) =>
+    z.object({ id: z.string().uuid(), status: z.enum(TICKET_STATUSES) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const scope = await ticketScope(context as unknown as ScopeContext);
-    const base = context.supabase.from("support_tickets").update({ status: data.status }).eq("id", data.id);
+    const base = context.supabase
+      .from("support_tickets")
+      .update({ status: data.status })
+      .eq("id", data.id);
     // Billing can only touch a billing ticket, even if a database policy ever let a wider read through.
     const scoped = scope === "billing" ? base.like("category", `${BILLING_AREA}%`) : base;
     const { error } = await scoped;
@@ -182,7 +230,10 @@ export const listTicketThread = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: ticket, error } = await context.supabase
-      .from("support_tickets").select("*").eq("id", data.ticketId).maybeSingle();
+      .from("support_tickets")
+      .select("*")
+      .eq("id", data.ticketId)
+      .maybeSingle();
     if (error) throw new Error("Couldn't load that ticket.");
     if (!ticket) throw new Error("That ticket isn't available to you.");
     const scope = await staffScope(context as unknown as ScopeContext);
@@ -190,11 +241,17 @@ export const listTicketThread = createServerFn({ method: "GET" })
     const escalated = !scope && (await escalationLead(context as unknown as ScopeContext));
     const owns = (ticket as TicketRecord).user_id === context.userId;
     if (!scope && !escalated && !owns) throw new Error("That ticket isn't available to you.");
-    if (escalated && !(ticket as TicketRecord).escalated_marketing) throw new Error("That ticket isn't available to you.");
+    if (escalated && !(ticket as TicketRecord).escalated_marketing)
+      throw new Error("That ticket isn't available to you.");
     const { data: messages, error: threadError } = await context.supabase
-      .from("support_ticket_messages").select("*").eq("ticket_id", data.ticketId).order("created_at");
+      .from("support_ticket_messages")
+      .select("*")
+      .eq("ticket_id", data.ticketId)
+      .order("created_at");
     if (threadError) throw new Error("Couldn't load the conversation.");
-    const rows = ((messages ?? []) as ThreadMessage[]).filter((m) => scope || escalated || !m.internal);
+    const rows = ((messages ?? []) as ThreadMessage[]).filter(
+      (m) => scope || escalated || !m.internal,
+    );
     return { ticket: ticket as TicketRecord, messages: rows, staff: !!(scope || escalated) };
   });
 
@@ -217,7 +274,10 @@ export const replyToTicket = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const scope = await ticketScope(context as unknown as ScopeContext);
     const { data: ticketRow, error: loadError } = await context.supabase
-      .from("support_tickets").select("*").eq("id", data.ticketId).maybeSingle();
+      .from("support_tickets")
+      .select("*")
+      .eq("id", data.ticketId)
+      .maybeSingle();
     if (loadError || !ticketRow) throw new Error("That ticket isn't in your queue.");
     const ticket = ticketRow as TicketRecord;
     if (scope === "billing" && !ticket.category.startsWith(BILLING_AREA)) {
@@ -233,13 +293,16 @@ export const replyToTicket = createServerFn({ method: "POST" })
       .from("user_roles")
       .select("role")
       .eq("user_id", context.userId);
-    const senderIsFounder = ((roleRows ?? []) as { role: string }[]).some((r) => r.role === "super_admin");
+    const senderIsFounder = ((roleRows ?? []) as { role: string }[]).some(
+      (r) => r.role === "super_admin",
+    );
     const authorName = formatStaffDisplayName(senderIsFounder ? "super_admin" : "employee", {
       name: claims.name,
       email: claims.email,
     });
     const { data: inserted, error: insertError } = await context.supabase
-      .from("support_ticket_messages").insert({
+      .from("support_ticket_messages")
+      .insert({
         ticket_id: ticket.id,
         author_kind: "staff",
         author_id: context.userId,
@@ -247,10 +310,13 @@ export const replyToTicket = createServerFn({ method: "POST" })
         body: data.body.trim(),
         internal: data.internal,
         request_id: data.requestId ?? null,
-      }).select("id").single();
+      })
+      .select("id")
+      .single();
     if (insertError || !inserted) {
       // Same request id twice: the first send already happened, so this is a no-op rather than a second reply.
-      if (insertError?.code === "23505") return { ok: true as const, emailed: false, duplicate: true };
+      if (insertError?.code === "23505")
+        return { ok: true as const, emailed: false, duplicate: true };
       throw new Error("Couldn't save the reply. Nothing was sent.");
     }
     const messageId = (inserted as { id: string }).id;
@@ -260,7 +326,8 @@ export const replyToTicket = createServerFn({ method: "POST" })
       if (!ticket.first_reply_at) patch.first_reply_at = new Date().toISOString();
       patch.status = afterSendStatus(data.after);
     }
-    if (Object.keys(patch).length) await context.supabase.from("support_tickets").update(patch).eq("id", ticket.id);
+    if (Object.keys(patch).length)
+      await context.supabase.from("support_tickets").update(patch).eq("id", ticket.id);
 
     let emailed = false;
     if (!data.internal) {
@@ -268,8 +335,10 @@ export const replyToTicket = createServerFn({ method: "POST" })
       emailed = result.emailed;
       if (emailed) {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        await supabaseAdmin.from("support_ticket_messages")
-          .update({ emailed_at: new Date().toISOString() }).eq("id", messageId);
+        await supabaseAdmin
+          .from("support_ticket_messages")
+          .update({ emailed_at: new Date().toISOString() })
+          .eq("id", messageId);
       }
     }
     return { ok: true as const, emailed, duplicate: false };
@@ -280,17 +349,25 @@ export const listMyTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: tickets, error } = await context.supabase
-      .from("support_tickets").select("*").eq("user_id", context.userId)
-      .order("created_at", { ascending: false }).limit(50);
+      .from("support_tickets")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
     if (error) throw new Error("Couldn't load your tickets.");
     const rows = (tickets ?? []) as TicketRecord[];
     if (!rows.length) return [] as (TicketRecord & { last_staff_at: string | null })[];
     const { data: replies } = await context.supabase
       .from("support_ticket_messages")
       .select("ticket_id,created_at,author_kind,internal")
-      .in("ticket_id", rows.map((t) => t.id))
-      .eq("author_kind", "staff").eq("internal", false)
-      .order("created_at", { ascending: false }).limit(200);
+      .in(
+        "ticket_id",
+        rows.map((t) => t.id),
+      )
+      .eq("author_kind", "staff")
+      .eq("internal", false)
+      .order("created_at", { ascending: false })
+      .limit(200);
     const latest = new Map<string, string>();
     for (const r of (replies ?? []) as { ticket_id: string; created_at: string }[]) {
       if (!latest.has(r.ticket_id)) latest.set(r.ticket_id, r.created_at);
@@ -301,28 +378,45 @@ export const listMyTickets = createServerFn({ method: "GET" })
 /** The member answers on their own ticket. A resolved ticket is closed: they open a new one instead. */
 export const replyAsMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ ticketId: z.string().uuid(), body: z.string().trim().min(1).max(8000) }).parse(d))
+  .inputValidator((d) =>
+    z.object({ ticketId: z.string().uuid(), body: z.string().trim().min(1).max(8000) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: ticketRow } = await supabaseAdmin
-      .from("support_tickets").select("*").eq("id", data.ticketId).eq("user_id", context.userId).maybeSingle();
+      .from("support_tickets")
+      .select("*")
+      .eq("id", data.ticketId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
     if (!ticketRow) throw new Error("That ticket isn't yours.");
     const ticket = ticketRow as TicketRecord;
-    if (ticket.status === "resolved") throw new Error("This ticket is resolved and closed. Open a new ticket and we'll pick it up.");
+    if (ticket.status === "resolved")
+      throw new Error(
+        "This ticket is resolved and closed. Open a new ticket and we'll pick it up.",
+      );
     const check = canSendReply(data.body, false);
     if (!check.ok) throw new Error(check.error);
     const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count } = await supabaseAdmin.from("support_ticket_messages")
+    const { count } = await supabaseAdmin
+      .from("support_ticket_messages")
       .select("id", { count: "exact", head: true })
-      .eq("ticket_id", ticket.id).eq("author_kind", "member").gte("created_at", since);
-    if ((count ?? 0) >= 10) throw new Error("That's a lot of messages in a row — give us a moment to reply.");
-    const { data: saved, error } = await supabaseAdmin.from("support_ticket_messages").insert({
-      ticket_id: ticket.id,
-      author_kind: "member",
-      author_id: context.userId,
-      author_name: ticket.name,
-      body: data.body.trim(),
-    }).select("id").single();
+      .eq("ticket_id", ticket.id)
+      .eq("author_kind", "member")
+      .gte("created_at", since);
+    if ((count ?? 0) >= 10)
+      throw new Error("That's a lot of messages in a row — give us a moment to reply.");
+    const { data: saved, error } = await supabaseAdmin
+      .from("support_ticket_messages")
+      .insert({
+        ticket_id: ticket.id,
+        author_kind: "member",
+        author_id: context.userId,
+        author_name: ticket.name,
+        body: data.body.trim(),
+      })
+      .select("id")
+      .single();
     if (error || !saved) throw new Error("Couldn't send your message. Please try again.");
     await supabaseAdmin.from("support_tickets").update({ status: "open" }).eq("id", ticket.id);
     await sendMemberReplyNotice(ticket, data.body.trim(), (saved as { id: string }).id);
@@ -335,8 +429,10 @@ export const markTicketRead = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin.from("support_tickets")
+    await supabaseAdmin
+      .from("support_tickets")
       .update({ member_read_at: new Date().toISOString() })
-      .eq("id", data.ticketId).eq("user_id", context.userId);
+      .eq("id", data.ticketId)
+      .eq("user_id", context.userId);
     return { ok: true };
   });

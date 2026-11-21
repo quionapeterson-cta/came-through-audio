@@ -2,9 +2,35 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStaffRole } from "@/lib/admin.functions";
-import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator, Smartphone , PenLine, LifeBuoy, ChevronDown } from "lucide-react";
+import {
+  ShieldCheck,
+  FileAudio,
+  Disc3,
+  Activity,
+  FileSignature,
+  ScrollText,
+  GraduationCap,
+  LogOut,
+  Moon,
+  Sun,
+  UserRound,
+  Gem,
+  Users,
+  Calculator,
+  Smartphone,
+  PenLine,
+  LifeBuoy,
+  ChevronDown,
+} from "lucide-react";
 import { IosInstallHelp, useInstallApp } from "@/components/InstallApp";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useArtistName } from "@/hooks/useArtistName";
@@ -15,7 +41,13 @@ import { useReminderSpotlight } from "@/hooks/useFocusHighlight";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { MetadataUploader, type CatalogFocus } from "@/components/MetadataUploader";
 import { AIProtectionHub } from "@/components/AIProtectionHub";
 import { SplitSheets } from "@/components/SplitSheets";
@@ -23,12 +55,27 @@ import { Contracts } from "@/components/Contracts";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { CatalogTrack } from "@/lib/catalog";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
-import { badgePrefs, loadOnboarding, loadSeatArtistDefaults, syncFromCloud, type Onboarding } from "@/lib/artist-profile";
+import {
+  badgePrefs,
+  loadOnboarding,
+  loadSeatArtistDefaults,
+  syncFromCloud,
+  type Onboarding,
+} from "@/lib/artist-profile";
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck, type HealthStart } from "@/components/RoyaltyHealthCheck";
 import { AuditBar, type AuditBackLink } from "@/components/AuditBar";
-import { AUDIT_EVENT, blankAudit, endAudit, readAudit, recordStop, saveAudit, type AuditSong, type AuditTrail } from "@/lib/audit-mode";
+import {
+  AUDIT_EVENT,
+  blankAudit,
+  endAudit,
+  readAudit,
+  recordStop,
+  saveAudit,
+  type AuditSong,
+  type AuditTrail,
+} from "@/lib/audit-mode";
 import { catalogHref } from "@/lib/catalog-links";
 import { NextBadgeHint } from "@/components/Badges";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
@@ -38,9 +85,24 @@ import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { listSeatState, seatArtistsFor } from "@/lib/seats";
 import { AddArtistDialog } from "@/components/ArtistSeats";
-import { PRICE_TIER, TIER_LABEL, hasTier, planIntentFromSearch, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
+import {
+  PRICE_TIER,
+  TIER_LABEL,
+  hasTier,
+  planIntentFromSearch,
+  rememberPlanIntent,
+  takePlanIntent,
+  upgradeNote,
+  type Tier,
+} from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
-import { readWorkingAs, rememberWorkingAs, workTierFor, workingProfiles, type WorkingProfile } from "@/lib/profile-switch";
+import {
+  readWorkingAs,
+  rememberWorkingAs,
+  workTierFor,
+  workingProfiles,
+  type WorkingProfile,
+} from "@/lib/profile-switch";
 import { BadgeWatcher } from "@/components/Badges";
 import { Confetti } from "@/components/Confetti";
 import { celebrateReturn } from "@/lib/celebrate";
@@ -64,9 +126,16 @@ export const Route = createFileRoute("/workspace")({
   head: () => ({
     meta: [
       { title: "Workspace — Came Through Audio" },
-      { name: "description", content: "Your Came Through Audio workspace: catalog, royalty health, splits and contracts." },
+      {
+        name: "description",
+        content:
+          "Your Came Through Audio workspace: catalog, royalty health, splits and contracts.",
+      },
       { property: "og:title", content: "Workspace — Came Through Audio" },
-      { property: "og:description", content: "Manage your music business from one secure dashboard." },
+      {
+        property: "og:description",
+        content: "Manage your music business from one secure dashboard.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -75,11 +144,26 @@ export const Route = createFileRoute("/workspace")({
   // email round trip (and a link opened on another device, where the browser never held the pick).
   // A Differences deep link (`?tab=catalog&songId=…&focusField=isrc&agencyIsrc=…&action=adopt`) is kept whole here, so the
   // song, the field and the suggested code all survive the router.
-  validateSearch: (s: Record<string, unknown>): {
-    tab?: string | undefined; checkout?: "success" | undefined; bought?: string | undefined; view?: "expert" | undefined;
-    plan?: string | undefined; ticket?: string | undefined; panel?: string | undefined; society?: string | undefined;
-    songId?: string | undefined; focusField?: string | undefined; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; agencyVersions?: string | undefined; action?: string | undefined;
-    trail?: string | undefined; song?: string | undefined; report?: string | undefined;
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): {
+    tab?: string | undefined;
+    checkout?: "success" | undefined;
+    bought?: string | undefined;
+    view?: "expert" | undefined;
+    plan?: string | undefined;
+    ticket?: string | undefined;
+    panel?: string | undefined;
+    society?: string | undefined;
+    songId?: string | undefined;
+    focusField?: string | undefined;
+    agencyIsrc?: string | undefined;
+    agencyVersion?: string | undefined;
+    agencyVersions?: string | undefined;
+    action?: string | undefined;
+    trail?: string | undefined;
+    song?: string | undefined;
+    report?: string | undefined;
   } => {
     const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string) : undefined);
     return {
@@ -91,10 +175,18 @@ export const Route = createFileRoute("/workspace")({
       plan: planIntentFromSearch(s["plan"]) ?? undefined,
       ticket: str("ticket"),
       // The Differences panel's own entry point, and the catalog handoff that follows a row.
-      panel: str("panel"), society: str("society"),
-      songId: str("songId"), focusField: str("focusField"), agencyIsrc: str("agencyIsrc"), agencyVersion: str("agencyVersion"), agencyVersions: str("agencyVersions"), action: str("action"),
+      panel: str("panel"),
+      society: str("society"),
+      songId: str("songId"),
+      focusField: str("focusField"),
+      agencyIsrc: str("agencyIsrc"),
+      agencyVersion: str("agencyVersion"),
+      agencyVersions: str("agencyVersions"),
+      action: str("action"),
       // Audit Mode: the hop that carries a fix, the song a return lands on, and the report a return reopens.
-      trail: str("trail"), song: str("song"), report: str("report"),
+      trail: str("trail"),
+      song: str("song"),
+      report: str("report"),
     };
   },
   component: Workspace,
@@ -137,11 +229,30 @@ function Workspace() {
   useEffect(() => {
     if (search.tab !== "catalog" || !search.songId || !search.focusField) return;
     setTab("catalog");
-    setCatalogFix({ trackId: search.songId, field: search.focusField,
-      ...(search.agencyIsrc ? { agencyIsrc: search.agencyIsrc } : {}), ...(search.agencyVersion ? { agencyVersion: search.agencyVersion } : {}),
-      ...(search.agencyVersions ? { agencyVersions: search.agencyVersions.split("|").map((v) => v.trim()).filter(Boolean) } : {}),
-      ...(search.action ? { action: search.action } : {}) });
-  }, [search.tab, search.songId, search.focusField, search.agencyIsrc, search.agencyVersion, search.agencyVersions, search.action]);
+    setCatalogFix({
+      trackId: search.songId,
+      field: search.focusField,
+      ...(search.agencyIsrc ? { agencyIsrc: search.agencyIsrc } : {}),
+      ...(search.agencyVersion ? { agencyVersion: search.agencyVersion } : {}),
+      ...(search.agencyVersions
+        ? {
+            agencyVersions: search.agencyVersions
+              .split("|")
+              .map((v) => v.trim())
+              .filter(Boolean),
+          }
+        : {}),
+      ...(search.action ? { action: search.action } : {}),
+    });
+  }, [
+    search.tab,
+    search.songId,
+    search.focusField,
+    search.agencyIsrc,
+    search.agencyVersion,
+    search.agencyVersions,
+    search.action,
+  ]);
   // Audit Mode (founder, 2026-11-14): one finding worked across the report, a song's checklist and My Catalog.
   const [audit, setAudit] = useState<AuditTrail | null>(() => readAudit());
   useEffect(() => {
@@ -156,21 +267,43 @@ function Workspace() {
     setTab("health");
     const base = readAudit();
     if (base) {
-      const moved = recordStop(base, "checklist", `/workspace?tab=health&song=${search.song}&trail=yes`, search.song);
+      const moved = recordStop(
+        base,
+        "checklist",
+        `/workspace?tab=health&song=${search.song}&trail=yes`,
+        search.song,
+      );
       // A different song (Next song) drops the old song's step line rather than naming the wrong one.
-      saveAudit(base.songId && base.songId !== search.song ? { ...moved, detail: undefined } : moved);
+      saveAudit(
+        base.songId && base.songId !== search.song ? { ...moved, detail: undefined } : moved,
+      );
     }
   }, [search.song]);
   // The fix link that carries an audit keeps the trail across the reload it makes.
   useEffect(() => {
     if (search.trail !== "yes" || !search.songId) return;
     const base = readAudit() ?? blankAudit();
-    saveAudit(recordStop(base, "catalog", `${window.location.pathname}${window.location.search}${window.location.hash}`, search.songId));
+    saveAudit(
+      recordStop(
+        base,
+        "catalog",
+        `${window.location.pathname}${window.location.search}${window.location.hash}`,
+        search.songId,
+      ),
+    );
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /** A report or checklist hop records the stop it leaves, so the audit bar can bring the member back to it. */
-  function auditFrom(from: "report" | "checklist", trackId: string, queue?: AuditSong[], detail?: string) {
+  function auditFrom(
+    from: "report" | "checklist",
+    trackId: string,
+    queue?: AuditSong[],
+    detail?: string,
+  ) {
     const base = readAudit() ?? blankAudit();
-    const href = from === "report" ? "/workspace?tab=health&report=yes&trail=yes" : `/workspace?tab=health&song=${trackId}&trail=yes`;
+    const href =
+      from === "report"
+        ? "/workspace?tab=health&report=yes&trail=yes"
+        : `/workspace?tab=health&song=${trackId}&trail=yes`;
     let trail = recordStop(base, from, href, trackId);
     if (queue?.length) trail = { ...trail, queue };
     if (detail) trail = { ...trail, detail };
@@ -195,8 +328,23 @@ function Workspace() {
     endAudit();
     setAudit(null);
     const url = new URL(window.location.href);
-    for (const key of ["trail", "song", "songId", "focusField", "agencyIsrc", "agencyVersion", "agencyVersions", "action", "report"]) url.searchParams.delete(key);
-    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    for (const key of [
+      "trail",
+      "song",
+      "songId",
+      "focusField",
+      "agencyIsrc",
+      "agencyVersion",
+      "agencyVersions",
+      "action",
+      "report",
+    ])
+      url.searchParams.delete(key);
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
   }
   // Esc ends an audit from anywhere in the workspace, unless a dialog or a field is using the key.
   useEffect(() => {
@@ -210,37 +358,70 @@ function Workspace() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [audit]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [audit]);
   /** The bar's second row: the list the fix came from, shown only while My Catalog is open in the audit. */
-  const auditBack: AuditBackLink | undefined = audit && tab === "catalog"
-    ? audit.hrefs.checklist
-      ? { href: audit.hrefs.checklist, label: "Back to the song checklist", detail: audit.detail ?? "Continue where you left off" }
-      : audit.hrefs.report
-        ? { href: audit.hrefs.report, label: "Back to the report", detail: "The finding you're working" }
-        : undefined
-    : undefined;
+  const auditBack: AuditBackLink | undefined =
+    audit && tab === "catalog"
+      ? audit.hrefs.checklist
+        ? {
+            href: audit.hrefs.checklist,
+            label: "Back to the song checklist",
+            detail: audit.detail ?? "Continue where you left off",
+          }
+        : audit.hrefs.report
+          ? {
+              href: audit.hrefs.report,
+              label: "Back to the report",
+              detail: "The finding you're working",
+            }
+          : undefined
+      : undefined;
   // A Royalty Health Check started from My Catalog: opens the Hub on that song's (or release's, or the catalog's) check-in.
   const [healthStart, setHealthStart] = useState<HealthStart>();
   /** My Catalog's "Continue Expert Registration" opens Royalty Health → Expert Help. */
   const [openExpert, setOpenExpert] = useState(false);
   // Used once: leaving the tab clears it, so coming back opens the Hub itself.
-  useEffect(() => { if (tab !== "health") { setHealthStart(undefined); setOpenExpert(false); } }, [tab]);
-  const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses, sub, plan, reload: reloadBilling } = useBilling(user?.id);
+  useEffect(() => {
+    if (tab !== "health") {
+      setHealthStart(undefined);
+      setOpenExpert(false);
+    }
+  }, [tab]);
+  const {
+    tier: realTier,
+    purchases,
+    loaded: billingLoaded,
+    lapse,
+    pauses,
+    sub,
+    plan,
+    reload: reloadBilling,
+  } = useBilling(user?.id);
   // Back from paying for seats: open the invite form, so the artist's email is asked for right away (2026-11-04) — once
   // per visit, never again after it is closed (founder, 2026-11-07).
   const [seatsOpen, setSeatsOpen] = useState(false);
   // The artists on this account's live seats, and which one is being worked as. Declared here because the seat prompt
   // below fills the list as soon as the page settles.
-  const [seatArtists, setSeatArtists] = useState<{ userId: string; name: string; tier: Exclude<Tier, "free"> }[]>([]);
+  const [seatArtists, setSeatArtists] = useState<
+    { userId: string; name: string; tier: Exclude<Tier, "free"> }[]
+  >([]);
   const [actingId, setActingId] = useState<string | null>(null);
   const seatPrompted = useRef(false);
   useEffect(() => {
     // Only a seat purchase opens the seat invite. A certificate, contract or branding return must never land here in
     // another product's add-on popup (founder, 2026-11-19).
-    if (!user || seatPrompted.current || new URLSearchParams(window.location.search).get("bought") !== "seat") return;
+    if (
+      !user ||
+      seatPrompted.current ||
+      new URLSearchParams(window.location.search).get("bought") !== "seat"
+    )
+      return;
     seatPrompted.current = true;
     listSeatState()
-      .then((s) => { if (s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed")) setSeatsOpen(true); })
+      .then((s) => {
+        if (s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed"))
+          setSeatsOpen(true);
+      })
       .catch(() => {});
   }, [user]);
   // The artists this account can work as: everyone who accepted a seat that is still paid for.
@@ -253,7 +434,9 @@ function Workspace() {
   // A reload lands back on the artist being worked on, and only while that seat is still one of theirs.
   useEffect(() => {
     if (!user || !seatArtists.length) return;
-    const remembered = readWorkingAs(workingProfiles({ userId: user.id, name: "", tier }, seatArtists));
+    const remembered = readWorkingAs(
+      workingProfiles({ userId: user.id, name: "", tier }, seatArtists),
+    );
     if (remembered) setActingId(remembered);
   }, [seatArtists.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
@@ -261,7 +444,11 @@ function Workspace() {
   // blueprint checklist keeps its own celebration. Never for someone who turned celebrations off or asked for reduced motion.
   const [welcomeBurst, setWelcomeBurst] = useState(false);
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
-  const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaymentsEnvironment() === "sandbox" });
+  const staff = useQuery({
+    queryKey: ["staff-role", user?.id],
+    queryFn: () => getStaffRole(),
+    enabled: !!user && getPaymentsEnvironment() === "sandbox",
+  });
   const canPreview = staff.data?.role === "super_admin";
   const tier: Tier = canPreview && previewTier !== "real" ? previewTier : realTier;
   // Free accounts may only sign invited split sheets (/sign/$token). Generating one starts at Plus; collecting
@@ -286,8 +473,13 @@ function Workspace() {
   const names = useArtistName(user, onboard?.stageName);
   const name = names.display;
   // You, then each artist on a live seat: exactly the list the switcher shows.
-  const profiles = workingProfiles({ userId: user?.id ?? "", name: name || "You", tier }, seatArtists);
-  const [seatDefaultsFor, setSeatDefaultsFor] = useState<{ userId: string; name: string } | null>(null);
+  const profiles = workingProfiles(
+    { userId: user?.id ?? "", name: name || "You", tier },
+    seatArtists,
+  );
+  const [seatDefaultsFor, setSeatDefaultsFor] = useState<{ userId: string; name: string } | null>(
+    null,
+  );
   /**
    * Switching remounts both working tabs, so the editor opens on the selected artist's saved defaults instead of the
    * last one's. Their defaults are read first: nothing is ever written by the switch itself.
@@ -305,12 +497,16 @@ function Workspace() {
   // The Health visit stays mounted once it is opened, so a check-in in progress survives a tab switch. Until it is
   // opened it stays unmounted, so its live agency lookups don't run for someone who never visits it.
   const [healthMounted, setHealthMounted] = useState(tab === "health");
-  useEffect(() => { if (tab === "health") setHealthMounted(true); }, [tab]);
+  useEffect(() => {
+    if (tab === "health") setHealthMounted(true);
+  }, [tab]);
   const [viewAvatar, setViewAvatar] = useState(false);
   // The Catalog Management status eagle opens full size, with its own share card, like the profile badge above.
   const [viewEagle, setViewEagle] = useState(false);
   // Song share cards reported by Embed and My Catalog; every other tab shares the profile card.
-  const [tabShare, setTabShare] = useState<Record<string, Partial<ShareInfo> & Pick<ShareInfo, "ctx">>>({});
+  const [tabShare, setTabShare] = useState<
+    Record<string, Partial<ShareInfo> & Pick<ShareInfo, "ctx">>
+  >({});
   const share = tabShare[tab] ?? { ctx: "profile" as const };
   useEffect(() => {
     if (!user) return;
@@ -322,17 +518,27 @@ function Workspace() {
       // Only the default actually changing remounts the two working tabs. An auth event (a token refresh, another
       // window signing in) used to look like a profile change and wipe an embed session or a visit in progress.
       if (JSON.stringify(o ?? null) !== JSON.stringify(local ?? null)) setEmbedKey((k) => k + 1);
-      setOnboard(o); setOnboardSynced(true);
+      setOnboard(o);
+      setOnboardSynced(true);
     });
-    return () => { live = false; };
+    return () => {
+      live = false;
+    };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // The setup walkthrough (embed defaults, catalog profile) is for plans that can embed. Free accounts skip it and
   // land on the Royalties and Registrations; it opens the first time they upgrade.
   useEffect(() => {
-    if (billingLoaded && onboardSynced && !onboard?.done && hasTier(tier, "plus")) setProfileOpen(true);
-  }, [billingLoaded, onboardSynced, onboard?.done, tier]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (billingLoaded && onboardSynced && !onboard?.done && hasTier(tier, "plus"))
+      setProfileOpen(true);
+  }, [billingLoaded, onboardSynced, onboard?.done, tier]);
   const upgrade = () => document.getElementById("plans-trigger")?.click();
-  const openQuickCheck = () => { setTab("health"); setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50); };
+  const openQuickCheck = () => {
+    setTab("health");
+    setTimeout(
+      () => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }),
+      50,
+    );
+  };
   const studio = useStudioMode();
   const app = useInstallApp();
   // A reminder's Open deep link lands on this card and lights it, the same spotlight a diagnostic fix uses. Wait for
@@ -341,34 +547,53 @@ function Workspace() {
   // Free accounts open on the Royalties and Registrations (Royalty Inspector) instead of the locked Embed tab.
   // A checkout return is never redirected: the webhook can still be in flight, so a brand-new Plus member would be
   // read as Free and moved off the tab they just bought (founder, 2026-11-08).
-  useEffect(() => { if (billingLoaded && !search.tab && !search.checkout && !hasTier(realTier, "plus")) setTab((t) => (t === "embed" ? "health" : t)); }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (billingLoaded && !search.tab && !search.checkout && !hasTier(realTier, "plus"))
+      setTab((t) => (t === "embed" ? "health" : t));
+  }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A plan picked before or during sign-up goes straight to that plan's checkout once billing has loaded. The plan
   // arrives two ways: named in the URL (the sign-up's confirmation link) or left in this browser (founder, 2026-11-06).
   // Until Stripe actually opens, it stays on screen as a banner, so nobody is left in a free workspace wondering where
   // the purchase went.
-  const [pendingPlan, setPendingPlan] = useState<string | null>(() => planIntentFromSearch(search.plan));
+  const [pendingPlan, setPendingPlan] = useState<string | null>(() =>
+    planIntentFromSearch(search.plan),
+  );
   // One automatic attempt per plan per visit; the banner is the retry, so a closed checkout doesn't reopen itself.
   const [triedPlan, setTriedPlan] = useState<string | null>(null);
   useEffect(() => {
     if (!user || !billingLoaded) return;
     // Back from Stripe is the purchase itself: never reopen its checkout here. The webhook lands seconds later, so the
     // tier still reads Free at this moment and a second session for the same plan would charge them twice.
-    if (search.checkout === "success") { takePlanIntent(); setPendingPlan(null); return; }
+    if (search.checkout === "success") {
+      takePlanIntent();
+      setPendingPlan(null);
+      return;
+    }
     const priceId = planIntentFromSearch(search.plan) ?? takePlanIntent();
-    if (!priceId || hasTier(realTier, PRICE_TIER[priceId]!)) { setPendingPlan(null); return; }
+    if (!priceId || hasTier(realTier, PRICE_TIER[priceId]!)) {
+      setPendingPlan(null);
+      return;
+    }
     setPendingPlan(priceId);
     if (triedPlan === priceId) return;
     setTriedPlan(priceId);
     toast.info(`Opening checkout for ${TIER_LABEL[PRICE_TIER[priceId]!]}…`);
     openCheckout({ kind: "plan", priceId })
-      .then(() => { takePlanIntent(); setPendingPlan(null); })
+      .then(() => {
+        takePlanIntent();
+        setPendingPlan(null);
+      })
       .catch((e) => {
         // Keep the pick whatever went wrong: the banner, the next visit and the upgrade button all resume the purchase
         // instead of leaving them in a free workspace with it forgotten (founder, 2026-11-05).
         rememberPlanIntent(priceId);
         setPendingPlan(priceId);
-        toast.error(e instanceof Error ? e.message : "Checkout could not open. Use the button at the top to try again.");
+        toast.error(
+          e instanceof Error
+            ? e.message
+            : "Checkout could not open. Use the button at the top to try again.",
+        );
       });
   }, [user, billingLoaded, realTier]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -396,222 +621,535 @@ function Workspace() {
 
   useEffect(() => {
     if (!user) return;
-    sendTrialEndingReminder({ data: { environment: getPaymentsEnvironment(), origin: window.location.origin } })
-      .then((r) => { if (r.sent) toast.info(`Your free Collaborate trial ends in ${r.daysLeft} day(s). We emailed you the details.`); })
+    sendTrialEndingReminder({
+      data: { environment: getPaymentsEnvironment(), origin: window.location.origin },
+    })
+      .then((r) => {
+        if (r.sent)
+          toast.info(
+            `Your free Collaborate trial ends in ${r.daysLeft} day(s). We emailed you the details.`,
+          );
+      })
       .catch(() => {});
   }, [user]);
 
-
   if (loading || !user) {
-    return <div className="flex min-h-screen items-center justify-center bg-ink text-ink-muted">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ink text-ink-muted">
+        Loading…
+      </div>
+    );
   }
 
   // One place decides which eagle the account shows (Soaring 1–4, Keep Soaring 4–8, I Soar The Highest 8+), so the
   // header badge and its share card can never disagree.
-  const eagle = eagleStatus({ onManagement: tier === "management", startedAt: sub?.current_period_start ?? null });
+  const eagle = eagleStatus({
+    onManagement: tier === "management",
+    startedAt: sub?.current_period_start ?? null,
+  });
 
   return (
-    <WorkspaceRemindersProvider userId={user.id} cloud={user.user_metadata?.["workspace_reminders"]}>
-    <div className="min-h-screen bg-background">
-      {welcomeBurst && <div className="pointer-events-none fixed inset-0 z-[85]"><Confetti /></div>}
-      <PaymentTestModeBanner previewTier={previewTier} onPreviewTier={canPreview ? setPreviewTier : undefined} />
-      <header className="border-b border-ink-border bg-ink text-ink-foreground">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 max-md:gap-2 max-md:px-4">
-          <div className="flex min-w-0 items-center gap-3 max-md:gap-2">
-            <BrandLogo showName={false} />
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-widest text-ink-muted">Came Through Audio</div>
-              <div className="truncate text-xl font-bold">{name}</div>
-            </div>
-            {/* Catalog Management status eagle: at the far right of the header's left group, after the wordmark and
+    <WorkspaceRemindersProvider
+      userId={user.id}
+      cloud={user.user_metadata?.["workspace_reminders"]}
+    >
+      <div className="min-h-screen bg-background">
+        {welcomeBurst && (
+          <div className="pointer-events-none fixed inset-0 z-[85]">
+            <Confetti />
+          </div>
+        )}
+        <PaymentTestModeBanner
+          previewTier={previewTier}
+          onPreviewTier={canPreview ? setPreviewTier : undefined}
+        />
+        <header className="border-b border-ink-border bg-ink text-ink-foreground">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 max-md:gap-2 max-md:px-4">
+            <div className="flex min-w-0 items-center gap-3 max-md:gap-2">
+              <BrandLogo showName={false} />
+              <div className="min-w-0">
+                <div className="text-xs uppercase tracking-widest text-ink-muted">
+                  Came Through Audio
+                </div>
+                <div className="truncate text-xl font-bold">{name}</div>
+              </div>
+              {/* Catalog Management status eagle: at the far right of the header's left group, after the wordmark and
                 the artist name. Soaring (months 1–4) → Keep Soaring (4–8) → I Soar The Highest (8+), or grayed out
                 until the account is on the plan (founder art, 2026-11-03). */}
-            <button type="button" aria-label={`View your Catalog Management status: ${eagle.label}`} onClick={() => setViewEagle(true)}
-              className="ml-1 shrink-0 self-center rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <EagleStatusBadge size={52} status={eagle} />
-            </button>
-          </div>
-          {/* Phones: everything sits in one menu on the profile picture, so the header never runs off the screen. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-auto shrink-0 rounded-full p-1 hover:bg-ink-border sm:hidden" aria-label="Account menu">
-                <ArtistAvatar src={onboard?.avatar} className="h-9 w-9" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-normal text-muted-foreground">{TIER_LABEL[tier]}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {profiles.length > 1 && (<>
-                {profiles.map((p) => (
-                  <DropdownMenuItem key={p.userId} onSelect={() => void workAs(p)} className="justify-between gap-3">
-                    <span className="truncate">{p.seat ? p.name : "You"}</span>
-                    <span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[pausedNow ? "free" : p.tier]}</span>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-              </>)}
-              <DropdownMenuItem onSelect={() => navigate({ to: "/profile" })}><UserRound />Profile</DropdownMenuItem>
-              <DropdownMenuItem onSelect={upgrade}><Gem />View Plans</DropdownMenuItem>
-              <DropdownMenuItem onSelect={studio.toggle}>{studio.on ? <Sun /> : <Moon />}{studio.on ? "Light mode" : "Studio Mode"}</DropdownMenuItem>
-              {app.canInstall && <DropdownMenuItem onSelect={() => void app.install()}><Smartphone />Install the app</DropdownMenuItem>}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <div className="hidden items-center gap-3 sm:flex">
-            {/* Working as an artist on a seat: the same shape as switching accounts in Instagram or TikTok (founder, 2026-11-08). */}
-            {profiles.length > 1 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground" aria-label="Switch the artist you are working as">
-                    <Users className="h-4 w-4" />{actingAs ? actingAs.name : "You"}<ChevronDown className="h-4 w-4 opacity-70" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
-                  <DropdownMenuLabel className="font-normal text-muted-foreground">Working as</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {profiles.map((p) => (
-                    <DropdownMenuItem key={p.userId} onSelect={() => void workAs(p)} className="justify-between gap-3">
-                      <span className="truncate">{p.seat ? p.name : "You"}</span>
-                      <span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[pausedNow ? "free" : p.tier]}</span>
-                    </DropdownMenuItem>
-                  ))}
-                  {actingAs && (<>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => setSeatDefaultsFor({ userId: actingAs.userId, name: actingAs.name })}>
-                      <UserRound />Edit their defaults
-                    </DropdownMenuItem>
-                  </>)}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            <Badge variant="outline" className="border-ink-border text-ink-foreground">{TIER_LABEL[tier]}</Badge>
-            <Button variant="ghost" className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground" onClick={() => navigate({ to: "/profile" })}>
-              <ArtistAvatar src={onboard?.avatar} className="h-7 w-7" />Profile
-            </Button>
-            <Button variant="ghost" size="icon" aria-label={studio.on ? "Switch to light mode" : "Switch to Studio Mode (dark)"} title={studio.on ? "Light mode" : "Studio Mode"}
-              className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground" onClick={studio.toggle}>
-              {studio.on ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-            {app.canInstall && (
-              <Button variant="ghost" size="icon" aria-label="Install the app" title="Install the app" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground" onClick={() => void app.install()}>
-                <Smartphone className="h-4 w-4" />
-              </Button>
-            )}
-            <PlansDialog tier={tier} note={plan ? upgradeNote(plan.orderedAt) : undefined} />
-            <Button variant="ghost" size="icon" aria-label="Log out" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
-              onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}>
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
-      <IosInstallHelp open={app.iosHelp} onOpenChange={app.setIosHelp} />
-
-      <AddArtistDialog open={seatsOpen} onOpenChange={setSeatsOpen} canAddArtist={realTier !== "free"} />
-      <ArtistOnboarding userId={user.id} open={profileOpen} onOpenChange={setProfileOpen} firstRun={!onboard?.done}
-        canAddArtist={realTier !== "free"}
-        onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
-      {/* The same defaults editor, on a seat artist's account, reachable from the switcher without leaving the workspace. */}
-      {seatDefaultsFor && (
-        <ArtistOnboarding userId={seatDefaultsFor.userId} seatArtist={{ name: seatDefaultsFor.name }} open firstRun={false}
-          onOpenChange={(o) => { if (!o) setSeatDefaultsFor(null); }}
-          onSaved={() => { setSeatDefaultsFor(null); setEmbedKey((k) => k + 1); setCatalogKey((k) => k + 1); }} />
-      )}
-      <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
-      <main className="mx-auto max-w-7xl px-6 py-8 max-md:px-4 max-md:py-6">
-        {audit && (tab === "catalog" || tab === "health") && (
-          <AuditBar trail={audit} onEnd={closeAudit} back={auditBack}
-            active={tab === "catalog" ? "catalog" : search.report === "yes" ? "report" : "checklist"} />
-        )}
-        {pendingPlan && <PlanPendingBanner priceId={pendingPlan} />}
-        {!user.email_confirmed_at && <EmailConfirmBanner email={user.email} />}
-        <CatalogLapseBanner sub={sub} lapse={lapse} pauses={pauses} onRenew={upgrade} onChanged={() => void reloadBilling()} />
-        <InactivityBanner userId={user.id} paid={realTier !== "free"} />
-        {/* Which artist the two working tabs are on, so a saved song can never land in the wrong catalog by mistake. */}
-        {actingAs && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-accent/30 p-3 text-sm">
-            <span>
-              Working in <b>{actingAs.name}</b>&rsquo;s catalog at {TIER_LABEL[workTier]}. Embed Metadata and My Catalog save to their
-              account; everything else in the workspace is still yours.
-            </span>
-            <Button variant="outline" size="sm" onClick={() => void workAs(profiles[0]!)}>Back to mine</Button>
-          </div>
-        )}
-        <Tabs value={tab} onValueChange={setTab}>
-          {/* One row, left to right, scrolled on narrow screens: all six belong on the same line (founder, 2026-11-04;
-              centering is for the sub-tab strip under the artist name, not this row). */}
-          <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1 max-md:snap-x max-md:snap-mandatory max-md:scroll-px-1 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">
-            {tabs.map(({ id, label, icon: Icon }, i) => (
-              <TabsTrigger key={id} value={id} className="shrink-0 gap-2 px-3 py-2.5 font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground max-md:snap-start">
-                <span className="text-xs opacity-70">{i + 1}.</span><Icon className="h-4 w-4" /> {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {/* Same row on every tab: the artist name centered, the next-badge card pinned top right (founder, 2026-10-25:
-              back to the card, not the round medal). Fixed side columns and height keep it in the same spot on every tab. */}
-          <div className="mt-8 grid items-center gap-4 sm:min-h-24 sm:grid-cols-[14rem_minmax(0,1fr)_14rem]">
-            <div className="hidden sm:block" />
-            <div className="min-w-0">
-              <h1 className="flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
-                <span className="min-w-0 break-words">{name}</span>
-                {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
-                {onboard?.avatar && <button type="button" aria-label="View your profile badge" onClick={() => setViewAvatar(true)} className="shrink-0 rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <ArtistAvatar src={onboard.avatar} className="h-[1.15em] w-[1.15em]" />
-                </button>}
-              </h1>
-              {/* Beside the artist's name: the custom reminder and the drawer with every scheduled one (founder, 2026-11-19). */}
-              <div className="mt-2"><WorkspaceReminderHeaderActions /></div>
+              <button
+                type="button"
+                aria-label={`View your Catalog Management status: ${eagle.label}`}
+                onClick={() => setViewEagle(true)}
+                className="ml-1 shrink-0 self-center rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <EagleStatusBadge size={52} status={eagle} />
+              </button>
             </div>
-            <NextBadgeHint userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
+            {/* Phones: everything sits in one menu on the profile picture, so the header never runs off the screen. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-auto shrink-0 rounded-full p-1 hover:bg-ink-border sm:hidden"
+                  aria-label="Account menu"
+                >
+                  <ArtistAvatar src={onboard?.avatar} className="h-9 w-9" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal text-muted-foreground">
+                  {TIER_LABEL[tier]}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {profiles.length > 1 && (
+                  <>
+                    {profiles.map((p) => (
+                      <DropdownMenuItem
+                        key={p.userId}
+                        onSelect={() => void workAs(p)}
+                        className="justify-between gap-3"
+                      >
+                        <span className="truncate">{p.seat ? p.name : "You"}</span>
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          {TIER_LABEL[pausedNow ? "free" : p.tier]}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onSelect={() => navigate({ to: "/profile" })}>
+                  <UserRound />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={upgrade}>
+                  <Gem />
+                  View Plans
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={studio.toggle}>
+                  {studio.on ? <Sun /> : <Moon />}
+                  {studio.on ? "Light mode" : "Studio Mode"}
+                </DropdownMenuItem>
+                {app.canInstall && (
+                  <DropdownMenuItem onSelect={() => void app.install()}>
+                    <Smartphone />
+                    Install the app
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    await supabase.auth.signOut();
+                    navigate({ to: "/" });
+                  }}
+                >
+                  <LogOut />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="hidden items-center gap-3 sm:flex">
+              {/* Working as an artist on a seat: the same shape as switching accounts in Instagram or TikTok (founder, 2026-11-08). */}
+              {profiles.length > 1 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground"
+                      aria-label="Switch the artist you are working as"
+                    >
+                      <Users className="h-4 w-4" />
+                      {actingAs ? actingAs.name : "You"}
+                      <ChevronDown className="h-4 w-4 opacity-70" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel className="font-normal text-muted-foreground">
+                      Working as
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {profiles.map((p) => (
+                      <DropdownMenuItem
+                        key={p.userId}
+                        onSelect={() => void workAs(p)}
+                        className="justify-between gap-3"
+                      >
+                        <span className="truncate">{p.seat ? p.name : "You"}</span>
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          {TIER_LABEL[pausedNow ? "free" : p.tier]}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                    {actingAs && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            setSeatDefaultsFor({ userId: actingAs.userId, name: actingAs.name })
+                          }
+                        >
+                          <UserRound />
+                          Edit their defaults
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              <Badge variant="outline" className="border-ink-border text-ink-foreground">
+                {TIER_LABEL[tier]}
+              </Badge>
+              <Button
+                variant="ghost"
+                className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground"
+                onClick={() => navigate({ to: "/profile" })}
+              >
+                <ArtistAvatar src={onboard?.avatar} className="h-7 w-7" />
+                Profile
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={studio.on ? "Switch to light mode" : "Switch to Studio Mode (dark)"}
+                title={studio.on ? "Light mode" : "Studio Mode"}
+                className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
+                onClick={studio.toggle}
+              >
+                {studio.on ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+              {app.canInstall && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Install the app"
+                  title="Install the app"
+                  className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
+                  onClick={() => void app.install()}
+                >
+                  <Smartphone className="h-4 w-4" />
+                </Button>
+              )}
+              <PlansDialog tier={tier} note={plan ? upgradeNote(plan.orderedAt) : undefined} />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Log out"
+                className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate({ to: "/" });
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          {/* Full-width, directly under the artist-name header; it stays until opened, snoozed or completed. */}
-          <WorkspaceReminderStrip />
-          <BadgeViewer src={viewAvatar ? onboard?.avatar : undefined} round={!isBadgeImage(onboard?.avatar)} onClose={() => setViewAvatar(false)}
-            about={(() => { const b = badgeForArt(onboard?.avatar); return b ? { description: b.description, times: 1 } : undefined; })()}
-            share={{ ...share, artist: share.artist || names.artist || name }} />
-          {/* The status eagle's share card: the same art the header shows, shared as a card under the artist's name. */}
-          <BadgeViewer src={viewEagle ? eagle.art : undefined} name={eagle.label} round={false} onClose={() => setViewEagle(false)}
-            about={{ description: eagle.locked ? eagle.detail : `${eagle.label}. ${eagle.stage.detail}`, times: 1 }}
-            share={{ ...share, artist: share.artist || names.artist || name }} />
+        </header>
+        <IosInstallHelp open={app.iosHelp} onOpenChange={app.setIosHelp} />
 
-          <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden">
-            {canCatalog ? <MetadataUploader key={`embed-${catalogOwner}-${embedKey}`} userId={catalogOwner} mode="embed" canWav={hasTier(workTier, "management")} onShareInfo={(i) => setTabShare((m) => ({ ...m, embed: i }))} onSubmitted={() => setCatalogKey((k) => k + 1)} />
-              : <PlusLock title="Embed Metadata starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
-          </TabsContent>
-          <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            {!canCatalog && !catalogReadOnly ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
-            <MetadataUploader key={`catalog-${catalogOwner}-${catalogKey}`} userId={catalogOwner} mode="catalog" canWav={hasTier(workTier, "management")} readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onFixAcknowledged={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} onHealthCheck={(trackId, release) => { setHealthStart({ trackId, release, nonce: Date.now() }); setTab("health"); }} onExpert={() => { setOpenExpert(true); setTab("health"); }} /></>}
-          </TabsContent>
-          <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.bought === "ai"} track={protectTrack} /></TabsContent>
-          <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
-          {/* forceMount: a visit has state in it (the streaming pull, an agency list, the check-in answers), so
+        <AddArtistDialog
+          open={seatsOpen}
+          onOpenChange={setSeatsOpen}
+          canAddArtist={realTier !== "free"}
+        />
+        <ArtistOnboarding
+          userId={user.id}
+          open={profileOpen}
+          onOpenChange={setProfileOpen}
+          firstRun={!onboard?.done}
+          canAddArtist={realTier !== "free"}
+          onSaved={(o) => {
+            setOnboard(o);
+            setEmbedKey((k) => k + 1);
+            setTab(canCatalog ? "embed" : "health");
+          }}
+        />
+        {/* The same defaults editor, on a seat artist's account, reachable from the switcher without leaving the workspace. */}
+        {seatDefaultsFor && (
+          <ArtistOnboarding
+            userId={seatDefaultsFor.userId}
+            seatArtist={{ name: seatDefaultsFor.name }}
+            open
+            firstRun={false}
+            onOpenChange={(o) => {
+              if (!o) setSeatDefaultsFor(null);
+            }}
+            onSaved={() => {
+              setSeatDefaultsFor(null);
+              setEmbedKey((k) => k + 1);
+              setCatalogKey((k) => k + 1);
+            }}
+          />
+        )}
+        <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
+        <main className="mx-auto max-w-7xl px-6 py-8 max-md:px-4 max-md:py-6">
+          {audit && (tab === "catalog" || tab === "health") && (
+            <AuditBar
+              trail={audit}
+              onEnd={closeAudit}
+              back={auditBack}
+              active={
+                tab === "catalog" ? "catalog" : search.report === "yes" ? "report" : "checklist"
+              }
+            />
+          )}
+          {pendingPlan && <PlanPendingBanner priceId={pendingPlan} />}
+          {!user.email_confirmed_at && <EmailConfirmBanner email={user.email} />}
+          <CatalogLapseBanner
+            sub={sub}
+            lapse={lapse}
+            pauses={pauses}
+            onRenew={upgrade}
+            onChanged={() => void reloadBilling()}
+          />
+          <InactivityBanner userId={user.id} paid={realTier !== "free"} />
+          {/* Which artist the two working tabs are on, so a saved song can never land in the wrong catalog by mistake. */}
+          {actingAs && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-accent/30 p-3 text-sm">
+              <span>
+                Working in <b>{actingAs.name}</b>&rsquo;s catalog at {TIER_LABEL[workTier]}. Embed
+                Metadata and My Catalog save to their account; everything else in the workspace is
+                still yours.
+              </span>
+              <Button variant="outline" size="sm" onClick={() => void workAs(profiles[0]!)}>
+                Back to mine
+              </Button>
+            </div>
+          )}
+          <Tabs value={tab} onValueChange={setTab}>
+            {/* One row, left to right, scrolled on narrow screens: all six belong on the same line (founder, 2026-11-04;
+              centering is for the sub-tab strip under the artist name, not this row). */}
+            <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1 max-md:snap-x max-md:snap-mandatory max-md:scroll-px-1 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">
+              {tabs.map(({ id, label, icon: Icon }, i) => (
+                <TabsTrigger
+                  key={id}
+                  value={id}
+                  className="shrink-0 gap-2 px-3 py-2.5 font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground max-md:snap-start"
+                >
+                  <span className="text-xs opacity-70">{i + 1}.</span>
+                  <Icon className="h-4 w-4" /> {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {/* Same row on every tab: the artist name centered, the next-badge card pinned top right (founder, 2026-10-25:
+              back to the card, not the round medal). Fixed side columns and height keep it in the same spot on every tab. */}
+            <div className="mt-8 grid items-center gap-4 sm:min-h-24 sm:grid-cols-[14rem_minmax(0,1fr)_14rem]">
+              <div className="hidden sm:block" />
+              <div className="min-w-0">
+                <h1 className="flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
+                  <span className="min-w-0 break-words">{name}</span>
+                  {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
+                  {onboard?.avatar && (
+                    <button
+                      type="button"
+                      aria-label="View your profile badge"
+                      onClick={() => setViewAvatar(true)}
+                      className="shrink-0 rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <ArtistAvatar src={onboard.avatar} className="h-[1.15em] w-[1.15em]" />
+                    </button>
+                  )}
+                </h1>
+                {/* Beside the artist's name: the custom reminder and the drawer with every scheduled one (founder, 2026-11-19). */}
+                <div className="mt-2">
+                  <WorkspaceReminderHeaderActions />
+                </div>
+              </div>
+              <NextBadgeHint userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
+            </div>
+            {/* Full-width, directly under the artist-name header; it stays until opened, snoozed or completed. */}
+            <WorkspaceReminderStrip />
+            <BadgeViewer
+              src={viewAvatar ? onboard?.avatar : undefined}
+              round={!isBadgeImage(onboard?.avatar)}
+              onClose={() => setViewAvatar(false)}
+              about={(() => {
+                const b = badgeForArt(onboard?.avatar);
+                return b ? { description: b.description, times: 1 } : undefined;
+              })()}
+              share={{ ...share, artist: share.artist || names.artist || name }}
+            />
+            {/* The status eagle's share card: the same art the header shows, shared as a card under the artist's name. */}
+            <BadgeViewer
+              src={viewEagle ? eagle.art : undefined}
+              name={eagle.label}
+              round={false}
+              onClose={() => setViewEagle(false)}
+              about={{
+                description: eagle.locked ? eagle.detail : `${eagle.label}. ${eagle.stage.detail}`,
+                times: 1,
+              }}
+              share={{ ...share, artist: share.artist || names.artist || name }}
+            />
+
+            <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden">
+              {canCatalog ? (
+                <MetadataUploader
+                  key={`embed-${catalogOwner}-${embedKey}`}
+                  userId={catalogOwner}
+                  mode="embed"
+                  canWav={hasTier(workTier, "management")}
+                  onShareInfo={(i) => setTabShare((m) => ({ ...m, embed: i }))}
+                  onSubmitted={() => setCatalogKey((k) => k + 1)}
+                />
+              ) : (
+                <PlusLock
+                  title="Embed Metadata starts with Catalog Plus"
+                  onQuickCheck={openQuickCheck}
+                  onUpgrade={upgrade}
+                />
+              )}
+            </TabsContent>
+            <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
+              {!canCatalog && !catalogReadOnly ? (
+                <PlusLock
+                  title="My Catalog starts with Catalog Plus"
+                  onQuickCheck={openQuickCheck}
+                  onUpgrade={upgrade}
+                />
+              ) : (
+                <>
+                  <MetadataUploader
+                    key={`catalog-${catalogOwner}-${catalogKey}`}
+                    userId={catalogOwner}
+                    mode="catalog"
+                    canWav={hasTier(workTier, "management")}
+                    readOnly={catalogReadOnly}
+                    onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))}
+                    canSplit={canSplit}
+                    canExport={canCollect}
+                    focus={catalogFix}
+                    onFocused={() => setCatalogFix(undefined)}
+                    onFixAcknowledged={() => setCatalogFix(undefined)}
+                    onSplitSheet={(t) => {
+                      setSplitTrackId(t.id);
+                      setTab("splits");
+                    }}
+                    onProtect={(t) => {
+                      setProtectTrack(t);
+                      setTab("protect");
+                    }}
+                    onHealthCheck={(trackId, release) => {
+                      setHealthStart({ trackId, release, nonce: Date.now() });
+                      setTab("health");
+                    }}
+                    onExpert={() => {
+                      setOpenExpert(true);
+                      setTab("health");
+                    }}
+                  />
+                </>
+              )}
+            </TabsContent>
+            <TabsContent value="protect">
+              <AIProtectionHub
+                userId={user.id}
+                purchases={purchases}
+                justPaid={search.checkout === "success" && search.bought === "ai"}
+                track={protectTrack}
+              />
+            </TabsContent>
+            <TabsContent value="splits">
+              <SplitSheets
+                userId={user.id}
+                canSplit={canSplit}
+                canCollect={canCollect}
+                prefillTrackId={splitTrackId}
+                onUpgrade={upgrade}
+              />
+            </TabsContent>
+            {/* forceMount: a visit has state in it (the streaming pull, an agency list, the check-in answers), so
               switching to My Catalog or another tab must not throw the appointment away. */}
-          <TabsContent value="health" {...(healthMounted ? { forceMount: true as const } : {})} className="data-[state=inactive]:hidden"><Health startView={openExpert || search.view === "expert" || search.bought === "expert" ? "expert" : "check"} justPaid={search.bought === "expert"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={fixInCatalog} onAuditFrom={auditFrom} focusSong={search.song} openReport={search.report === "yes"} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
-          <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade}
-            onOpen={(link) => {
-              if (link.where === "profile") setProfileOpen(true);
-              else if (link.where === "catalog" || link.where === "health" || link.where === "splits") setTab(link.where);
-            }} /></TabsContent>
-          <TabsContent value="pdf">
-            {hasTier(tier, "management")
-              ? <PdfTools canEmail={false} canSave={false} title="Fill, sign and download a PDF" />
-              : <PlusLock title="PDF Fill & Sign starts with Catalog Management" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
-          </TabsContent>
-          <TabsContent value="support">
-            <SupportCenter userId={user.id} openTicketId={search.ticket} />
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+            <TabsContent
+              value="health"
+              {...(healthMounted ? { forceMount: true as const } : {})}
+              className="data-[state=inactive]:hidden"
+            >
+              <Health
+                startView={
+                  openExpert || search.view === "expert" || search.bought === "expert"
+                    ? "expert"
+                    : "check"
+                }
+                justPaid={search.bought === "expert"}
+                canCatalog={canCatalog}
+                onFix={() => setTab("catalog")}
+                onFixField={fixInCatalog}
+                onAuditFrom={auditFrom}
+                focusSong={search.song}
+                openReport={search.report === "yes"}
+                onAddSong={(newTitle, artist) => {
+                  setCatalogFix({ newTitle, artist, nonce: Date.now() });
+                  setTab("catalog");
+                }}
+                onEmbed={() => setTab("embed")}
+                userId={user.id}
+                purchases={purchases}
+                canUtility={canCollect}
+                onUpgrade={upgrade}
+                onSplitSheet={(id) => {
+                  setSplitTrackId(id);
+                  setTab("splits");
+                }}
+                start={healthStart}
+              />
+            </TabsContent>
+            <TabsContent value="learn">
+              <Learn
+                userId={user.id}
+                unlocked={hasTier(tier, "management")}
+                onUpgrade={upgrade}
+                onOpen={(link) => {
+                  if (link.where === "profile") setProfileOpen(true);
+                  else if (
+                    link.where === "catalog" ||
+                    link.where === "health" ||
+                    link.where === "splits"
+                  )
+                    setTab(link.where);
+                }}
+              />
+            </TabsContent>
+            <TabsContent value="pdf">
+              {hasTier(tier, "management") ? (
+                <PdfTools canEmail={false} canSave={false} title="Fill, sign and download a PDF" />
+              ) : (
+                <PlusLock
+                  title="PDF Fill & Sign starts with Catalog Management"
+                  onQuickCheck={openQuickCheck}
+                  onUpgrade={upgrade}
+                />
+              )}
+            </TabsContent>
+            <TabsContent value="support">
+              <SupportCenter userId={user.id} openTicketId={search.ticket} />
+            </TabsContent>
+          </Tabs>
+        </main>
+      </div>
     </WorkspaceRemindersProvider>
   );
 }
 
-function PlusLock({ title, onQuickCheck, onUpgrade }: { title: string; onQuickCheck: () => void; onUpgrade: () => void }) {
-  return <UpgradeLock title={title} tier="plus" onUpgrade={onUpgrade} free={{ label: "Run a free Royalty Health Check", onClick: onQuickCheck }}
-    text="Embed your credits into every master, keep your catalog, masters, art and lyrics in one place, and generate split sheets." />;
+function PlusLock({
+  title,
+  onQuickCheck,
+  onUpgrade,
+}: {
+  title: string;
+  onQuickCheck: () => void;
+  onUpgrade: () => void;
+}) {
+  return (
+    <UpgradeLock
+      title={title}
+      tier="plus"
+      onUpgrade={onUpgrade}
+      free={{ label: "Run a free Royalty Health Check", onClick: onQuickCheck }}
+      text="Embed your credits into every master, keep your catalog, masters, art and lyrics in one place, and generate split sheets."
+    />
+  );
 }
 
 /**
@@ -622,11 +1160,19 @@ function useStudioMode() {
   // Starts on (matches the server render), then applies the saved choice once in the browser.
   const [on, setOn] = useState(true);
   useEffect(() => {
-    try { if (localStorage.getItem("cta.studioMode") === "off") setOn(false); } catch { /* storage blocked */ }
+    try {
+      if (localStorage.getItem("cta.studioMode") === "off") setOn(false);
+    } catch {
+      /* storage blocked */
+    }
   }, []);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", on);
-    try { localStorage.setItem("cta.studioMode", on ? "on" : "off"); } catch { /* storage blocked */ }
+    try {
+      localStorage.setItem("cta.studioMode", on ? "on" : "off");
+    } catch {
+      /* storage blocked */
+    }
     return () => document.documentElement.classList.remove("dark");
   }, [on]);
   return { on, toggle: () => setOn((v) => !v) };
@@ -635,34 +1181,83 @@ function useStudioMode() {
 /** One on One Coaching stays hidden until there's a plan for it (founder, 2026-10-23). Set to true to bring it back. */
 const SHOW_COACHING = false;
 
-function Learn({ userId, unlocked, onUpgrade, onOpen }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** A checklist item's shortcut, so a blueprint can be worked from its own list (founder, 2026-11-06). */ onOpen: (link: GuideLink) => void }) {
+function Learn({
+  userId,
+  unlocked,
+  onUpgrade,
+  onOpen,
+}: {
+  userId: string;
+  unlocked: boolean;
+  onUpgrade: () => void;
+  /** A checklist item's shortcut, so a blueprint can be worked from its own list (founder, 2026-11-06). */ onOpen: (
+    link: GuideLink,
+  ) => void;
+}) {
   const [view, setView] = useState<"contracts" | "classes">("contracts");
   return (
     <div className="mt-6">
-      {SHOW_COACHING && <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
-        <Button size="sm" variant={view === "contracts" ? "default" : "ghost"} onClick={() => setView("contracts")}><ScrollText className="h-4 w-4" />Contracts & Blueprints</Button>
-        <Button size="sm" variant={view === "classes" ? "default" : "ghost"} onClick={() => setView("classes")}><GraduationCap className="h-4 w-4" />One on One Coaching</Button>
-      </div>}
+      {SHOW_COACHING && (
+        <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
+          <Button
+            size="sm"
+            variant={view === "contracts" ? "default" : "ghost"}
+            onClick={() => setView("contracts")}
+          >
+            <ScrollText className="h-4 w-4" />
+            Contracts & Blueprints
+          </Button>
+          <Button
+            size="sm"
+            variant={view === "classes" ? "default" : "ghost"}
+            onClick={() => setView("classes")}
+          >
+            <GraduationCap className="h-4 w-4" />
+            One on One Coaching
+          </Button>
+        </div>
+      )}
       {/* Contracts handles its own gating: blueprint guides are a preview for everyone, and contracts sent to you are always visible. */}
-      {view === "contracts" || !SHOW_COACHING ? <Contracts userId={userId} unlocked={unlocked} onUpgrade={onUpgrade} onOpen={onOpen} />
-        : !unlocked ? <UpgradeLock title="One on One Coaching" tier="management" onUpgrade={onUpgrade}
-            text="Private sessions with a music business expert on your catalog, releases, royalties or deals." />
-        : <Coaching userId={userId} />}
+      {view === "contracts" || !SHOW_COACHING ? (
+        <Contracts userId={userId} unlocked={unlocked} onUpgrade={onUpgrade} onOpen={onOpen} />
+      ) : !unlocked ? (
+        <UpgradeLock
+          title="One on One Coaching"
+          tier="management"
+          onUpgrade={onUpgrade}
+          text="Private sessions with a music business expert on your catalog, releases, royalties or deals."
+        />
+      ) : (
+        <Coaching userId={userId} />
+      )}
     </div>
   );
 }
 
 function PlansDialog({ tier, note }: { tier: Tier; note?: string | undefined }) {
   const buy = async (priceId: string) => {
-    try { await openCheckout({ kind: "plan", priceId }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
+    try {
+      await openCheckout({ kind: "plan", priceId });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Checkout could not open.");
+    }
   };
   return (
     <Dialog>
-      <DialogTrigger asChild><Button id="plans-trigger" className="font-semibold">View Plans</Button></DialogTrigger>
+      <DialogTrigger asChild>
+        <Button id="plans-trigger" className="font-semibold">
+          View Plans
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
-        <DialogHeader><DialogTitle className="text-2xl font-bold">Choose your plan</DialogTitle></DialogHeader>
-        <PlanComparison currentTier={tier} note={note} action={(p) => planAction(p, { tier, onBuy: (id) => void buy(id), onSignup: () => {} })} />
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">Choose your plan</DialogTitle>
+        </DialogHeader>
+        <PlanComparison
+          currentTier={tier}
+          note={note}
+          action={(p) => planAction(p, { tier, onBuy: (id) => void buy(id), onSignup: () => {} })}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -674,9 +1269,17 @@ function Coaching({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
   async function notifyMe() {
     setBusy(true);
-    const { error } = await supabase.from("feature_interest" as never).upsert({ user_id: userId, feature: "masterclasses" } as never, { onConflict: "user_id,feature", ignoreDuplicates: true });
+    const { error } = await supabase
+      .from("feature_interest" as never)
+      .upsert({ user_id: userId, feature: "masterclasses" } as never, {
+        onConflict: "user_id,feature",
+        ignoreDuplicates: true,
+      });
     setBusy(false);
-    if (error) { toast.error("Couldn't save that. Try again."); return; }
+    if (error) {
+      toast.error("Couldn't save that. Try again.");
+      return;
+    }
     setAsked(true);
     toast.success("You're on the list. We'll email you as soon as coaching opens.");
   }
@@ -685,35 +1288,136 @@ function Coaching({ userId }: { userId: string }) {
       <div className="rounded-2xl border border-border p-6">
         <GraduationCap className="h-8 w-8 text-primary" />
         <h2 className="mt-3 text-2xl font-bold">One on One Coaching</h2>
-        <p className="mt-2 text-muted-foreground">A private video session with a music business expert, about your catalog, releases, royalties or deals.</p>
+        <p className="mt-2 text-muted-foreground">
+          A private video session with a music business expert, about your catalog, releases,
+          royalties or deals.
+        </p>
         <div className="mt-4 space-y-2">
-          {([["30-minute session", "$25"], ["60-minute session", "$45"]] as const).map(([label, price]) => (
-            <div key={label} className="flex items-center justify-between rounded-lg bg-muted p-4"><span className="font-semibold">{label}</span><span className="text-xl font-bold text-primary">{price}</span></div>
+          {(
+            [
+              ["30-minute session", "$25"],
+              ["60-minute session", "$45"],
+            ] as const
+          ).map(([label, price]) => (
+            <div key={label} className="flex items-center justify-between rounded-lg bg-muted p-4">
+              <span className="font-semibold">{label}</span>
+              <span className="text-xl font-bold text-primary">{price}</span>
+            </div>
           ))}
         </div>
-        <p className="mt-4 text-sm text-muted-foreground">Coaching sessions are being scheduled now. Join the list and we'll email you as soon as booking opens.</p>
-        <Button className="mt-3 w-full" disabled={busy || asked} onClick={() => void notifyMe()}>{asked ? "You're on the list" : "Notify me when coaching opens"}</Button>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Coaching sessions are being scheduled now. Join the list and we'll email you as soon as
+          booking opens.
+        </p>
+        <Button className="mt-3 w-full" disabled={busy || asked} onClick={() => void notifyMe()}>
+          {asked ? "You're on the list" : "Notify me when coaching opens"}
+        </Button>
       </div>
     </div>
   );
 }
 
-function Health({ startView, justPaid, canCatalog, onFix, onFixField, onAuditFrom, focusSong, openReport, onAddSong, onEmbed, userId, purchases, canUtility, onUpgrade, onSplitSheet, start }: { startView: "check" | "expert"; justPaid: boolean; canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onAuditFrom: (from: "report" | "checklist", trackId: string, queue?: AuditSong[], detail?: string) => void; focusSong?: string | undefined; openReport: boolean; onAddSong: (title: string, artist?: string) => void; onEmbed: () => void; onSplitSheet: (trackId: string) => void; start?: HealthStart | undefined }) {
+function Health({
+  startView,
+  justPaid,
+  canCatalog,
+  onFix,
+  onFixField,
+  onAuditFrom,
+  focusSong,
+  openReport,
+  onAddSong,
+  onEmbed,
+  userId,
+  purchases,
+  canUtility,
+  onUpgrade,
+  onSplitSheet,
+  start,
+}: {
+  startView: "check" | "expert";
+  justPaid: boolean;
+  canCatalog: boolean;
+  userId: string;
+  purchases: Purchase[];
+  canUtility: boolean;
+  onUpgrade: () => void;
+  onFix: () => void;
+  onFixField: (trackId: string, field: string) => void;
+  onAuditFrom: (
+    from: "report" | "checklist",
+    trackId: string,
+    queue?: AuditSong[],
+    detail?: string,
+  ) => void;
+  focusSong?: string | undefined;
+  openReport: boolean;
+  onAddSong: (title: string, artist?: string) => void;
+  onEmbed: () => void;
+  onSplitSheet: (trackId: string) => void;
+  start?: HealthStart | undefined;
+}) {
   // Three tools, one at a time, switched like Contracts & Blueprints.
   const [view, setView] = useState<"check" | "expert" | "utility">(startView);
-  useEffect(() => { if (start) setView("check"); }, [start?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
-  const views = [["check", "Royalties and Registrations", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
+  useEffect(() => {
+    if (start) setView("check");
+  }, [start?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  const views = [
+    ["check", "Royalties and Registrations", Activity],
+    ["expert", "Expert Help", Users],
+    ["utility", "Utility Suite", Calculator],
+  ] as const;
   return (
     <div className="mt-6 space-y-6">
       <div className="flex flex-wrap items-center justify-center gap-3">
         <div className="inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1">
-          {views.map(([id, label, Icon]) => <Button key={id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}><Icon className="h-4 w-4" />{label}</Button>)}
+          {views.map(([id, label, Icon]) => (
+            <Button
+              key={id}
+              size="sm"
+              variant={view === id ? "default" : "ghost"}
+              onClick={() => setView(id)}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Button>
+          ))}
         </div>
       </div>
-      {view === "check" && <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} canExport={canUtility} onUpgrade={onUpgrade} onFixField={onFixField} onAuditFrom={onAuditFrom} focusSong={focusSong} openReport={openReport} onEmbed={onEmbed} onSplitSheet={canCatalog ? onSplitSheet : undefined}
-        onExpert={() => { setView("expert"); window.scrollTo({ top: 0, behavior: "smooth" }); }} start={start} />}
-      {view === "expert" && <div id="expert-assistance"><ExpertAssistance userId={userId} purchases={purchases} justPaid={justPaid} onFix={onFixField} onCatalog={onFix} onAddSong={onAddSong} /></div>}
-      {view === "utility" && <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} userId={userId} />}
+      {view === "check" && (
+        <RoyaltyHealthCheck
+          userId={userId}
+          canCatalog={canCatalog}
+          canExport={canUtility}
+          onUpgrade={onUpgrade}
+          onFixField={onFixField}
+          onAuditFrom={onAuditFrom}
+          focusSong={focusSong}
+          openReport={openReport}
+          onEmbed={onEmbed}
+          onSplitSheet={canCatalog ? onSplitSheet : undefined}
+          onExpert={() => {
+            setView("expert");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          start={start}
+        />
+      )}
+      {view === "expert" && (
+        <div id="expert-assistance">
+          <ExpertAssistance
+            userId={userId}
+            purchases={purchases}
+            justPaid={justPaid}
+            onFix={onFixField}
+            onCatalog={onFix}
+            onAddSong={onAddSong}
+          />
+        </div>
+      )}
+      {view === "utility" && (
+        <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} userId={userId} />
+      )}
     </div>
   );
 }

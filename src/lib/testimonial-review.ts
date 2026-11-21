@@ -74,7 +74,10 @@ export function testimonialsChanged(
   items: EditableTestimonial[],
   filter: TestimonialFilter,
 ): boolean {
-  return JSON.stringify(items) !== JSON.stringify(ws.items) || JSON.stringify(filter) !== JSON.stringify(ws.filter);
+  return (
+    JSON.stringify(items) !== JSON.stringify(ws.items) ||
+    JSON.stringify(filter) !== JSON.stringify(ws.filter)
+  );
 }
 
 const isStatus = (v: unknown): v is TestimonialReviewStatus =>
@@ -137,7 +140,8 @@ export function testimonialsEditable(status: TestimonialReviewStatus): boolean {
 
 /** Why this version cannot be submitted, or null. Only one version can wait for a decision at a time. */
 export function submitTestimonialsError(review: TestimonialReview): string | null {
-  if (review.status === "pending_approval") return "This version is already waiting for a super admin. Edits open again when they decide.";
+  if (review.status === "pending_approval")
+    return "This version is already waiting for a super admin. Edits open again when they decide.";
   return null;
 }
 
@@ -148,7 +152,8 @@ export function decideTestimonialsError(
   note: string,
 ): string | null {
   if (review.status !== "pending_approval") return "Nothing is waiting for approval.";
-  if (decision !== "approve" && note.trim().length < 3) return "Add a note so they know what to change.";
+  if (decision !== "approve" && note.trim().length < 3)
+    return "Add a note so they know what to change.";
   return null;
 }
 

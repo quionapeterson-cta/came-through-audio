@@ -8,12 +8,26 @@ import { Label } from "@/components/ui/label";
 import { passwordValid, rememberReturn } from "@/lib/password";
 import { rememberLoginEmail } from "@/lib/login-memory";
 import { PasswordField } from "@/components/PasswordField";
-import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent, planIntentFromSearch, planSignupNext, rememberPlanIntent, takePlanIntent } from "@/lib/plans";
+import {
+  PLAN_INTENT_EVENT,
+  PLAN_TIERS,
+  PRICE_TIER,
+  TIER_LABEL,
+  peekPlanIntent,
+  planIntentFromSearch,
+  planSignupNext,
+  rememberPlanIntent,
+  takePlanIntent,
+} from "@/lib/plans";
 import { openCheckout } from "@/lib/checkout";
 import { usePrelaunchGuard } from "@/hooks/usePrelaunchGuard";
 import { GoogleButton } from "@/components/GoogleButton";
 
-export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: string; onAuthed?: () => void; inviteMode?: boolean } = {}) {
+export function SignupCard({
+  returnPath,
+  onAuthed,
+  inviteMode,
+}: { returnPath?: string; onAuthed?: () => void; inviteMode?: boolean } = {}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signup" | "login" | "forgot">("signup");
   const [stageName, setStageName] = useState("");
@@ -33,7 +47,13 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
   useEffect(() => {
     // The plan can arrive in the URL (a link that names it) as well as in this browser, so the form still knows which
     // tier it is signing up for when storage was blocked or the link came from somewhere else.
-    const read = () => setIntent(inviteMode ? null : (planIntentFromSearch(new URLSearchParams(window.location.search).get("plan")) ?? peekPlanIntent()));
+    const read = () =>
+      setIntent(
+        inviteMode
+          ? null
+          : (planIntentFromSearch(new URLSearchParams(window.location.search).get("plan")) ??
+              peekPlanIntent()),
+      );
     read();
     window.addEventListener(PLAN_INTENT_EVENT, read);
     return () => window.removeEventListener(PLAN_INTENT_EVENT, read);
@@ -47,12 +67,22 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
    */
   async function afterAuth() {
     rememberLoginEmail(email);
-    if (onAuthed) { onAuthed(); return; }
+    if (onAuthed) {
+      onAuthed();
+      return;
+    }
     if (intent) {
-      try { await openCheckout({ kind: "plan", priceId: intent }); takePlanIntent(); return; }
-      catch (e) {
+      try {
+        await openCheckout({ kind: "plan", priceId: intent });
+        takePlanIntent();
+        return;
+      } catch (e) {
         rememberPlanIntent(intent);
-        toast.error(e instanceof Error ? e.message : "Checkout could not open. Your plan is saved — finish it in your workspace.");
+        toast.error(
+          e instanceof Error
+            ? e.message
+            : "Checkout could not open. Your plan is saved — finish it in your workspace.",
+        );
       }
     }
     navigate({ to: "/workspace", search: { tab: "health", plan: intent ?? undefined } });
@@ -73,12 +103,18 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (mode === "signup" && !passwordValid(password)) { setShowRules(true); toast.error("Your password needs to pass every check below."); return; }
+    if (mode === "signup" && !passwordValid(password)) {
+      setShowRules(true);
+      toast.error("Your password needs to pass every check below.");
+      return;
+    }
     if (returnPath) rememberReturn(returnPath);
     setBusy(true);
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
         if (error) throw error;
         setSent(true);
       } else if (mode === "signup") {
@@ -98,8 +134,14 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
         // inbox screen below is the fallback.
         if (data.session) await afterAuth();
         else {
-          const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-          if (signInError || !signedIn.session) { setSent(true); return; }
+          const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (signInError || !signedIn.session) {
+            setSent(true);
+            return;
+          }
           await afterAuth();
         }
       } else {
@@ -131,12 +173,15 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
         </p>
         <h2 className="mt-2 text-2xl font-bold leading-tight">Sign-ups open at launch</h2>
         <p className="mt-2 text-muted-foreground">
-          Came Through Audio isn&apos;t finished yet, so we&apos;re not taking new accounts. There&apos;s nothing you need to do
-          today — check back for our official launch.
+          Came Through Audio isn&apos;t finished yet, so we&apos;re not taking new accounts.
+          There&apos;s nothing you need to do today — check back for our official launch.
         </p>
         <div className="mt-4 rounded-xl border border-[#D97706] bg-[#FEF3C7] p-4 text-sm text-[#92400E] dark:border-[#F59E0B]/60 dark:bg-[#F59E0B]/10 dark:text-[#F59E0B]">
           <p className="font-semibold">Please don&apos;t register or pay yet.</p>
-          <p className="mt-1">An account made now, or a payment sent now, would land on a build that is still changing.</p>
+          <p className="mt-1">
+            An account made now, or a payment sent now, would land on a build that is still
+            changing.
+          </p>
         </div>
         <Button type="button" className="mt-4 h-11 w-full" onClick={() => setMode("login")}>
           I already have an account — log in
@@ -154,8 +199,15 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
             }}
           >
             <Label htmlFor="tester-passkey">Tester passkey</Label>
-            <Input id="tester-passkey" value={passkey} onChange={(e) => setPasskey(e.target.value)} autoComplete="off" />
-            <Button type="submit" className="w-full">Unlock sign-ups</Button>
+            <Input
+              id="tester-passkey"
+              value={passkey}
+              onChange={(e) => setPasskey(e.target.value)}
+              autoComplete="off"
+            />
+            <Button type="submit" className="w-full">
+              Unlock sign-ups
+            </Button>
           </form>
         ) : (
           <button
@@ -177,10 +229,14 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
           <h2 className="text-2xl font-bold">Check your email</h2>
           {mode === "forgot" ? (
             // Same message whether or not an account exists, so this form can't be used to discover who has one.
-            <p className="text-muted-foreground">If an account uses <span className="font-semibold text-foreground">{email}</span>, we sent a link to reset your password. It expires in one hour.</p>
+            <p className="text-muted-foreground">
+              If an account uses <span className="font-semibold text-foreground">{email}</span>, we
+              sent a link to reset your password. It expires in one hour.
+            </p>
           ) : (
             <p className="text-muted-foreground">
-              We sent a confirmation link to <span className="font-semibold text-foreground">{email}</span>.{" "}
+              We sent a confirmation link to{" "}
+              <span className="font-semibold text-foreground">{email}</span>.{" "}
               {paid
                 ? `${TIER_LABEL[PRICE_TIER[intent!]!]} checkout opens by itself the moment you click it, on this device or any other — no need to come back to this page.`
                 : "Click it to open your workspace."}
@@ -190,21 +246,58 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
               instruction: the button re-checks the address and carries on to checkout (founder, 2026-11-05). */}
           {mode === "signup" && (
             <div className="space-y-2 pt-1">
-              <Button className="w-full" onClick={() => void continueAfterConfirm()}>{paid ? "I've confirmed — open checkout" : "I've confirmed — open my workspace"}</Button>
-              <button type="button" className="text-sm font-semibold text-primary" onClick={() => void resendConfirmation()}>Send the link again</button>
+              <Button className="w-full" onClick={() => void continueAfterConfirm()}>
+                {paid ? "I've confirmed — open checkout" : "I've confirmed — open my workspace"}
+              </Button>
+              <button
+                type="button"
+                className="text-sm font-semibold text-primary"
+                onClick={() => void resendConfirmation()}
+              >
+                Send the link again
+              </button>
             </div>
           )}
-          {mode === "forgot" && <button type="button" className="text-sm font-semibold text-primary" onClick={() => { setSent(false); setMode("login"); }}>Back to log in</button>}
+          {mode === "forgot" && (
+            <button
+              type="button"
+              className="text-sm font-semibold text-primary"
+              onClick={() => {
+                setSent(false);
+                setMode("login");
+              }}
+            >
+              Back to log in
+            </button>
+          )}
         </div>
       ) : (
         <>
           <h2 className="text-2xl font-bold leading-tight">
             {mode === "signup" ? (
-              paid
-                ? <>Sign up and pay for {TIER_LABEL[PRICE_TIER[intent!]!]}<span className="mt-1 block text-lg font-normal text-primary">{paid.price} a year. Your account is created, then Stripe&apos;s checkout opens in the same step.</span></>
-                : <>Musicians, sign up free.<span className="mt-1 block text-lg font-normal text-primary">Includes Free Unlimited Royalty Health Checks.</span></>
+              paid ? (
+                <>
+                  Sign up and pay for {TIER_LABEL[PRICE_TIER[intent!]!]}
+                  <span className="mt-1 block text-lg font-normal text-primary">
+                    {paid.price} a year. Your account is created, then Stripe&apos;s checkout opens
+                    in the same step.
+                  </span>
+                </>
+              ) : (
+                <>
+                  Musicians, sign up free.
+                  <span className="mt-1 block text-lg font-normal text-primary">
+                    Includes Free Unlimited Royalty Health Checks.
+                  </span>
+                </>
+              )
             ) : mode === "forgot" ? (
-              <>Reset your password<span className="mt-1 block text-base font-normal text-muted-foreground">Enter your account email and we'll send you a reset link.</span></>
+              <>
+                Reset your password
+                <span className="mt-1 block text-base font-normal text-muted-foreground">
+                  Enter your account email and we'll send you a reset link.
+                </span>
+              </>
             ) : (
               "Welcome back"
             )}
@@ -216,9 +309,14 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
                     front of this form while sign-ups are shut, so Google waits there with it. */}
                 <GoogleButton
                   label={mode === "signup" ? "Sign up with Google" : "Continue with Google"}
-                  onBeforeRedirect={() => { if (returnPath) rememberReturn(returnPath); }}
+                  onBeforeRedirect={() => {
+                    if (returnPath) rememberReturn(returnPath);
+                  }}
                 />
-                <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground" aria-hidden>
+                <div
+                  className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  aria-hidden
+                >
                   <span className="h-px flex-1 bg-border" />
                   or
                   <span className="h-px flex-1 bg-border" />
@@ -229,49 +327,134 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="stage">Artist name</Label>
-                  <Input id="stage" value={stageName} onChange={(e) => setStageName(e.target.value)} required />
+                  <Input
+                    id="stage"
+                    value={stageName}
+                    onChange={(e) => setStageName(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="legal">Legal name</Label>
-                  <Input id="legal" value={legalName} onChange={(e) => setLegalName(e.target.value)} required />
+                  <Input
+                    id="legal"
+                    value={legalName}
+                    onChange={(e) => setLegalName(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              {inviteMode && <p className="text-xs font-medium text-primary">Use your invite email: the same address your signature request was sent to.</p>}
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              {inviteMode && (
+                <p className="text-xs font-medium text-primary">
+                  Use your invite email: the same address your signature request was sent to.
+                </p>
+              )}
             </div>
-            {mode === "signup" ? <PasswordField id="password" value={password} onChange={setPassword} rules={showRules} />
-              : mode === "login" && (
-              <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <button type="button" className="text-xs font-semibold text-primary" onClick={() => setMode("forgot")}>Forgot password?</button>
+            {mode === "signup" ? (
+              <PasswordField
+                id="password"
+                value={password}
+                onChange={setPassword}
+                rules={showRules}
+              />
+            ) : (
+              mode === "login" && (
+                <div className="space-y-1.5">
+                  <div className="flex items-baseline justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-primary"
+                      onClick={() => setMode("forgot")}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
                 </div>
-                <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
+              )
             )}
             <Button type="submit" disabled={busy} className="h-12 w-full text-base font-semibold">
-              {busy ? "Please wait…" : mode === "signup" ? (paid ? `Sign up & pay ${paid.price}` : "Create my free account") : mode === "forgot" ? "Send reset link" : "Log in"}
+              {busy
+                ? "Please wait…"
+                : mode === "signup"
+                  ? paid
+                    ? `Sign up & pay ${paid.price}`
+                    : "Create my free account"
+                  : mode === "forgot"
+                    ? "Send reset link"
+                    : "Log in"}
             </Button>
-            {mode === "signup" && (paid
-              ? <p className="text-center text-xs text-muted-foreground">One step: your account is created, then you pay. Card details stay in Stripe.</p>
-              : <p className="text-center text-xs text-muted-foreground">Free forever plan. No card needed.</p>)}
+            {mode === "signup" &&
+              (paid ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  One step: your account is created, then you pay. Card details stay in Stripe.
+                </p>
+              ) : (
+                <p className="text-center text-xs text-muted-foreground">
+                  Free forever plan. No card needed.
+                </p>
+              ))}
             {mode === "signup" && (
               <p className="text-center text-xs text-muted-foreground">
                 By creating an account you agree to our{" "}
-                <a className="font-semibold text-primary underline" href="/terms-of-service" target="_blank" rel="noreferrer">Terms of Service</a>{" "}
+                <a
+                  className="font-semibold text-primary underline"
+                  href="/terms-of-service"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Terms of Service
+                </a>{" "}
                 and{" "}
-                <a className="font-semibold text-primary underline" href="/privacy-policy" target="_blank" rel="noreferrer">Privacy Policy</a>,
-                including how an artist seat shares catalog, split-sheet and contract access with the account that pays for it.
+                <a
+                  className="font-semibold text-primary underline"
+                  href="/privacy-policy"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Privacy Policy
+                </a>
+                , including how an artist seat shares catalog, split-sheet and contract access with
+                the account that pays for it.
               </p>
             )}
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            {mode === "signup" ? "Already have an account?" : mode === "forgot" ? "Remembered it?" : "New here?"}{" "}
-            <button type="button" className="font-semibold text-primary" onClick={() => setMode(mode === "signup" ? "login" : mode === "forgot" ? "login" : "signup")}>
-              {mode === "signup" || mode === "forgot" ? "Log in" : paid ? "Sign up" : "Sign up free"}
+            {mode === "signup"
+              ? "Already have an account?"
+              : mode === "forgot"
+                ? "Remembered it?"
+                : "New here?"}{" "}
+            <button
+              type="button"
+              className="font-semibold text-primary"
+              onClick={() =>
+                setMode(mode === "signup" ? "login" : mode === "forgot" ? "login" : "signup")
+              }
+            >
+              {mode === "signup" || mode === "forgot"
+                ? "Log in"
+                : paid
+                  ? "Sign up"
+                  : "Sign up free"}
             </button>
           </p>
         </>

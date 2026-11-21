@@ -8,10 +8,15 @@ import { resendKey } from "./collab-trial.server";
  */
 const FROM = mailFrom("registrations");
 
-export async function sendReleaseDayEmails(today = new Date().toISOString().slice(0, 10)): Promise<{ released: number; sent: number }> {
+export async function sendReleaseDayEmails(
+  today = new Date().toISOString().slice(0, 10),
+): Promise<{ released: number; sent: number }> {
   const db = (await import("@/integrations/supabase/client.server")).supabaseAdmin;
   const key = resendKey();
-  const { data } = await db.from("catalogs").select("id, user_id, track_title, details").eq("details->>releaseDate" as never, today);
+  const { data } = await db
+    .from("catalogs")
+    .select("id, user_id, track_title, details")
+    .eq("details->>releaseDate" as never, today);
   const songs = (data ?? []) as { id: string; user_id: string; track_title: string | null }[];
   if (!key) return { released: songs.length, sent: 0 };
   let sent = 0;
@@ -28,11 +33,22 @@ export async function sendReleaseDayEmails(today = new Date().toISOString().slic
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       // One per song: the key stops a second run on the same day from sending it again.
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `release-day-${s.id}-${today}` },
-      body: JSON.stringify({ from: FROM, to: [email], subject: `"${title}" is out today: your next two steps`,
-        html: emailLayout(body, { reason: `You're receiving this because "${title}" in your Came Through Audio catalog has today as its release date. It's a one-time note for this song.` }) }),
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `release-day-${s.id}-${today}`,
+      },
+      body: JSON.stringify({
+        from: FROM,
+        to: [email],
+        subject: `"${title}" is out today: your next two steps`,
+        html: emailLayout(body, {
+          reason: `You're receiving this because "${title}" in your Came Through Audio catalog has today as its release date. It's a one-time note for this song.`,
+        }),
+      }),
     });
-    if (res.ok) sent++; else console.error(`Release-day email failed [${res.status}]: ${await res.text()}`);
+    if (res.ok) sent++;
+    else console.error(`Release-day email failed [${res.status}]: ${await res.text()}`);
   }
   return { released: songs.length, sent };
 }

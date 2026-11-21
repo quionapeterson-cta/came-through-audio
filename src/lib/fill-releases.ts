@@ -16,10 +16,15 @@ export const FILL_RELEASE_TYPES = ["Single", "EP", "Album", "Instrumental", "Unr
 export const MAX_FILL_RELEASES = 24;
 
 /** One identity for a release: its kind plus its title, trimmed and case-folded, so "afterglow " and "Afterglow" are one entry. */
-export const releaseKey = (release: { type: string; name: string }) => `${release.type}:${albumKey(release.name)}`;
+export const releaseKey = (release: { type: string; name: string }) =>
+  `${release.type}:${albumKey(release.name)}`;
 
 /** Puts a release at the front of the list, replacing the entry with the same kind and title. */
-export function mergeRelease(list: FillRelease[], entry: FillRelease, max = MAX_FILL_RELEASES): FillRelease[] {
+export function mergeRelease(
+  list: FillRelease[],
+  entry: FillRelease,
+  max = MAX_FILL_RELEASES,
+): FillRelease[] {
   const name = entry.name.trim();
   if (!name) return list;
   const clean = { ...(entry.id ? { id: entry.id } : {}), type: entry.type, name } as FillRelease;
@@ -36,15 +41,27 @@ export function withoutKeystrokes(releases: FillRelease[]): FillRelease[] {
   const title = (r: FillRelease) => albumKey(r.name);
   const drop = new Set<FillRelease>();
   for (const longer of releases) {
-    const prefixes = releases.filter((r) => r !== longer && r.type === longer.type && title(r) && title(longer).startsWith(title(r)) && title(r) !== title(longer));
+    const prefixes = releases.filter(
+      (r) =>
+        r !== longer &&
+        r.type === longer.type &&
+        title(r) &&
+        title(longer).startsWith(title(r)) &&
+        title(r) !== title(longer),
+    );
     if (prefixes.length >= 2) prefixes.forEach((r) => drop.add(r));
   }
   return releases.filter((r) => !drop.has(r));
 }
 
 /** The releases the member's own catalog already offers, so a remembered title that has since been released isn't offered twice. */
-export function withoutCatalog(releases: FillRelease[], catalog: { album: string; kind: string }[]): FillRelease[] {
-  return releases.filter((r) => !catalog.some((c) => c.kind === r.type && albumKey(c.album) === albumKey(r.name)));
+export function withoutCatalog(
+  releases: FillRelease[],
+  catalog: { album: string; kind: string }[],
+): FillRelease[] {
+  return releases.filter(
+    (r) => !catalog.some((c) => c.kind === r.type && albumKey(c.album) === albumKey(r.name)),
+  );
 }
 
 /**
@@ -53,7 +70,11 @@ export function withoutCatalog(releases: FillRelease[], catalog: { album: string
  * account wins where both have the same release, because it is the real list and its row's id is the one to send back;
  * the entries it doesn't know yet go first, since those are the ones just typed.
  */
-export function mergeRemembered(account: FillRelease[], local: FillRelease[], max = MAX_FILL_RELEASES): FillRelease[] {
+export function mergeRemembered(
+  account: FillRelease[],
+  local: FillRelease[],
+  max = MAX_FILL_RELEASES,
+): FillRelease[] {
   const known = new Map(account.map((r) => [releaseKey(r), r]));
   const merged: FillRelease[] = [];
   const seen = new Set<string>();
@@ -70,7 +91,10 @@ export function mergeRemembered(account: FillRelease[], local: FillRelease[], ma
 }
 
 /** The copy this browser keeps, for the moments the account list can't be read. */
-export function readCachedReleases(userId: string, store: Storage | undefined = safeStorage()): FillRelease[] {
+export function readCachedReleases(
+  userId: string,
+  store: Storage | undefined = safeStorage(),
+): FillRelease[] {
   if (!userId || !store) return [];
   try {
     const raw = store.getItem(key(userId));
@@ -83,7 +107,11 @@ export function readCachedReleases(userId: string, store: Storage | undefined = 
   }
 }
 
-export function cacheReleases(userId: string, list: FillRelease[], store: Storage | undefined = safeStorage()): void {
+export function cacheReleases(
+  userId: string,
+  list: FillRelease[],
+  store: Storage | undefined = safeStorage(),
+): void {
   if (!userId || !store) return;
   try {
     store.setItem(key(userId), JSON.stringify(withoutKeystrokes(list).slice(0, MAX_FILL_RELEASES)));

@@ -9,9 +9,19 @@
 import { PRICE_TIER, TIER_LABEL, type Tier } from "./plans";
 import { VAULT_PRICE } from "./retention";
 
-export type PurchaseKind = "plan" | "seat" | "vault" | "branding" | "contract" | "ai" | "expert" | "renew";
+export type PurchaseKind =
+  "plan" | "seat" | "vault" | "branding" | "contract" | "ai" | "expert" | "renew";
 
-const KINDS: readonly PurchaseKind[] = ["plan", "seat", "vault", "branding", "contract", "ai", "expert", "renew"];
+const KINDS: readonly PurchaseKind[] = [
+  "plan",
+  "seat",
+  "vault",
+  "branding",
+  "contract",
+  "ai",
+  "expert",
+  "renew",
+];
 
 /** A Stripe metadata `kind` as a purchase we know how to confirm, or null. */
 export function purchaseKind(raw: string | null | undefined): PurchaseKind | null {
@@ -56,16 +66,28 @@ export function purchasedPlan(priceIds: string[]): Tier | null {
 }
 
 /** An amount Stripe charged, in its own currency, or null when the session didn't report one. */
-export function money(amount: number | null | undefined, currency: string | null | undefined): string | null {
+export function money(
+  amount: number | null | undefined,
+  currency: string | null | undefined,
+): string | null {
   if (typeof amount !== "number" || !currency) return null;
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(amount / 100);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(amount / 100);
   } catch {
     return null;
   }
 }
 
-export type ReceiptCopy = { subject: string; eyebrow: string; heading: string; paragraphs: string[]; cta: string };
+export type ReceiptCopy = {
+  subject: string;
+  eyebrow: string;
+  heading: string;
+  paragraphs: string[];
+  cta: string;
+};
 
 /** What one purchase's email says. `paid` is the real charge on that session, and is left out when Stripe didn't say. */
 /** A date in the same long form every account email uses, or null when it isn't a date. */
@@ -129,11 +151,12 @@ export function receiptCopy(i: {
       // nothing today, so it never says "We charged $0.00".
       const starts = renewalDate(i.pauseStarts);
       const fee = `$${VAULT_PRICE.toFixed(2)}`;
-      const first = paid && paid !== "$0.00"
-        ? money_line
-        : starts
-          ? `Nothing is charged today. Your pause starts on ${starts}, and the first ${fee} is charged then.`
-          : "Your pause is in place.";
+      const first =
+        paid && paid !== "$0.00"
+          ? money_line
+          : starts
+            ? `Nothing is charged today. Your pause starts on ${starts}, and the first ${fee} is charged then.`
+            : "Your pause is in place.";
       copy = {
         ...base,
         subject: "Your pause is in place",
@@ -208,7 +231,9 @@ export function receiptCopy(i: {
         heading: "You're renewed for another year",
         paragraphs: [
           money_line,
-          ...(renews ? [`Your plan now renews on ${renews}, with nothing charged before then.`] : []),
+          ...(renews
+            ? [`Your plan now renews on ${renews}, with nothing charged before then.`]
+            : []),
           "Every day you had left is kept, and the next charge sits a year past the renewal this paid for.",
           "Your catalog, masters and badges carry on as they are.",
         ],
@@ -219,7 +244,9 @@ export function receiptCopy(i: {
   }
 
   if (i.managed) {
-    copy.paragraphs.push("If you paid through Link, Stripe's checkout service, its own receipt reaches you as well; this note is what confirms what unlocked on your account.");
+    copy.paragraphs.push(
+      "If you paid through Link, Stripe's checkout service, its own receipt reaches you as well; this note is what confirms what unlocked on your account.",
+    );
   }
   return copy;
 }

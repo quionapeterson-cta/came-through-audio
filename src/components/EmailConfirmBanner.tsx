@@ -31,8 +31,10 @@ export function EmailConfirmBanner({ email }: { email?: string | null | undefine
     setBusy(true);
     const { data } = await supabase.auth.refreshSession();
     setBusy(false);
-    if (data.user?.email_confirmed_at) { setDone(true); toast.success("Email confirmed. You're all set."); }
-    else toast.error("Not confirmed yet. Open the link in your inbox, then try again.");
+    if (data.user?.email_confirmed_at) {
+      setDone(true);
+      toast.success("Email confirmed. You're all set.");
+    } else toast.error("Not confirmed yet. Open the link in your inbox, then try again.");
   }
 
   return (
@@ -40,13 +42,18 @@ export function EmailConfirmBanner({ email }: { email?: string | null | undefine
       <p className="flex items-center gap-2 text-sm">
         <MailCheck className="h-4 w-4 shrink-0 text-primary" />
         <span>
-          We emailed a confirmation link to <span className="font-semibold">{email}</span>. Everything on your account
-          works now; confirming the address is what keeps your login and password reset reaching you.
+          We emailed a confirmation link to <span className="font-semibold">{email}</span>.
+          Everything on your account works now; confirming the address is what keeps your login and
+          password reset reaching you.
         </span>
       </p>
       <div className="flex shrink-0 gap-2">
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => void resend()}>Send it again</Button>
-        <Button size="sm" disabled={busy} onClick={() => void check()}>I&apos;ve confirmed</Button>
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => void resend()}>
+          Send it again
+        </Button>
+        <Button size="sm" disabled={busy} onClick={() => void check()}>
+          I&apos;ve confirmed
+        </Button>
       </div>
     </div>
   );

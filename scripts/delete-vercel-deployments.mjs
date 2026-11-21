@@ -31,8 +31,12 @@ const KEEP = flag("keep", 40);
 const KEEP_DAYS = flag("keep-days", 0);
 
 if (!TOKEN) {
-  console.error("Set VERCEL_TOKEN first, for example: VERCEL_TOKEN=xxx node scripts/delete-vercel-deployments.mjs");
-  console.error("Create one at https://vercel.com/account/tokens — it is only read from the environment, never written to disk.");
+  console.error(
+    "Set VERCEL_TOKEN first, for example: VERCEL_TOKEN=xxx node scripts/delete-vercel-deployments.mjs",
+  );
+  console.error(
+    "Create one at https://vercel.com/account/tokens — it is only read from the environment, never written to disk.",
+  );
   process.exit(1);
 }
 
@@ -40,7 +44,11 @@ async function api(path, init = {}) {
   for (let attempt = 1; attempt <= 5; attempt++) {
     const res = await fetch(`${API}${path}`, {
       ...init,
-      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json", ...init.headers },
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+        ...init.headers,
+      },
     });
     if (res.status === 429 || res.status >= 500) {
       const wait = 1000 * attempt;
@@ -49,7 +57,10 @@ async function api(path, init = {}) {
       continue;
     }
     const body = res.status === 204 ? null : await res.json().catch(() => null);
-    if (!res.ok) throw new Error(`${init.method ?? "GET"} ${path.split("?")[0]} -> ${res.status} ${body?.error?.message ?? ""}`);
+    if (!res.ok)
+      throw new Error(
+        `${init.method ?? "GET"} ${path.split("?")[0]} -> ${res.status} ${body?.error?.message ?? ""}`,
+      );
     return body;
   }
   throw new Error(`Gave up on ${path.split("?")[0]} after 5 attempts`);
@@ -84,8 +95,12 @@ for (const d of newestFirst) if (d.createdAt > cutoff) keep.add(d.uid);
 const doomed = newestFirst.filter((d) => !keep.has(d.uid));
 
 const mb = (d) => `${Math.round(d.createdAt / 1000)}`;
-console.log(`${deployments.length} deployments found; keeping ${keep.size}, ${DELETE ? "deleting" : "would delete"} ${doomed.length}.`);
-console.log(`Keeping the live one: ${live ? `${live.uid} (${new Date(live.createdAt).toISOString()})` : "none found — aborting for safety"}`);
+console.log(
+  `${deployments.length} deployments found; keeping ${keep.size}, ${DELETE ? "deleting" : "would delete"} ${doomed.length}.`,
+);
+console.log(
+  `Keeping the live one: ${live ? `${live.uid} (${new Date(live.createdAt).toISOString()})` : "none found — aborting for safety"}`,
+);
 if (!live) process.exit(1);
 console.log(
   KEEP_DAYS > 0
@@ -106,19 +121,27 @@ let ok = 0;
 const failed = [];
 for (const [i, d] of doomed.entries()) {
   try {
-    await api(`/v9/deployments/${d.uid}?teamId=${TEAM_ID}${d.url ? `&url=${encodeURIComponent(d.url)}` : ""}`, { method: "DELETE" });
+    await api(
+      `/v9/deployments/${d.uid}?teamId=${TEAM_ID}${d.url ? `&url=${encodeURIComponent(d.url)}` : ""}`,
+      { method: "DELETE" },
+    );
     ok++;
   } catch (err) {
     failed.push(`${d.uid}: ${err.message}`);
   }
-  if ((i + 1) % 10 === 0) console.log(`  ${i + 1}/${doomed.length} processed (${ok} deleted, ${failed.length} failed)`);
+  if ((i + 1) % 10 === 0)
+    console.log(`  ${i + 1}/${doomed.length} processed (${ok} deleted, ${failed.length} failed)`);
   await sleep(250);
 }
 
 console.log(`\nDeleted ${ok} of ${doomed.length}.`);
 if (failed.length) {
-  console.log(`${failed.length} could not be deleted; Vercel refuses deployments that still hold an alias:`);
+  console.log(
+    `${failed.length} could not be deleted; Vercel refuses deployments that still hold an alias:`,
+  );
   for (const line of failed.slice(0, 20)) console.log(`  ${line}`);
   if (failed.length > 20) console.log(`  …and ${failed.length - 20} more`);
 }
-console.log("Storage usage updates over the next few minutes; check https://vercel.com/camethroughfam/came-through-audio/usage");
+console.log(
+  "Storage usage updates over the next few minutes; check https://vercel.com/camethroughfam/came-through-audio/usage",
+);

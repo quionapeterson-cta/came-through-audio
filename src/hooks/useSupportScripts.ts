@@ -7,7 +7,11 @@ import type { SupportScript } from "@/lib/support-scripts";
  * The staff script catalog, fetched once per session. The words are server-side (`support-scripts.server.ts`) so they no
  * longer ship in the admin bundle; this is the only way the panel and the ticket rail get them.
  */
-export function useSupportScripts(): { scripts: SupportScript[]; loading: boolean; error: boolean } {
+export function useSupportScripts(): {
+  scripts: SupportScript[];
+  loading: boolean;
+  error: boolean;
+} {
   const load = useServerFn(listSupportScripts);
   const q = useQuery({
     queryKey: ["support-scripts"],

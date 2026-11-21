@@ -11,8 +11,18 @@ export type TaskImportance = (typeof TASK_IMPORTANCE)[number];
 export const TASK_REPEATS = ["weekly", "monthly", "quarterly"] as const;
 export type TaskRepeat = (typeof TASK_REPEATS)[number];
 export type DepartmentTask = {
-  id: string; department: string; title: string; body: string; status: TaskStatus; created_at: string; updated_at: string;
-  importance: TaskImportance; due_at: string | null; owner_id: string | null; completed_at: string | null; completed_by: string | null;
+  id: string;
+  department: string;
+  title: string;
+  body: string;
+  status: TaskStatus;
+  created_at: string;
+  updated_at: string;
+  importance: TaskImportance;
+  due_at: string | null;
+  owner_id: string | null;
+  completed_at: string | null;
+  completed_by: string | null;
   repeat?: TaskRepeat | null;
 };
 
@@ -33,7 +43,11 @@ const taskSchema = z.object({
 export const listTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.from("department_tasks" as never).select("*").order("updated_at", { ascending: false }).limit(500);
+    const { data, error } = await context.supabase
+      .from("department_tasks" as never)
+      .select("*")
+      .order("updated_at", { ascending: false })
+      .limit(500);
     if (error) throw new Error("Couldn't load the task bank.");
     return (data ?? []) as unknown as DepartmentTask[];
   });
@@ -43,11 +57,27 @@ export const saveTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => taskSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: data.department });
+    const { data: allowed } = await context.supabase.rpc("in_department", {
+      _user_id: context.userId,
+      _dept: data.department,
+    });
     if (!allowed) throw new Error("Forbidden");
-    const row = { department: data.department, title: data.title, body: data.body, status: data.status, importance: data.importance, due_at: data.due_at, owner_id: data.owner_id, ...(data.repeat !== undefined ? { repeat: data.repeat } : {}), updated_at: new Date().toISOString() };
+    const row = {
+      department: data.department,
+      title: data.title,
+      body: data.body,
+      status: data.status,
+      importance: data.importance,
+      due_at: data.due_at,
+      owner_id: data.owner_id,
+      ...(data.repeat !== undefined ? { repeat: data.repeat } : {}),
+      updated_at: new Date().toISOString(),
+    };
     const { error } = data.id
-      ? await context.supabase.from("department_tasks" as never).update(row as never).eq("id", data.id)
+      ? await context.supabase
+          .from("department_tasks" as never)
+          .update(row as never)
+          .eq("id", data.id)
       : await context.supabase.from("department_tasks" as never).insert(row as never);
     if (error) throw new Error("Couldn't save the task.");
     return { ok: true };
@@ -57,7 +87,10 @@ export const deleteTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("department_tasks" as never).delete().eq("id", data.id);
+    const { error } = await context.supabase
+      .from("department_tasks" as never)
+      .delete()
+      .eq("id", data.id);
     if (error) throw new Error("Couldn't delete the task.");
     return { ok: true };
   });
@@ -71,18 +104,36 @@ export const listTaskOwners = createServerFn({ method: "GET" })
     const { data: isStaff } = await context.supabase.rpc("is_staff", { _user_id: context.userId });
     if (!isStaff) throw new Error("Forbidden");
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-    const { data: rows } = await db.from("user_roles").select("user_id, role, departments").neq("role", "user");
+    const { data: rows } = await db
+      .from("user_roles")
+      .select("user_id, role, departments")
+      .neq("role", "user");
     const mineRows = (rows ?? []).filter((r) => r.user_id === context.userId);
     const isSuper = mineRows.some((r) => r.role === "super_admin");
     const myDepts = new Set(mineRows.flatMap((r) => (r.departments as string[] | null) ?? []));
     const byUser = new Map<string, string[]>();
-    for (const r of rows ?? []) byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), ...(((r.departments as string[] | null) ?? []))]);
-    const ids = [...byUser.keys()].filter((id) => id === context.userId || isSuper || byUser.get(id)!.some((d) => myDepts.has(d)));
-    const { data: profiles } = await db.from("profiles").select("id, legal_name, stage_name").in("id", ids);
-    const owners = ids.map((id) => {
-      const p = profiles?.find((x) => x.id === id);
-      return { userId: id, name: p?.legal_name || p?.stage_name || "Team member", departments: [...new Set(byUser.get(id))] };
-    }).sort((a, b) => a.name.localeCompare(b.name));
+    for (const r of rows ?? [])
+      byUser.set(r.user_id, [
+        ...(byUser.get(r.user_id) ?? []),
+        ...((r.departments as string[] | null) ?? []),
+      ]);
+    const ids = [...byUser.keys()].filter(
+      (id) => id === context.userId || isSuper || byUser.get(id)!.some((d) => myDepts.has(d)),
+    );
+    const { data: profiles } = await db
+      .from("profiles")
+      .select("id, legal_name, stage_name")
+      .in("id", ids);
+    const owners = ids
+      .map((id) => {
+        const p = profiles?.find((x) => x.id === id);
+        return {
+          userId: id,
+          name: p?.legal_name || p?.stage_name || "Team member",
+          departments: [...new Set(byUser.get(id))],
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
     return { me: context.userId, owners };
   });
 
@@ -90,17 +141,36 @@ export const listTaskOwners = createServerFn({ method: "GET" })
 export const loadLaunchMilestones = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: isSuper } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
+    const { data: isSuper } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "super_admin",
+    });
     if (!isSuper) throw new Error("Only super admins can load the pre-launch milestones.");
     const { LAUNCH_MILESTONES } = await import("./launch-milestones");
-    const { data: have } = await context.supabase.from("department_tasks" as never).select("title").eq("department", "launch");
+    const { data: have } = await context.supabase
+      .from("department_tasks" as never)
+      .select("title")
+      .eq("department", "launch");
     const titles = new Set(((have ?? []) as { title: string }[]).map((t) => t.title));
     const rows = LAUNCH_MILESTONES.filter((m) => !titles.has(m.title)).map((m) => ({
-      department: "launch", title: m.title, body: m.body, status: "planned", importance: m.importance, due_at: m.due, owner_id: context.userId,
+      department: "launch",
+      title: m.title,
+      body: m.body,
+      status: "planned",
+      importance: m.importance,
+      due_at: m.due,
+      owner_id: context.userId,
     }));
     if (rows.length) {
-      const { error } = await context.supabase.from("department_tasks" as never).insert(rows as never);
-      if (error) throw new Error(/check constraint/i.test(error.message) ? "Run migration 20261025170000 (launch department) first." : "Couldn't add the milestones.");
+      const { error } = await context.supabase
+        .from("department_tasks" as never)
+        .insert(rows as never);
+      if (error)
+        throw new Error(
+          /check constraint/i.test(error.message)
+            ? "Run migration 20261025170000 (launch department) first."
+            : "Couldn't add the milestones.",
+        );
     }
     return { added: rows.length };
   });
@@ -109,16 +179,30 @@ export const loadLaunchMilestones = createServerFn({ method: "POST" })
 export const loadResearchPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "research" });
+    const { data: allowed } = await context.supabase.rpc("in_department", {
+      _user_id: context.userId,
+      _dept: "research",
+    });
     if (!allowed) throw new Error("Only the Market Research team can load its plan.");
     const { researchTasks } = await import("./research-plan");
-    const { data: have } = await context.supabase.from("department_tasks" as never).select("title").eq("department", "research");
+    const { data: have } = await context.supabase
+      .from("department_tasks" as never)
+      .select("title")
+      .eq("department", "research");
     const titles = new Set(((have ?? []) as { title: string }[]).map((t) => t.title));
-    const rows = researchTasks().filter((t) => !titles.has(t.title)).map((t) => ({ department: "research", status: "planned", ...t }));
+    const rows = researchTasks()
+      .filter((t) => !titles.has(t.title))
+      .map((t) => ({ department: "research", status: "planned", ...t }));
     if (rows.length) {
-      const { error } = await context.supabase.from("department_tasks" as never).insert(rows as never);
-      if (error) throw new Error(/check constraint|repeat/i.test(error.message) ? "Run migration 20261025200000 (Market Research) first." : "Couldn't add the plan.");
+      const { error } = await context.supabase
+        .from("department_tasks" as never)
+        .insert(rows as never);
+      if (error)
+        throw new Error(
+          /check constraint|repeat/i.test(error.message)
+            ? "Run migration 20261025200000 (Market Research) first."
+            : "Couldn't add the plan.",
+        );
     }
     return { added: rows.length };
   });
-

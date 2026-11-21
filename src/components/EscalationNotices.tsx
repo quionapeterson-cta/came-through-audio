@@ -11,7 +11,13 @@ const when = (iso: string) => new Date(iso).toLocaleString();
  * the same rows, because a notice is the escalation row itself. Each row carries the note Support left and one button
  * that opens that exact thread in Admin → Support Tickets.
  */
-export function EscalationNotices({ title, blurb, footer, rows, onOpen }: {
+export function EscalationNotices({
+  title,
+  blurb,
+  footer,
+  rows,
+  onOpen,
+}: {
   title: string;
   blurb: string;
   footer: string;
@@ -41,10 +47,13 @@ export function EscalationNotices({ title, blurb, footer, rows, onOpen }: {
           >
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                {!notice.readAt ? <Badge className="bg-primary text-primary-foreground">New</Badge> : null}
+                {!notice.readAt ? (
+                  <Badge className="bg-primary text-primary-foreground">New</Badge>
+                ) : null}
                 <Badge variant="outline">{notice.channel === "info" ? "INFO" : "SUPPORT"}</Badge>
                 <Badge variant="outline">
-                  {TICKET_STATUS_LABEL[notice.status as keyof typeof TICKET_STATUS_LABEL] ?? notice.status}
+                  {TICKET_STATUS_LABEL[notice.status as keyof typeof TICKET_STATUS_LABEL] ??
+                    notice.status}
                 </Badge>
               </div>
               <p className="mt-1 truncate text-sm font-semibold">{notice.subject}</p>

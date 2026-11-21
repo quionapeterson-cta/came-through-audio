@@ -22,14 +22,18 @@ import {
 const TOKEN = /^[a-f0-9]{48}$/;
 
 const unavailable = (message: string) =>
-  new Response(message, { status: 503, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+  new Response(message, {
+    status: 503,
+    headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" },
+  });
 
 export const Route = createFileRoute("/api/calendar/feed")({
   server: {
     handlers: {
       GET: async ({ request }) => {
         const token = (new URL(request.url).searchParams.get("token") ?? "").trim().toLowerCase();
-        if (!TOKEN.test(token)) return new Response("Not found", { status: 404, headers: { "X-Robots-Tag": "noindex" } });
+        if (!TOKEN.test(token))
+          return new Response("Not found", { status: 404, headers: { "X-Robots-Tag": "noindex" } });
 
         if (!process.env["SUPABASE_URL"] || !process.env["SUPABASE_SERVICE_ROLE_KEY"]) {
           console.error("Calendar feed: Supabase is not configured, so no feed can be built.");
@@ -48,7 +52,8 @@ export const Route = createFileRoute("/api/calendar/feed")({
           return unavailable("The calendar feed isn't available right now.");
         }
         const userId = (row as { user_id?: string } | null)?.user_id;
-        if (!userId) return new Response("Not found", { status: 404, headers: { "X-Robots-Tag": "noindex" } });
+        if (!userId)
+          return new Response("Not found", { status: 404, headers: { "X-Robots-Tag": "noindex" } });
 
         const { data: roles, error: roleError } = await supabaseAdmin
           .from("user_roles")
@@ -58,9 +63,12 @@ export const Route = createFileRoute("/api/calendar/feed")({
           console.error("Calendar feed: couldn't read the owner's roles:", roleError.message);
           return unavailable("The calendar feed isn't available right now.");
         }
-        const access = resolveAccess((roles ?? []) as { role: string; departments: string[] | null }[]);
+        const access = resolveAccess(
+          (roles ?? []) as { role: string; departments: string[] | null }[],
+        );
         // A link outlives a role only until its next refresh: someone no longer on staff has nothing to subscribe to.
-        if (!access) return new Response("Not found", { status: 404, headers: { "X-Robots-Tag": "noindex" } });
+        if (!access)
+          return new Response("Not found", { status: 404, headers: { "X-Robots-Tag": "noindex" } });
 
         const viewer = calendarViewer(userId, access);
         const { from, to } = feedWindow();
@@ -70,7 +78,9 @@ export const Route = createFileRoute("/api/calendar/feed")({
         const [eventsResult, deadlinesResult] = await Promise.all([
           supabaseAdmin
             .from("calendar_events")
-            .select("id, owner_id, department, title, notes, starts_at, ends_at, all_day, updated_at")
+            .select(
+              "id, owner_id, department, title, notes, starts_at, ends_at, all_day, updated_at",
+            )
             .gte("starts_at", from)
             .lte("starts_at", to),
           supabaseAdmin
@@ -90,7 +100,10 @@ export const Route = createFileRoute("/api/calendar/feed")({
 
         const ics = buildCalendarFeedIcs({
           events: visibleCalendarEvents((eventsResult.data ?? []) as AdminCalendarEvent[], viewer),
-          deadlines: visibleTaskDeadlines((deadlinesResult.data ?? []) as AdminCalendarDeadline[], viewer),
+          deadlines: visibleTaskDeadlines(
+            (deadlinesResult.data ?? []) as AdminCalendarDeadline[],
+            viewer,
+          ),
           now: new Date(),
           origin: new URL(request.url).origin,
           ...(timeZone ? { timeZone } : {}),

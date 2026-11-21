@@ -17,6 +17,7 @@ describe("seal artwork", () => {
 
   it("names each choice for the studio", () => {
     expect(Object.keys(SEAL_ART_LABELS).sort()).toEqual(Object.keys(SEAL_ART).sort());
-    for (const label of Object.values(SEAL_ART_LABELS)) expect(label.trim().length).toBeGreaterThan(0);
+    for (const label of Object.values(SEAL_ART_LABELS))
+      expect(label.trim().length).toBeGreaterThan(0);
   });
 });

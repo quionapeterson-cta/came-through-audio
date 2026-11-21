@@ -53,7 +53,8 @@ export function priorityOf(state: OrganState): PlanPriority {
 /** What a healthy version of each system gives back, in plain words (the report's own Royalty Impact, forward-looking). */
 export const ORGAN_GAIN: Record<OrganId, string> = {
   heart: "Both halves of every performance royalty keep flowing, writer and publisher side.",
-  lungs: "Every stream's mechanical royalty is matched to its recording instead of sitting unmatched.",
+  lungs:
+    "Every stream's mechanical royalty is matched to its recording instead of sitting unmatched.",
   kidneys: "The recording side collects too: internet and satellite radio plays reach you.",
   brain: "Agencies match each play to the right song, writer and share.",
   spine: "Splits are settled, so no agency can hold a payment waiting on paperwork.",
@@ -151,11 +152,23 @@ export function buildTreatmentPlan(checkup: Checkup): TreatmentPlan {
     const cards = organ.findings.length
       ? organ.findings.map((f) => cardOf(organ, f, priority))
       : [maintenanceCard(organ, priority)];
-    return { id: organ.id, name: organ.name, system: organ.system, state: organ.state, priority, broken: organ.broken, cards };
+    return {
+      id: organ.id,
+      name: organ.name,
+      system: organ.system,
+      state: organ.state,
+      priority,
+      broken: organ.broken,
+      cards,
+    };
   });
-  const rank = (s: PlanSystem) => PRIORITY_ORDER.indexOf(s.priority) * 10 + ORGAN_ORDER.indexOf(s.id);
+  const rank = (s: PlanSystem) =>
+    PRIORITY_ORDER.indexOf(s.priority) * 10 + ORGAN_ORDER.indexOf(s.id);
   const ordered = [...systems].sort((a, b) => rank(a) - rank(b));
-  const groups: PriorityGroup[] = PRIORITY_ORDER.map((priority) => ({ priority, systems: ordered.filter((s) => s.priority === priority) })).filter((g) => g.systems.length > 0);
+  const groups: PriorityGroup[] = PRIORITY_ORDER.map((priority) => ({
+    priority,
+    systems: ordered.filter((s) => s.priority === priority),
+  })).filter((g) => g.systems.length > 0);
   return {
     groups,
     systems,
@@ -187,17 +200,39 @@ export function phaseLabel(phase: PlanPhase): string {
 // ── Reading the report's own data ───────────────────────────────────────────
 
 export type PlanSource = "handoff" | "saved" | "live";
-export type TreatmentPlanData = { checkup: Checkup; date: string; scope: string; country: string; source: PlanSource };
+export type TreatmentPlanData = {
+  checkup: Checkup;
+  date: string;
+  scope: string;
+  country: string;
+  source: PlanSource;
+};
 
 const HANDOFF_KEY = "cta-treatment-plan-v1";
 const HANDOFF_MAX_MS = 30 * 60 * 1000;
 
 /** Left by the report page so the plan opens on exactly the report the member just read. */
-export function savePlanHandoff(checkup: Checkup, reportDate: string, reportCountry: string, reportScope: string) {
+export function savePlanHandoff(
+  checkup: Checkup,
+  reportDate: string,
+  reportCountry: string,
+  reportScope: string,
+) {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ at: Date.now(), checkup, date: reportDate, country: reportCountry, scope: reportScope }));
-  } catch { /* private mode: the saved report or a live read still works */ }
+    window.sessionStorage.setItem(
+      HANDOFF_KEY,
+      JSON.stringify({
+        at: Date.now(),
+        checkup,
+        date: reportDate,
+        country: reportCountry,
+        scope: reportScope,
+      }),
+    );
+  } catch {
+    /* private mode: the saved report or a live read still works */
+  }
 }
 
 export function readPlanHandoff(): TreatmentPlanData | null {
@@ -205,15 +240,29 @@ export function readPlanHandoff(): TreatmentPlanData | null {
   try {
     const raw = window.sessionStorage.getItem(HANDOFF_KEY);
     if (!raw) return null;
-    const saved = JSON.parse(raw) as { at?: number; checkup?: Checkup; date?: string; country?: string; scope?: string };
-    if (!saved.at || Date.now() - saved.at > HANDOFF_MAX_MS || !saved.checkup?.organs?.length) return null;
-    return { checkup: saved.checkup, date: saved.date ?? "", scope: saved.scope ?? "Royalty Health Report", country: saved.country ?? "", source: "handoff" };
+    const saved = JSON.parse(raw) as {
+      at?: number;
+      checkup?: Checkup;
+      date?: string;
+      country?: string;
+      scope?: string;
+    };
+    if (!saved.at || Date.now() - saved.at > HANDOFF_MAX_MS || !saved.checkup?.organs?.length)
+      return null;
+    return {
+      checkup: saved.checkup,
+      date: saved.date ?? "",
+      scope: saved.scope ?? "Royalty Health Report",
+      country: saved.country ?? "",
+      source: "handoff",
+    };
   } catch {
     return null;
   }
 }
 
-const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 /**
  * The newest saved report that kept its whole report, because its snapshot holds the exact treatment steps. Falls back
@@ -249,15 +298,25 @@ async function liveTreatmentPlan(userId: string): Promise<TreatmentPlanData> {
   ]);
   const allTracks = [...tracks, ...inspectorSongs];
   const onboarding = loadOnboarding(userId);
-  const country = countryByCode(onboarding?.healthCountry ?? "")
-    ?? countryByCode(guessCountry(allTracks.flatMap((t) => [...t.metadata.writers, ...t.metadata.composers].map((w) => w.pro))))
-    ?? countryByCode("US")!;
+  const country =
+    countryByCode(onboarding?.healthCountry ?? "") ??
+    countryByCode(
+      guessCountry(
+        allTracks.flatMap((t) =>
+          [...t.metadata.writers, ...t.metadata.composers].map((w) => w.pro),
+        ),
+      ),
+    ) ??
+    countryByCode("US")!;
   const report = healthReport(allTracks, country, [...checks, ...inspectorChecks(statuses)]);
 
   const signedSheets = new Map<string, boolean>();
   try {
-    for (const [id, list] of await listSplitSheets()) signedSheets.set(id, sheetStatus(list) === "signed");
-  } catch { /* no sheets read: the report simply doesn't count them, as it does on the Hub */ }
+    for (const [id, list] of await listSplitSheets())
+      signedSheets.set(id, sheetStatus(list) === "signed");
+  } catch {
+    /* no sheets read: the report simply doesn't count them, as it does on the Hub */
+  }
 
   const account = statuses.find((x) => x.songRef === ACCOUNT_REF);
   const rows = report.rows.map((r) => {
@@ -267,7 +326,11 @@ async function liveTreatmentPlan(userId: string): Promise<TreatmentPlanData> {
 
   return {
     checkup: royaltyCheckup({ rows, signedSheets }),
-    date: new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+    date: new Date().toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
     scope: "Catalog Examination",
     country: country.name,
     source: "live",

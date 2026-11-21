@@ -43,47 +43,94 @@ export type ChecklistStep = {
  * one field moves it. Registering and confirming are still steps the user ticks (`registered`, `done`), but they don't
  * move the %; "healthy" means every step is done.
  */
-export type SongChecklist = { steps: ChecklistStep[]; done: number; total: number; pct: number; registered: { done: number; total: number }; group: "attention" | "later" | "healthy";
+export type SongChecklist = {
+  steps: ChecklistStep[];
+  done: number;
+  total: number;
+  pct: number;
+  registered: { done: number; total: number };
+  group: "attention" | "later" | "healthy";
   /** Not released yet: `pct` is how ready it is to distribute (Release checklist + PRO/MLC registration), not registration readiness. */
-  prerelease: boolean };
+  prerelease: boolean;
+};
 
 /** Account-wide checklist state lives in its own health_song_status row, under this song_ref (it's not a song). */
 export const ACCOUNT_REF = "account";
 /** Set once per account: international airplay collection through SoundExchange or PPL. */
 export const INTL_KEY = "intl:setup";
 
-export const STAGE_LABEL: Record<Stage, string> = { release: "Getting ready to release", details: "Ready to register", register: "Register it", confirm: "Confirm it shows up" };
+export const STAGE_LABEL: Record<Stage, string> = {
+  release: "Getting ready to release",
+  details: "Ready to register",
+  register: "Register it",
+  confirm: "Confirm it shows up",
+};
 
 /** What each society's search finds a song by most exactly, and the value to copy. Missing values point at their field. */
 /** `also` is a second detail to search with (BMI: the performer next to the title). */
-export type SearchKey = { by: string; value: string; field?: string; hint: string; also?: { by: string; value: string; field: string } };
+export type SearchKey = {
+  by: string;
+  value: string;
+  field?: string;
+  hint: string;
+  also?: { by: string; value: string; field: string };
+};
 export function searchKey(society: Society, m: Metadata): SearchKey {
-  if (society.searchBy === "isrc") return { by: "ISRC", value: m.isrc.trim(), field: "isrc", hint: society.id === "soundexchange"
-    ? "Search SoundExchange's public ISRC database by your ISRC (or by artist and title). It's the most exact match."
-    : `Search ${society.name} by ISRC. It's the most exact match.` };
-  if (society.searchBy === "title-performer") return { by: "title", value: m.title.trim(), field: "title", also: { by: "performer", value: m.artist.trim(), field: "artist" },
-    hint: `Search ${society.name} by the song title, then pick the result with your artist name as the performer.` };
+  if (society.searchBy === "isrc")
+    return {
+      by: "ISRC",
+      value: m.isrc.trim(),
+      field: "isrc",
+      hint:
+        society.id === "soundexchange"
+          ? "Search SoundExchange's public ISRC database by your ISRC (or by artist and title). It's the most exact match."
+          : `Search ${society.name} by ISRC. It's the most exact match.`,
+    };
+  if (society.searchBy === "title-performer")
+    return {
+      by: "title",
+      value: m.title.trim(),
+      field: "title",
+      also: { by: "performer", value: m.artist.trim(), field: "artist" },
+      hint: `Search ${society.name} by the song title, then pick the result with your artist name as the performer.`,
+    };
   if (society.searchBy === "writer") {
     const writer = [...m.writers, ...m.composers].map(creditName).find(Boolean) ?? "";
-    return { by: "writer name", value: writer, field: "writers-0-legalName", hint: `Search ${society.name} by writer name, then find the song in that writer's list.` };
+    return {
+      by: "writer name",
+      value: writer,
+      field: "writers-0-legalName",
+      hint: `Search ${society.name} by writer name, then find the song in that writer's list.`,
+    };
   }
-  return { by: "title", value: m.title.trim(), field: "title", hint: `Search ${society.name} by the exact title.` };
+  return {
+    by: "title",
+    value: m.title.trim(),
+    field: "title",
+    hint: `Search ${society.name} by the exact title.`,
+  };
 }
 
 /** A short fingerprint of the details a society registration holds, so a later edit to them can be noticed. */
 export function registrationPrint(m: Metadata, pillar: Pillar): string {
-  const people = (rows: Metadata["writers"]) => rows.map((r) => [creditName(r), r.role ?? "", r.percentage, r.pro, r.ipi].join("~")).filter((x) => x.replace(/~/g, ""));
-  const parts = pillar === "digital"
-    ? [m.title, m.artist, m.isrc, ...m.featured]
-    : [m.title, ...people(m.writers), ...people(m.composers), ...people(m.publishers)];
+  const people = (rows: Metadata["writers"]) =>
+    rows
+      .map((r) => [creditName(r), r.role ?? "", r.percentage, r.pro, r.ipi].join("~"))
+      .filter((x) => x.replace(/~/g, ""));
+  const parts =
+    pillar === "digital"
+      ? [m.title, m.artist, m.isrc, ...m.featured]
+      : [m.title, ...people(m.writers), ...people(m.composers), ...people(m.publishers)];
   let h = 5381;
-  for (const ch of parts.map((x) => x.trim().toLowerCase()).join("|")) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0;
+  for (const ch of parts.map((x) => x.trim().toLowerCase()).join("|"))
+    h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0;
   return h.toString(36);
 }
 export const printKey = (societyId: string) => `print:${societyId}`;
 
 /** The society a pillar's steps point at: the one already marked, otherwise the first (writers join one PRO). */
-const societyOf = (p: TrackReport["pillars"][number]) => (p.societies.find((s) => s.check) ?? p.societies[0])?.society;
+const societyOf = (p: TrackReport["pillars"][number]) =>
+  (p.societies.find((s) => s.check) ?? p.societies[0])?.society;
 
 /** The agencies our registration check knows; other societies fall back to the core readiness rules. */
 const AGENCIES: RegistrationAgency[] = ["bmi", "ascap", "mlc", "soundexchange"];
@@ -92,18 +139,37 @@ const AGENCIES: RegistrationAgency[] = ["bmi", "ascap", "mlc", "soundexchange"];
  * Is the song ready to register with this society? Uses the shared registrationCheck (never re-implemented here),
  * so the items listed are exactly what our team would ask for before registering.
  */
-function readyFor(m: Metadata, society: Society, pillar: Pillar): { items: { text: string; field?: string }[]; required: number } {
+function readyFor(
+  m: Metadata,
+  society: Society,
+  pillar: Pillar,
+): { items: { text: string; field?: string }[]; required: number } {
   const agency = AGENCIES.find((a) => a === society.id);
   if (agency) {
     const check = registrationCheck(m, agency);
-    return { items: check.missing.map((x) => ({ text: x.message, field: x.field })), required: check.total };
+    return {
+      items: check.missing.map((x) => ({ text: x.message, field: x.field })),
+      required: check.total,
+    };
   }
-  if (pillar === "digital") return { items: m.isrc.trim() ? [] : [{ text: "Add the recording's ISRC.", field: "isrc" }], required: 1 };
+  if (pillar === "digital")
+    return {
+      items: m.isrc.trim() ? [] : [{ text: "Add the recording's ISRC.", field: "isrc" }],
+      required: 1,
+    };
   const core = registrationReadiness(m, pillar === "mechanical" ? "mlc" : "pro");
-  return { items: [...core.missing, ...core.warnings].map((x) => ({ text: x.message, field: x.field })), required: core.checked };
+  return {
+    items: [...core.missing, ...core.warnings].map((x) => ({ text: x.message, field: x.field })),
+    required: core.checked,
+  };
 }
 
-export function songChecklist(r: TrackReport, country: Country, status?: SongStatus, account?: SongStatus): SongChecklist {
+export function songChecklist(
+  r: TrackReport,
+  country: Country,
+  status?: SongStatus,
+  account?: SongStatus,
+): SongChecklist {
   const m = r.track.metadata;
   const ticked = status?.steps ?? {};
   const needsPro = r.issues.some((i) => i.field?.endsWith("-pro"));
@@ -111,7 +177,19 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   // Not out yet: what to have ready before distributing comes first, and recordings wait for the release date.
   const prerelease = isUnreleased(m);
   if (prerelease) {
-    for (const i of releaseItems(m, ticked, !!r.beatLinked)) steps.push({ id: `release:${i.id}`, stage: "release", auto: i.auto, done: i.done, title: i.title, field: i.field, items: i.items, tick: i.tick, optional: i.optional, why: i.why });
+    for (const i of releaseItems(m, ticked, !!r.beatLinked))
+      steps.push({
+        id: `release:${i.id}`,
+        stage: "release",
+        auto: i.auto,
+        done: i.done,
+        title: i.title,
+        field: i.field,
+        items: i.items,
+        tick: i.tick,
+        optional: i.optional,
+        why: i.why,
+      });
   }
 
   // Ready to register: one step per agency, ticked by the catalog itself. These alone make up the song's %.
@@ -120,8 +198,18 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
     if (!society) continue;
     const ready = readyFor(m, society, p.pillar);
     const name = p.pillar === "performance" && needsPro ? "your PRO" : society.name;
-    steps.push({ id: `ready:${p.pillar}`, stage: "details", auto: true, pillar: p.pillar, society, done: !ready.items.length,
-      title: `Ready to register with ${name}`, items: ready.items, required: ready.required, field: ready.items[0]?.field });
+    steps.push({
+      id: `ready:${p.pillar}`,
+      stage: "details",
+      auto: true,
+      pillar: p.pillar,
+      society,
+      done: !ready.items.length,
+      title: `Ready to register with ${name}`,
+      items: ready.items,
+      required: ready.required,
+      field: ready.items[0]?.field,
+    });
   }
 
   for (const p of r.pillars) {
@@ -129,30 +217,81 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
     if (!society || (p.pillar === "performance" && needsPro)) continue;
     // SoundExchange registers recordings once they're out: shown as waiting, never counted against an unreleased song.
     if (prerelease && p.pillar === "digital") {
-      steps.push({ id: `register:${p.pillar}`, stage: "register", auto: true, pillar: p.pillar, society, optional: true, done: false,
-        title: `Register with ${society.name} after release${m.releaseDate ? ` (${m.releaseDate})` : ""}` });
+      steps.push({
+        id: `register:${p.pillar}`,
+        stage: "register",
+        auto: true,
+        pillar: p.pillar,
+        society,
+        optional: true,
+        done: false,
+        title: `Register with ${society.name} after release${m.releaseDate ? ` (${m.releaseDate})` : ""}`,
+      });
       continue;
     }
     const found = p.state === "confirmed";
     const registered = found || !!ticked[`registered:${society.id}`];
     const saved = ticked[printKey(society.id)];
     const update = registered && !!saved && saved !== registrationPrint(m, p.pillar);
-    steps.push({ id: `register:${p.pillar}`, stage: "register", auto: false, pillar: p.pillar, society, update,
-      done: registered && !update, title: update ? `Update your registration at ${society.name}` : `Register with ${society.name} for ${pillarLabel(p.pillar, country).toLowerCase()}` });
-    steps.push({ id: `confirm:${p.pillar}`, stage: "confirm", auto: false, pillar: p.pillar, society,
-      done: found, title: `Confirm it shows up in ${society.name}` });
+    steps.push({
+      id: `register:${p.pillar}`,
+      stage: "register",
+      auto: false,
+      pillar: p.pillar,
+      society,
+      update,
+      done: registered && !update,
+      title: update
+        ? `Update your registration at ${society.name}`
+        : `Register with ${society.name} for ${pillarLabel(p.pillar, country).toLowerCase()}`,
+    });
+    steps.push({
+      id: `confirm:${p.pillar}`,
+      stage: "confirm",
+      auto: false,
+      pillar: p.pillar,
+      society,
+      done: found,
+      title: `Confirm it shows up in ${society.name}`,
+    });
   }
   // US radio doesn't pay recordings, so US artists collect airplay abroad through SoundExchange or PPL. One setting per account.
   if (country.code === "US")
-    steps.push({ id: "intl", stage: "register", auto: false, done: !!account?.steps[INTL_KEY], title: "Collect international airplay (neighbouring rights)" });
+    steps.push({
+      id: "intl",
+      stage: "register",
+      auto: false,
+      done: !!account?.steps[INTL_KEY],
+      title: "Collect international airplay (neighbouring rights)",
+    });
   // Live records that disagree with the catalog (e.g. a different ISRC on streaming) are checked after registering.
-  const findings = r.findings.filter((f) => f.level === "warn").map((f) => ({ text: f.text, field: f.field === "writers" ? "writers-0-legalName" : f.field }));
-  if (findings.length) steps.push({ id: "details", stage: "confirm", auto: true, done: false, title: "Match what the live records show", items: findings, field: findings[0]?.field });
+  const findings = r.findings
+    .filter((f) => f.level === "warn")
+    .map((f) => ({ text: f.text, field: f.field === "writers" ? "writers-0-legalName" : f.field }));
+  if (findings.length)
+    steps.push({
+      id: "details",
+      stage: "confirm",
+      auto: true,
+      done: false,
+      title: "Match what the live records show",
+      items: findings,
+      field: findings[0]?.field,
+    });
   if (r.pillars.some((p) => p.pillar === "performance" || p.pillar === "mechanical"))
     // An ISWC the member has applied for waits on the PRO, so it stops being a step they owe: the date they chose is
     // when to look, and ticking the box off is their answer (founder, 2026-11-12).
-    steps.push({ id: "iswc", stage: "confirm", auto: true, done: !!m.iswc.trim(), optional: m.iswcPending,
-      title: m.iswcPending ? `ISWC awaiting PRO approval${m.iswcCheckOn ? ` · check ${m.iswcCheckOn}` : ""}` : "Add the ISWC once it's assigned", field: "iswc" });
+    steps.push({
+      id: "iswc",
+      stage: "confirm",
+      auto: true,
+      done: !!m.iswc.trim(),
+      optional: m.iswcPending,
+      title: m.iswcPending
+        ? `ISWC awaiting PRO approval${m.iswcCheckOn ? ` · check ${m.iswcCheckOn}` : ""}`
+        : "Add the ISWC once it's assigned",
+      field: "iswc",
+    });
 
   const counted = steps.filter((s) => !s.optional);
   const ready = steps.filter((s) => s.stage === "details");
@@ -162,47 +301,102 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   // song missing one of fifteen reads 93%, not 33% (founder, 2026-11-12). A whole agency must still be complete for its
   // step to tick, and only a song with nothing missing reads 100%.
   const required = ready.reduce((n, s) => n + (s.required ?? 0), 0);
-  const met = ready.reduce((n, s) => n + Math.max(0, (s.required ?? 0) - (s.items?.length ?? 0)), 0);
+  const met = ready.reduce(
+    (n, s) => n + Math.max(0, (s.required ?? 0) - (s.items?.length ?? 0)),
+    0,
+  );
   // Unreleased: ready to distribute = the release items plus registering with the PRO and mechanical society.
-  const pct = prerelease ? releasePct([...steps.filter((s) => s.stage === "release"), ...reg.filter((s) => s.id !== "intl")])
-    : required ? Math.round((met / required) * 100) : 0;
-  const group = done === counted.length ? "healthy" : status?.list === "later" ? "later" : "attention";
-  return { steps, done, total: counted.length, pct, registered: { done: reg.filter((s) => s.done).length, total: reg.length }, group, prerelease };
+  const pct = prerelease
+    ? releasePct([
+        ...steps.filter((s) => s.stage === "release"),
+        ...reg.filter((s) => s.id !== "intl"),
+      ])
+    : required
+      ? Math.round((met / required) * 100)
+      : 0;
+  const group =
+    done === counted.length ? "healthy" : status?.list === "later" ? "later" : "attention";
+  return {
+    steps,
+    done,
+    total: counted.length,
+    pct,
+    registered: { done: reg.filter((s) => s.done).length, total: reg.length },
+    group,
+    prerelease,
+  };
 }
 
 /**
  * The My Catalog health meter: how ready each song is to register (the same readiness steps the Royalties and Registrations
  * ticks) and their average, how many registrations are ticked off, and the first missing field so "Fix next" can jump to it.
  */
-export function catalogHealth(tracks: CatalogTrack[], country: Country, checks: RepertoireCheck[], statuses: SongStatus[]) {
+export function catalogHealth(
+  tracks: CatalogTrack[],
+  country: Country,
+  checks: RepertoireCheck[],
+  statuses: SongStatus[],
+) {
   const statusOf = (id: string) => statuses.find((s) => s.songRef === id);
   const account = statusOf(ACCOUNT_REF);
   const songs = tracks.map((track) => {
-    const c = songChecklist(trackReport(track, country, checks), country, statusOf(track.id), account);
-    return { track, pct: c.pct, prerelease: c.prerelease, registered: c.registered, field: c.steps.find((s) => (s.stage === "details" || s.stage === "release") && !s.done && s.field)?.field };
+    const c = songChecklist(
+      trackReport(track, country, checks),
+      country,
+      statusOf(track.id),
+      account,
+    );
+    return {
+      track,
+      pct: c.pct,
+      prerelease: c.prerelease,
+      registered: c.registered,
+      field: c.steps.find(
+        (s) => (s.stage === "details" || s.stage === "release") && !s.done && s.field,
+      )?.field,
+    };
   });
   // Unreleased songs get their own "getting ready" line and stay out of the score until release (founder, 2026-10-25).
   const out = songs.filter((s) => !s.prerelease);
   const upcoming = songs.filter((s) => s.prerelease);
-  const avg = (list: typeof songs) => (list.length ? Math.round(list.reduce((sum, s) => sum + s.pct, 0) / list.length) : 0);
+  const avg = (list: typeof songs) =>
+    list.length ? Math.round(list.reduce((sum, s) => sum + s.pct, 0) / list.length) : 0;
   const pct = avg(out);
-  const next = out.filter((s) => s.pct < 100).sort((a, b) => a.pct - b.pct)[0] ?? upcoming.filter((s) => s.pct < 100).sort((a, b) => a.pct - b.pct)[0];
-  const registered = out.reduce((n, s) => ({ done: n.done + s.registered.done, total: n.total + s.registered.total }), { done: 0, total: 0 });
-  return { songs, pct, ready: out.filter((s) => s.pct === 100).length, released: out.length, registered, next, prerelease: { count: upcoming.length, pct: avg(upcoming) } };
+  const next =
+    out.filter((s) => s.pct < 100).sort((a, b) => a.pct - b.pct)[0] ??
+    upcoming.filter((s) => s.pct < 100).sort((a, b) => a.pct - b.pct)[0];
+  const registered = out.reduce(
+    (n, s) => ({ done: n.done + s.registered.done, total: n.total + s.registered.total }),
+    { done: 0, total: 0 },
+  );
+  return {
+    songs,
+    pct,
+    ready: out.filter((s) => s.pct === 100).length,
+    released: out.length,
+    registered,
+    next,
+    prerelease: { count: upcoming.length, pct: avg(upcoming) },
+  };
 }
 
 /** A warm, honest line for where the song is. */
 export function encouragement(c: SongChecklist): string {
   if (c.prerelease) {
-    if (c.pct === 100) return "Ready to distribute. Everything that can happen before release is done; SoundExchange comes after release day.";
+    if (c.pct === 100)
+      return "Ready to distribute. Everything that can happen before release is done; SoundExchange comes after release day.";
     return `${c.pct}% ready to distribute. Get these done before release so the money can find you from day one.`;
   }
-  if (c.group === "healthy") return "Ready, registered and confirmed. This song is set up to get paid. Nice work.";
+  if (c.group === "healthy")
+    return "Ready, registered and confirmed. This song is set up to get paid. Nice work.";
   if (c.pct === 100) {
     const left = c.registered.total - c.registered.done;
-    return left ? `Ready to register everywhere. ${left} registration${left === 1 ? "" : "s"} left to do.` : "Ready and registered. Confirm it shows up to finish.";
+    return left
+      ? `Ready to register everywhere. ${left} registration${left === 1 ? "" : "s"} left to do.`
+      : "Ready and registered. Confirm it shows up to finish.";
   }
-  if (c.pct === 0) return "A few details to add before it's ready to register. Take them one at a time; nothing here is urgent.";
+  if (c.pct === 0)
+    return "A few details to add before it's ready to register. Take them one at a time; nothing here is urgent.";
   if (c.pct >= 50) return `${c.pct}% ready to register. More than halfway, keep going.`;
   return `${c.pct}% ready to register. Every detail you add makes it easier to get paid.`;
 }
@@ -215,17 +409,36 @@ export function releaseKind(m: Pick<Metadata, "releaseType">): "Single" | "EP" |
 
 /** The song list's release groups: each album and EP, then every single in one Singles group, then Royalty Inspector songs. */
 export type SongSort = "least" | "az" | "recent";
-export type ReleaseGroup<T> = { key: string; name: string; type: string; songs: T[]; pct: number; updatedAt: string };
+export type ReleaseGroup<T> = {
+  key: string;
+  name: string;
+  type: string;
+  songs: T[];
+  pct: number;
+  updatedAt: string;
+};
 type Listed = { r: TrackReport; c: SongChecklist };
 
 export const SINGLES_KEY = "~singles";
 
-export function releaseGroups<T extends Listed>(songs: T[], sort: SongSort, query = ""): ReleaseGroup<T>[] {
+export function releaseGroups<T extends Listed>(
+  songs: T[],
+  sort: SongSort,
+  query = "",
+): ReleaseGroup<T>[] {
   const q = query.trim().toLowerCase();
-  const hit = ({ r }: T) => !q || [r.track.title, r.track.artist, r.track.metadata.album].some((v) => v?.toLowerCase().includes(q));
+  const hit = ({ r }: T) =>
+    !q ||
+    [r.track.title, r.track.artist, r.track.metadata.album].some((v) =>
+      v?.toLowerCase().includes(q),
+    );
   // The album title routes the songs, not each song's own release type (founder, 2026-11-10), so a track saved as a
   // Single inside an album still groups with that album here and in My Catalog.
-  const kinds = routedKinds(songs, (x) => ({ ...x.r.track.metadata, title: x.r.track.title }), (x) => x.r.track.id);
+  const kinds = routedKinds(
+    songs,
+    (x) => ({ ...x.r.track.metadata, title: x.r.track.title }),
+    (x) => x.r.track.id,
+  );
   const groups = new Map<string, ReleaseGroup<T>>();
   for (const x of songs.filter(hit)) {
     const m = x.r.track.metadata;
@@ -234,7 +447,18 @@ export function releaseGroups<T extends Listed>(songs: T[], sort: SongSort, quer
     const kind = kinds.get(x.r.track.id) ?? "Single";
     const project = !inspector && kind !== "Single";
     const key = inspector ? "~inspector" : project ? `${kind}:${albumKey(album)}` : SINGLES_KEY;
-    const g = groups.get(key) ?? { key, name: inspector ? "Royalty Inspector songs" : project ? album || `Untitled ${kind}` : "Singles", type: project ? kind : "", songs: [], pct: 0, updatedAt: "" };
+    const g = groups.get(key) ?? {
+      key,
+      name: inspector
+        ? "Royalty Inspector songs"
+        : project
+          ? album || `Untitled ${kind}`
+          : "Singles",
+      type: project ? kind : "",
+      songs: [],
+      pct: 0,
+      updatedAt: "",
+    };
     g.songs.push(x);
     if (x.r.track.updatedAt > g.updatedAt) g.updatedAt = x.r.track.updatedAt;
     groups.set(key, g);
@@ -242,11 +466,15 @@ export function releaseGroups<T extends Listed>(songs: T[], sort: SongSort, quer
   const trackNo = (x: Listed) => Number(x.r.track.metadata.trackNumber) || 999;
   const title = (a: Listed, b: Listed) => a.r.track.title.localeCompare(b.r.track.title);
   // Albums and EPs keep track order; Singles have none, so they follow the chosen sort.
-  const inGroup = (key: string) => key.startsWith("~")
-    ? sort === "least" ? (a: Listed, b: Listed) => a.c.pct - b.c.pct || title(a, b)
-      : sort === "recent" ? (a: Listed, b: Listed) => b.r.track.updatedAt.localeCompare(a.r.track.updatedAt) || title(a, b)
-      : title
-    : (a: Listed, b: Listed) => trackNo(a) - trackNo(b) || title(a, b);
+  const inGroup = (key: string) =>
+    key.startsWith("~")
+      ? sort === "least"
+        ? (a: Listed, b: Listed) => a.c.pct - b.c.pct || title(a, b)
+        : sort === "recent"
+          ? (a: Listed, b: Listed) =>
+              b.r.track.updatedAt.localeCompare(a.r.track.updatedAt) || title(a, b)
+          : title
+      : (a: Listed, b: Listed) => trackNo(a) - trackNo(b) || title(a, b);
   const list = [...groups.values()].map((g) => ({
     ...g,
     songs: g.songs.sort(inGroup(g.key)),
@@ -254,8 +482,11 @@ export function releaseGroups<T extends Listed>(songs: T[], sort: SongSort, quer
   }));
   // Albums and EPs are sorted; Singles and Royalty Inspector songs always come after them.
   const rank = (g: ReleaseGroup<T>) => (g.key === "~inspector" ? 2 : g.key === SINGLES_KEY ? 1 : 0);
-  const by = sort === "az" ? (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => a.name.localeCompare(b.name)
-    : sort === "recent" ? (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => b.updatedAt.localeCompare(a.updatedAt)
-    : (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => a.pct - b.pct;
+  const by =
+    sort === "az"
+      ? (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => a.name.localeCompare(b.name)
+      : sort === "recent"
+        ? (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => b.updatedAt.localeCompare(a.updatedAt)
+        : (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => a.pct - b.pct;
   return list.sort((a, b) => rank(a) - rank(b) || by(a, b));
 }

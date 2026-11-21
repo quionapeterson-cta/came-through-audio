@@ -34,7 +34,9 @@ export function usePrelaunchGuard() {
     void supabase.auth.getSession().then(({ data }) => {
       if (alive) setSignedIn(!!data.session);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => setSignedIn(!!session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
+      setSignedIn(!!session),
+    );
     // Another part of the page (the passkey on the sign-up card, the banner's Lock) changes the state this hook holds.
     const sync = () => setStored(readTesterState());
     window.addEventListener(TESTER_EVENT, sync);
@@ -66,5 +68,13 @@ export function usePrelaunchGuard() {
   );
 
   const unlocked = !IS_PRELAUNCH || testerUnlocked(stored, signedIn);
-  return { isPrelaunch: IS_PRELAUNCH, unlocked, locked: !unlocked, signedIn, unlock, lock, tryPasskey };
+  return {
+    isPrelaunch: IS_PRELAUNCH,
+    unlocked,
+    locked: !unlocked,
+    signedIn,
+    unlock,
+    lock,
+    tryPasskey,
+  };
 }

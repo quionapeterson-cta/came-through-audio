@@ -33,59 +33,62 @@ export const BATCH_CONFIRMATION =
  * The agency-specific double-checks. Each one names a field the agency will reject or mis-file on, so a box that is
  * still unticked is a reason to stop rather than a formality.
  */
-export const AGENCY_VERIFICATION: Record<VerificationAgency, { intro: string; checks: string[] }> = {
-  SoundExchange: {
-    intro:
-      "SoundExchange registers the recording, not the composition, so the writer fields are deliberately absent here.",
-    checks: [
-      "The ISRC on each recording matches the master and is unique (no reused or borrowed code).",
-      "The rights owner and artist name are spelled exactly as they appear on the release.",
-      "The recording share is allocated to the right owner and totals 100%.",
-      "The UPC for the release is entered once per album, not per track.",
-      "A featured artist is credited as a featured artist, not added as a second owner.",
-    ],
-  },
-  "The MLC": {
-    intro:
-      "The MLC registers the composition and matches on title, writer and ISRC, so a wrong IPI files the money to nobody.",
-    checks: [
-      "The ISRC is present and belongs to this recording.",
-      "Every writer has an IPI number and a legal name (no stage names in the writer fields).",
-      "The publisher is named with its own IPI, or the work is marked Self-published.",
-      "Writer splits total exactly 100%, and publisher shares total exactly 100% when a publisher is listed.",
-      "The ISWC is included when the client has one: it helps The MLC match the work.",
-    ],
-  },
-  BMI: {
-    intro:
-      "BMI registers the composition too, and pays the publisher share to its own writers, so a wrong IPI or an unanswered publisher question blocks the filing.",
-    checks: [
-      "Legal writer names are used, spelled as they are on the writer's BMI account.",
-      "Each writer's PRO and IPI number are correct, and Author/Composer is the role where it applies.",
-      "The publisher is entered with its own IPI and share, or the work is marked Self-published (a song with only BMI writers and no publisher needs neither).",
-      "Writer splits total exactly 100%, and publisher shares total exactly 100% when a publisher is listed.",
-      "The duration and genre are filled in, and \"written for film/TV/stage/ad\" is answered.",
-    ],
-  },
-  ASCAP: {
-    intro:
-      "ASCAP registers the composition. It does not require an ISRC, so an unreleased work or a song written for another artist still registers.",
-    checks: [
-      "Legal writer names are used, spelled as they are on the writer's ASCAP account.",
-      "Each writer's PRO and IPI number are correct, and Author/Composer is the role where it applies.",
-      "The publisher is entered with its share, or the work is marked Self-published.",
-      "Writer splits total exactly 100%, and publisher shares total exactly 100% when a publisher is listed.",
-      "The samples question is answered, and the work is marked instrumental where there are no lyrics.",
-    ],
-  },
-};
+export const AGENCY_VERIFICATION: Record<VerificationAgency, { intro: string; checks: string[] }> =
+  {
+    SoundExchange: {
+      intro:
+        "SoundExchange registers the recording, not the composition, so the writer fields are deliberately absent here.",
+      checks: [
+        "The ISRC on each recording matches the master and is unique (no reused or borrowed code).",
+        "The rights owner and artist name are spelled exactly as they appear on the release.",
+        "The recording share is allocated to the right owner and totals 100%.",
+        "The UPC for the release is entered once per album, not per track.",
+        "A featured artist is credited as a featured artist, not added as a second owner.",
+      ],
+    },
+    "The MLC": {
+      intro:
+        "The MLC registers the composition and matches on title, writer and ISRC, so a wrong IPI files the money to nobody.",
+      checks: [
+        "The ISRC is present and belongs to this recording.",
+        "Every writer has an IPI number and a legal name (no stage names in the writer fields).",
+        "The publisher is named with its own IPI, or the work is marked Self-published.",
+        "Writer splits total exactly 100%, and publisher shares total exactly 100% when a publisher is listed.",
+        "The ISWC is included when the client has one: it helps The MLC match the work.",
+      ],
+    },
+    BMI: {
+      intro:
+        "BMI registers the composition too, and pays the publisher share to its own writers, so a wrong IPI or an unanswered publisher question blocks the filing.",
+      checks: [
+        "Legal writer names are used, spelled as they are on the writer's BMI account.",
+        "Each writer's PRO and IPI number are correct, and Author/Composer is the role where it applies.",
+        "The publisher is entered with its own IPI and share, or the work is marked Self-published (a song with only BMI writers and no publisher needs neither).",
+        "Writer splits total exactly 100%, and publisher shares total exactly 100% when a publisher is listed.",
+        'The duration and genre are filled in, and "written for film/TV/stage/ad" is answered.',
+      ],
+    },
+    ASCAP: {
+      intro:
+        "ASCAP registers the composition. It does not require an ISRC, so an unreleased work or a song written for another artist still registers.",
+      checks: [
+        "Legal writer names are used, spelled as they are on the writer's ASCAP account.",
+        "Each writer's PRO and IPI number are correct, and Author/Composer is the role where it applies.",
+        "The publisher is entered with its share, or the work is marked Self-published.",
+        "Writer splits total exactly 100%, and publisher shares total exactly 100% when a publisher is listed.",
+        "The samples question is answered, and the work is marked instrumental where there are no lyrics.",
+      ],
+    },
+  };
 
 /**
  * The agencies' checks for one order, in one fixed order so the dialogs read the same every time. Every agency an order
  * can be bought for is covered, including BMI: a missing list used to leave its songs with no checklist and no way to
  * press Mark Registered.
  */
-export function verificationFor(agencies: string[]): { agency: VerificationAgency; intro: string; checks: string[] }[] {
+export function verificationFor(
+  agencies: string[],
+): { agency: VerificationAgency; intro: string; checks: string[] }[] {
   return VERIFICATION_AGENCIES.filter((agency) => agencies.includes(agency)).map((agency) => ({
     agency,
     ...AGENCY_VERIFICATION[agency],
@@ -131,20 +134,18 @@ export function groupOrdersByUser<T extends GroupableOrder>(orders: T[]): UserGr
   const groups = new Map<string, UserGroup<T>>();
   for (const order of orders) {
     const key = keyOf(order);
-    const group =
-      groups.get(key) ??
-      {
-        key,
-        email: order.email ?? "",
-        name: order.customer,
-        orders: [],
-        songs: 0,
-        registered: 0,
-        total: 0,
-        onHold: 0,
-        complete: false,
-        batchDone: false,
-      };
+    const group = groups.get(key) ?? {
+      key,
+      email: order.email ?? "",
+      name: order.customer,
+      orders: [],
+      songs: 0,
+      registered: 0,
+      total: 0,
+      onHold: 0,
+      complete: false,
+      batchDone: false,
+    };
     group.orders.push(order);
     if (!group.email && order.email) group.email = order.email;
     group.songs += order.songs.length;

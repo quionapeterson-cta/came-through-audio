@@ -154,7 +154,10 @@ export const Route = createFileRoute("/api/inbox/file")({
         const problem = dropFilesProblem(files.map((f) => ({ name: f.name, size: f.size })));
         if (problem) return fail(problem);
         const badType = files.find((f) => !ALLOWED_DROP_TYPE.test(f.name));
-        if (badType) return fail(`${badType.name} isn't a file type we accept. Send documents, images, audio, video or a ZIP.`);
+        if (badType)
+          return fail(
+            `${badType.name} isn't a file type we accept. Send documents, images, audio, video or a ZIP.`,
+          );
 
         const submissionId = crypto.randomUUID();
         const stored: { filename: string; mimeType?: string; size: number; storagePath: string }[] =

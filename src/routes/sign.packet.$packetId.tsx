@@ -223,10 +223,7 @@ function PacketSigningPage() {
                 return (
                   <section key={block.id}>
                     <p className="text-sm font-semibold">{block.label || "Print legal name"}</p>
-                    <div
-                      className="mt-1 h-7 border-b"
-                      style={{ borderColor: BRAND.black }}
-                    >
+                    <div className="mt-1 h-7 border-b" style={{ borderColor: BRAND.black }}>
                       {String(values["PRINT_LEGAL_NAME"] ?? "")}
                     </div>
                   </section>

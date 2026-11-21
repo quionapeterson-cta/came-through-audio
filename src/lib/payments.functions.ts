@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
-import { CHECKOUT_UNAVAILABLE, checkoutEnvironmentError, getPaymentsEnvironment } from "@/lib/payments-env";
+import {
+  CHECKOUT_UNAVAILABLE,
+  checkoutEnvironmentError,
+  getPaymentsEnvironment,
+} from "@/lib/payments-env";
 import { readCountedPaymentsEnvironment } from "@/lib/payments-env.server";
 import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
 import { isActiveSub, PRICE_TIER } from "@/lib/plans";
@@ -29,14 +33,19 @@ async function resolveOrCreateCustomer(
   stripe: ReturnType<typeof createStripeClient>,
   options: { email?: string | undefined; userId: string },
 ): Promise<string> {
-  const found = await stripe.customers.search({ query: `metadata['userId']:'${options.userId}'`, limit: 1 });
+  const found = await stripe.customers.search({
+    query: `metadata['userId']:'${options.userId}'`,
+    limit: 1,
+  });
   if (found.data[0]) return found.data[0].id;
   if (options.email) {
     const existing = await stripe.customers.list({ email: options.email, limit: 1 });
     const customer = existing.data[0];
     if (customer) {
       if (customer.metadata?.["userId"] !== options.userId) {
-        await stripe.customers.update(customer.id, { metadata: { ...customer.metadata, userId: options.userId } });
+        await stripe.customers.update(customer.id, {
+          metadata: { ...customer.metadata, userId: options.userId },
+        });
       }
       return customer.id;
     }
@@ -55,7 +64,11 @@ type Stripe = ReturnType<typeof createStripeClient>;
  * this, a price object created at the wrong amount was only discovered on the member's card statement: the page said
  * $3.99 and Stripe took $14.99. The refusal names the lookup key and both amounts, and nothing is charged.
  */
-function refuseMispriced(env: "sandbox" | "live", lookupKey: string | null | undefined, amount: number | null | undefined) {
+function refuseMispriced(
+  env: "sandbox" | "live",
+  lookupKey: string | null | undefined,
+  amount: number | null | undefined,
+) {
   const problem = amountProblem(lookupKey ?? "", amount);
   if (!problem) return;
   console.error(`Stripe price mismatch (${env}): ${problem} ${PRICE_MISMATCH_NOTE}`);
@@ -67,7 +80,10 @@ function refuseMispriced(env: "sandbox" | "live", lookupKey: string | null | und
  * one-time or yearly price under `vault_month` failed at Stripe with "Checkout could not open (…)", which reads as a
  * broken button; the member gets the reason and nothing is charged.
  */
-function refuseVaultPrice(env: "sandbox" | "live", price: Parameters<typeof vaultPriceShapeProblem>[0] & { unit_amount?: number | null }) {
+function refuseVaultPrice(
+  env: "sandbox" | "live",
+  price: Parameters<typeof vaultPriceShapeProblem>[0] & { unit_amount?: number | null },
+) {
   const problem = vaultPriceShapeProblem(price);
   if (!problem) return;
   console.error(`Vault price mismatch (${env}): ${problem} ${PRICE_MISMATCH_NOTE}`);
@@ -85,7 +101,9 @@ function stripeClient(env: "sandbox" | "live"): Stripe {
   } catch (e) {
     if (e instanceof Error && e.message.endsWith("is not configured")) {
       console.error("Payments are not configured here:", e.message);
-      throw new Error("Card payments aren't switched on in this preview (no Stripe key here). Buy it on the published site: it appears on this account the moment Stripe confirms the payment.");
+      throw new Error(
+        "Card payments aren't switched on in this preview (no Stripe key here). Buy it on the published site: it appears on this account the moment Stripe confirms the payment.",
+      );
     }
     throw e;
   }
@@ -96,31 +114,56 @@ function stripeClient(env: "sandbox" | "live"): Stripe {
  * amount and takes the payment. Needs no plan switching set up in the portal settings: if Stripe asks for it, an
  * app-owned portal configuration that allows it is used instead. Picking the plan they already have opens the portal.
  */
-async function planSwitchUrl(stripe: Stripe, env: "sandbox" | "live", customer: string, subscriptionId: string, lookupKey: string, returnUrl: string) {
+async function planSwitchUrl(
+  stripe: Stripe,
+  env: "sandbox" | "live",
+  customer: string,
+  subscriptionId: string,
+  lookupKey: string,
+  returnUrl: string,
+) {
   const [sub, prices] = await Promise.all([
     stripe.subscriptions.retrieve(subscriptionId),
     stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 }),
   ]);
   const item = sub.items.data[0];
   const price = prices.data[0];
-  if (!price) throw new Error("This item isn't available to buy yet. Contact support and we'll help right away.");
+  if (!price)
+    throw new Error(
+      "This item isn't available to buy yet. Contact support and we'll help right away.",
+    );
   refuseMispriced(env, lookupKey, price.unit_amount);
-  if (!item || item.price.id === price.id) return (await stripe.billingPortal.sessions.create({ customer, return_url: returnUrl })).url;
+  if (!item || item.price.id === price.id)
+    return (await stripe.billingPortal.sessions.create({ customer, return_url: returnUrl })).url;
   const flow = {
     customer,
     return_url: returnUrl,
     flow_data: {
       type: "subscription_update_confirm" as const,
-      subscription_update_confirm: { subscription: subscriptionId, items: [{ id: item.id, price: price.id, quantity: 1 }] },
+      subscription_update_confirm: {
+        subscription: subscriptionId,
+        items: [{ id: item.id, price: price.id, quantity: 1 }],
+      },
       // The product is named on the way back too, so the workspace opens a plan return and nothing else.
-      after_completion: { type: "redirect" as const, redirect: { return_url: `${returnUrl}?checkout=success&bought=plan` } },
+      after_completion: {
+        type: "redirect" as const,
+        redirect: { return_url: `${returnUrl}?checkout=success&bought=plan` },
+      },
     },
   };
   try {
     return (await stripe.billingPortal.sessions.create(flow)).url;
   } catch (e) {
-    console.warn("Plan switch with the default portal settings failed, retrying with the app's own:", getStripeErrorMessage(e));
-    return (await stripe.billingPortal.sessions.create({ ...flow, configuration: await planSwitchConfiguration(stripe) })).url;
+    console.warn(
+      "Plan switch with the default portal settings failed, retrying with the app's own:",
+      getStripeErrorMessage(e),
+    );
+    return (
+      await stripe.billingPortal.sessions.create({
+        ...flow,
+        configuration: await planSwitchConfiguration(stripe),
+      })
+    ).url;
   }
 }
 
@@ -129,7 +172,11 @@ async function planSwitchConfiguration(stripe: Stripe) {
   const existing = await stripe.billingPortal.configurations.list({ active: true, limit: 100 });
   const found = existing.data.find((c) => c.metadata?.["app"] === "cta_plan_switch");
   if (found) return found.id;
-  const prices = await stripe.prices.list({ lookup_keys: Object.keys(PRICE_TIER), active: true, limit: 20 });
+  const prices = await stripe.prices.list({
+    lookup_keys: Object.keys(PRICE_TIER),
+    active: true,
+    limit: 20,
+  });
   const byProduct = new Map<string, string[]>();
   for (const p of prices.data) {
     const product = typeof p.product === "string" ? p.product : p.product.id;
@@ -157,25 +204,50 @@ async function planSwitchConfiguration(stripe: Stripe) {
  * Renew now: a one-time payment for next year's plan at the plan's own price (read from the user's subscription,
  * never the browser). The webhook then moves the renewal a full year past the one paid for.
  */
-async function renewCheckout(stripe: Stripe, env: "sandbox" | "live", userId: string, email: string | undefined, origin: string) {
-  const [{ admin, loadState }, { canRenewEarly, renewalDate }] = await Promise.all([import("@/lib/retention.server"), import("@/lib/retention")]);
+async function renewCheckout(
+  stripe: Stripe,
+  env: "sandbox" | "live",
+  userId: string,
+  email: string | undefined,
+  origin: string,
+) {
+  const [{ admin, loadState }, { canRenewEarly, renewalDate }] = await Promise.all([
+    import("@/lib/retention.server"),
+    import("@/lib/retention"),
+  ]);
   const s = await loadState(await admin(), userId, env);
-  if (!s.sub?.stripe_subscription_id || !canRenewEarly(s.sub, s.pauses)) throw new Error("Renew now isn't available on this plan right now.");
+  if (!s.sub?.stripe_subscription_id || !canRenewEarly(s.sub, s.pauses))
+    throw new Error("Renew now isn't available on this plan right now.");
   try {
-    const sub = await stripe.subscriptions.retrieve(s.sub.stripe_subscription_id, { expand: ["items.data.price.product"] });
+    const sub = await stripe.subscriptions.retrieve(s.sub.stripe_subscription_id, {
+      expand: ["items.data.price.product"],
+    });
     const price = sub.items.data[0]?.price;
     const product = price && (typeof price.product === "string" ? price.product : price.product.id);
     if (!price?.unit_amount || !product) throw new Error("This plan's price couldn't be read.");
-    const name = typeof price.product === "object" && "name" in price.product ? price.product.name : "Plan";
+    const name =
+      typeof price.product === "object" && "name" in price.product ? price.product.name : "Plan";
     const session = await stripe.checkout.sessions.create({
-      line_items: [{ price_data: { currency: price.currency, product, unit_amount: price.unit_amount }, quantity: 1 }],
+      line_items: [
+        {
+          price_data: { currency: price.currency, product, unit_amount: price.unit_amount },
+          quantity: 1,
+        },
+      ],
       mode: "payment",
       ui_mode: "embedded_page",
       return_url: `${origin}${purchaseLanding("renew")}`,
       customer: await resolveOrCreateCustomer(stripe, { email, userId }),
       client_reference_id: userId,
       payment_intent_data: { description: `${name}: next year, renewed early` },
-      metadata: { userId, kind: "renew", subscription: sub.id, renews: renewalDate(s.sub)!.toISOString(), priceIds: price.lookup_key ?? "", managed_payments: "true" },
+      metadata: {
+        userId,
+        kind: "renew",
+        subscription: sub.id,
+        renews: renewalDate(s.sub)!.toISOString(),
+        priceIds: price.lookup_key ?? "",
+        managed_payments: "true",
+      },
       managed_payments: { enabled: true },
     } as Parameters<typeof stripe.checkout.sessions.create>[0]);
     if (!session.client_secret) throw new Error("Stripe did not return a client secret");
@@ -183,7 +255,9 @@ async function renewCheckout(stripe: Stripe, env: "sandbox" | "live", userId: st
   } catch (e) {
     const reason = getStripeErrorMessage(e);
     console.error("Renew now checkout failed:", reason, e);
-    throw new Error(`Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`);
+    throw new Error(
+      `Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`,
+    );
   }
 }
 
@@ -200,40 +274,80 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     // A checkout in one mode while the database counts the other takes money for a plan that never shows, or hands
     // out a paid plan for free (founder, 2026-11-12). Refused before Stripe is called, so nothing is charged.
     const counted = await readCountedPaymentsEnvironment();
-    const refusal = counted.read ? checkoutEnvironmentError(env, counted.env) : CHECKOUT_UNAVAILABLE;
+    const refusal = counted.read
+      ? checkoutEnvironmentError(env, counted.env)
+      : CHECKOUT_UNAVAILABLE;
     if (refusal) throw new Error(refusal);
     const stripe = stripeClient(env);
     const origin = await appOrigin();
     // No confirmation check here any more (founder, 2026-11-05): paying comes first and the confirmation link is a
     // reminder that arrives alongside the purchase, so the email gate that used to stand in front of Stripe is gone.
-    if (data.kind === "renew") return renewCheckout(stripe, env, context.userId, (context.claims as { email?: string }).email, origin);
+    if (data.kind === "renew")
+      return renewCheckout(
+        stripe,
+        env,
+        context.userId,
+        (context.claims as { email?: string }).email,
+        origin,
+      );
     // Seat handoff: the artist starts a normal plan at the seat's tier, and the first charge waits for the seat's paid
     // period to end. The seat is read here, so the tier, the buyer and the date can't come from the browser.
     if (data.kind === "seat_handoff") {
-      const { data: row, error } = await context.supabase.from("artist_seats" as never)
+      const { data: row, error } = await context.supabase
+        .from("artist_seats" as never)
         .select("id, tier, status, member_user_id, current_period_end" as never)
-        .eq("id" as never, data.seatId as never).maybeSingle();
+        .eq("id" as never, data.seatId as never)
+        .maybeSingle();
       if (error) throw new Error(`Couldn't open that seat (${error.message}).`);
-      const seat = row as { id: string; tier: string; status: string; member_user_id: string | null; current_period_end: string | null } | null;
-      if (!seat || seat.member_user_id !== context.userId) throw new Error("That artist seat isn't on your account.");
-      if (seat.status === "handed_off") throw new Error("You're already paying for this plan yourself.");
-      if (seat.status === "ended") throw new Error("This seat has ended, so there is nothing to take over.");
+      const seat = row as {
+        id: string;
+        tier: string;
+        status: string;
+        member_user_id: string | null;
+        current_period_end: string | null;
+      } | null;
+      if (!seat || seat.member_user_id !== context.userId)
+        throw new Error("That artist seat isn't on your account.");
+      if (seat.status === "handed_off")
+        throw new Error("You're already paying for this plan yourself.");
+      if (seat.status === "ended")
+        throw new Error("This seat has ended, so there is nothing to take over.");
       // A second click while the first handoff settles must not open a second plan: one live plan is the limit.
-      const { data: mine } = await context.supabase.from("subscriptions")
+      const { data: mine } = await context.supabase
+        .from("subscriptions")
         .select("status, current_period_end")
-        .eq("user_id", context.userId).eq("environment", env)
+        .eq("user_id", context.userId)
+        .eq("environment", env)
         .not("stripe_subscription_id", "is", null);
-      if (((mine ?? []) as { status: string; current_period_end: string | null }[]).some((s) => isActiveSub(s))) {
-        throw new Error("You already have a plan of your own. Change or cancel it first in Profile → Manage billing, so you're never charged twice.");
+      if (
+        ((mine ?? []) as { status: string; current_period_end: string | null }[]).some((s) =>
+          isActiveSub(s),
+        )
+      ) {
+        throw new Error(
+          "You already have a plan of your own. Change or cancel it first in Profile → Manage billing, so you're never charged twice.",
+        );
       }
       const end = seat.current_period_end ? new Date(seat.current_period_end) : null;
-      if (!end || end.getTime() <= Date.now()) throw new Error("This seat's paid period has ended, so there is nothing to take over.");
+      if (!end || end.getTime() <= Date.now())
+        throw new Error("This seat's paid period has ended, so there is nothing to take over.");
       const lookupKey = Object.entries(PRICE_TIER).find(([, t]) => t === seat.tier)?.[0];
-      if (!lookupKey) throw new Error("This seat's plan isn't available right now. Contact support and we'll help.");
+      if (!lookupKey)
+        throw new Error(
+          "This seat's plan isn't available right now. Contact support and we'll help.",
+        );
       try {
-        const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, expand: ["data.product"], limit: 1 });
+        const prices = await stripe.prices.list({
+          lookup_keys: [lookupKey],
+          active: true,
+          expand: ["data.product"],
+          limit: 1,
+        });
         const price = prices.data[0];
-        if (!price) throw new Error("This seat's plan isn't available right now. Contact support and we'll help.");
+        if (!price)
+          throw new Error(
+            "This seat's plan isn't available right now. Contact support and we'll help.",
+          );
         refuseMispriced(env, lookupKey, price.unit_amount);
         // Stripe's earliest trial_end is 48 hours out; a handoff in the last two days of the period therefore starts its
         // first charge just after the renewal rather than before it. Nothing is ever charged at handoff.
@@ -246,10 +360,22 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           mode: "subscription",
           ui_mode: "embedded_page",
           return_url: `${origin}/profile?checkout=success`,
-          customer: await resolveOrCreateCustomer(stripe, { email: (context.claims as { email?: string }).email, userId: context.userId }),
+          customer: await resolveOrCreateCustomer(stripe, {
+            email: (context.claims as { email?: string }).email,
+            userId: context.userId,
+          }),
           client_reference_id: context.userId,
-          metadata: { userId: context.userId, kind: "seat_handoff", seatId: seat.id, priceIds: lookupKey, managed_payments: "true" },
-          subscription_data: { trial_end: trialEnd, metadata: { userId: context.userId, kind: "seat_handoff", seatId: seat.id } },
+          metadata: {
+            userId: context.userId,
+            kind: "seat_handoff",
+            seatId: seat.id,
+            priceIds: lookupKey,
+            managed_payments: "true",
+          },
+          subscription_data: {
+            trial_end: trialEnd,
+            metadata: { userId: context.userId, kind: "seat_handoff", seatId: seat.id },
+          },
           managed_payments: { enabled: true },
         } as Parameters<typeof stripe.checkout.sessions.create>[0]);
         if (!session.client_secret) throw new Error("Stripe did not return a client secret");
@@ -257,15 +383,24 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       } catch (e) {
         const reason = getStripeErrorMessage(e);
         console.error(`Seat handoff checkout failed (${env}):`, reason, e);
-        throw new Error(`Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`);
+        throw new Error(
+          `Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`,
+        );
       }
     }
     const plan = planCheckout(data, context.userId);
     if (data.kind === "contract") {
-      const { data: gen } = await context.supabase.from("contract_generations" as never).select("id, company, draft, contract_id").eq("id", data.generationId).eq("user_id", context.userId).maybeSingle();
+      const { data: gen } = await context.supabase
+        .from("contract_generations" as never)
+        .select("id, company, draft, contract_id")
+        .eq("id", data.generationId)
+        .eq("user_id", context.userId)
+        .maybeSingle();
       const g = gen as { company: boolean; draft: unknown; contract_id: string | null } | null;
-      if (!g || g.company || !g.draft) throw new Error("That draft wasn't found. Draft it again and try once more.");
-      if (g.contract_id) throw new Error("You already have this contract. Open it in My Contracts.");
+      if (!g || g.company || !g.draft)
+        throw new Error("That draft wasn't found. Draft it again and try once more.");
+      if (g.contract_id)
+        throw new Error("You already have this contract. Open it in My Contracts.");
     }
     // The pause's own monthly Vault subscription: where it starts, and whether the first month waits for the renewal
     // date or is charged today (founder, 2026-11-20). It has no end date: it runs until the member resumes
@@ -273,20 +408,34 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     let vault: { starts: string; trialEnd: number | null; idempotencyKey: string } | null = null;
     if (data.kind === "vault") {
       // Pause is only sold when it can start: around renewal, after a failed renewal or during the grace period.
-      const [{ admin, loadState, liveVaultPause, liveVaultSubscription }, { offers, pauseSpan }, { pauseCheckoutRefusal }] = await Promise.all([
-        import("@/lib/retention.server"), import("@/lib/retention"), import("@/lib/vault-subscription"),
+      const [
+        { admin, loadState, liveVaultPause, liveVaultSubscription },
+        { offers, pauseSpan },
+        { pauseCheckoutRefusal },
+      ] = await Promise.all([
+        import("@/lib/retention.server"),
+        import("@/lib/retention"),
+        import("@/lib/vault-subscription"),
       ]);
       const db = await admin();
       const s = await loadState(db, context.userId, env);
       const o = offers(s.sub, s.lapse, s.pauses);
-      if (!o.canPause) throw new Error(o.pauseAgain ? "Pause can be used once every 12 months." : "Pause isn't available on this account right now.");
+      if (!o.canPause)
+        throw new Error(
+          o.pauseAgain
+            ? "Pause can be used once every 12 months."
+            : "Pause isn't available on this account right now.",
+        );
       // A double click or a second tab must not open a second pause subscription: one live pause per account, whether
       // its row is already written or its checkout has only just been paid for (founder, 2026-11-20).
       const [pause, subscription] = await Promise.all([
         liveVaultPause(db, context.userId, env),
         liveVaultSubscription(env, context.userId),
       ]);
-      const refusal = pauseCheckoutRefusal({ livePause: !!pause, liveSubscription: !!subscription });
+      const refusal = pauseCheckoutRefusal({
+        livePause: !!pause,
+        liveSubscription: !!subscription,
+      });
       if (refusal) throw new Error(refusal);
       const span = pauseSpan(s.sub);
       // Ten-minute bucket: a double click and an immediate retry share one Stripe session, while a genuinely later
@@ -307,24 +456,48 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       // tier again is allowed: that is how an owner adds a second or third artist (founder, 2026-11-04). A branding kit
       // is its own yearly subscription too (founder, 2026-11-19), and so is the pause's monthly Vault fee (founder,
       // 2026-11-20): neither ever replaces or switches the member's plan.
-      if (plan.mode === "subscription" && data.kind !== "seat" && data.kind !== "branding" && data.kind !== "vault") {
-        const { data: subs } = await context.supabase.from("subscriptions")
+      if (
+        plan.mode === "subscription" &&
+        data.kind !== "seat" &&
+        data.kind !== "branding" &&
+        data.kind !== "vault"
+      ) {
+        const { data: subs } = await context.supabase
+          .from("subscriptions")
           .select("stripe_subscription_id, stripe_customer_id, status, current_period_end")
-          .eq("user_id", context.userId).eq("environment", env).not("stripe_subscription_id", "is", null)
+          .eq("user_id", context.userId)
+          .eq("environment", env)
+          .not("stripe_subscription_id", "is", null)
           .order("created_at", { ascending: false });
         const current = subs?.find((s) => s.status !== "canceled" && isActiveSub(s));
         if (current?.stripe_customer_id && current.stripe_subscription_id) {
-          return { portalUrl: await planSwitchUrl(stripe, env, current.stripe_customer_id, current.stripe_subscription_id, plan.items[0]!.lookupKey, `${origin}/workspace`) };
+          return {
+            portalUrl: await planSwitchUrl(
+              stripe,
+              env,
+              current.stripe_customer_id,
+              current.stripe_subscription_id,
+              plan.items[0]!.lookupKey,
+              `${origin}/workspace`,
+            ),
+          };
         }
       }
 
       // Resolve human-readable price IDs via lookup_keys.
-      const prices = await stripe.prices.list({ lookup_keys: plan.items.map((i) => i.lookupKey), active: true, expand: ["data.product"], limit: 20 });
+      const prices = await stripe.prices.list({
+        lookup_keys: plan.items.map((i) => i.lookupKey),
+        active: true,
+        expand: ["data.product"],
+        limit: 20,
+      });
       const byKey = new Map(prices.data.map((p) => [p.lookup_key, p]));
       const missing = plan.items.find((i) => !byKey.has(i.lookupKey));
       if (missing) {
         console.error(`Stripe price with lookup key ${missing.lookupKey} not found (${env})`);
-        throw new Error("This item isn't available to buy yet. Contact support and we'll help right away.");
+        throw new Error(
+          "This item isn't available to buy yet. Contact support and we'll help right away.",
+        );
       }
       // The card must be charged what the page quotes, every item in the order (founder, 2026-11-19), and a pause's
       // price must be the monthly one it is sold as, not a one-time or yearly price under the same key.
@@ -348,26 +521,41 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         ...(vault ? { pauseStarts: vault.starts } : {}),
       };
 
-      const session = await stripe.checkout.sessions.create({
-        line_items: plan.items.map((i) => ({ price: byKey.get(i.lookupKey)!.id, quantity: i.quantity })),
-        mode: plan.mode,
-        ui_mode: "embedded_page",
-        return_url: back,
-        customer,
-        client_reference_id: context.userId,
-        // One-off charges: the product name lands on the Charge so the payments dashboard
-        // shows it instead of "Unknown product". Subscriptions resolve names server-side.
-        ...(plan.mode === "payment" && { payment_intent_data: { description: productNames.join(" + ") } }),
-        metadata: plan.managed ? { ...metadata, managed_payments: "true" } : metadata,
-        // The kind travels with the subscription so the webhook can tell a kit, a seat, a pause and a plan apart without
-        // guessing. A pause carries its own dates, and waits for the renewal date when Stripe can hold that as a trial
-        // (it will not defer one by less than 48 hours, so a pause starting now is charged today).
-        ...(plan.mode === "subscription" && {
-          subscription_data: { metadata, ...(vault?.trialEnd ? { trial_end: vault.trialEnd } : {}) },
-        }),
-        // Managed: Stripe handles tax, fraud protection, disputes and transaction support end-to-end.
-        ...(plan.managed ? { managed_payments: { enabled: true } } : STRIPE_TAX ? { automatic_tax: { enabled: true } } : {}),
-      } as Parameters<typeof stripe.checkout.sessions.create>[0], vault ? { idempotencyKey: vault.idempotencyKey } : undefined);
+      const session = await stripe.checkout.sessions.create(
+        {
+          line_items: plan.items.map((i) => ({
+            price: byKey.get(i.lookupKey)!.id,
+            quantity: i.quantity,
+          })),
+          mode: plan.mode,
+          ui_mode: "embedded_page",
+          return_url: back,
+          customer,
+          client_reference_id: context.userId,
+          // One-off charges: the product name lands on the Charge so the payments dashboard
+          // shows it instead of "Unknown product". Subscriptions resolve names server-side.
+          ...(plan.mode === "payment" && {
+            payment_intent_data: { description: productNames.join(" + ") },
+          }),
+          metadata: plan.managed ? { ...metadata, managed_payments: "true" } : metadata,
+          // The kind travels with the subscription so the webhook can tell a kit, a seat, a pause and a plan apart without
+          // guessing. A pause carries its own dates, and waits for the renewal date when Stripe can hold that as a trial
+          // (it will not defer one by less than 48 hours, so a pause starting now is charged today).
+          ...(plan.mode === "subscription" && {
+            subscription_data: {
+              metadata,
+              ...(vault?.trialEnd ? { trial_end: vault.trialEnd } : {}),
+            },
+          }),
+          // Managed: Stripe handles tax, fraud protection, disputes and transaction support end-to-end.
+          ...(plan.managed
+            ? { managed_payments: { enabled: true } }
+            : STRIPE_TAX
+              ? { automatic_tax: { enabled: true } }
+              : {}),
+        } as Parameters<typeof stripe.checkout.sessions.create>[0],
+        vault ? { idempotencyKey: vault.idempotencyKey } : undefined,
+      );
       if (!session.client_secret) throw new Error("Stripe did not return a client secret");
       return { clientSecret: session.client_secret };
     } catch (e) {
@@ -375,9 +563,15 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       console.error(`Stripe checkout failed (${data.kind}):`, reason, e);
       // A refusal that already explains itself (no such item, or a Stripe price that doesn't match the published one)
       // is passed through, so the person reads the lookup key instead of a generic failure.
-      if (e instanceof Error && (e.message.startsWith("This item") || e.message.includes("published price"))) throw e;
+      if (
+        e instanceof Error &&
+        (e.message.startsWith("This item") || e.message.includes("published price"))
+      )
+        throw e;
       // Name the reason so a failing checkout can be fixed instead of guessed at (PLAN-registration-intake §0).
-      throw new Error(`Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`);
+      throw new Error(
+        `Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`,
+      );
     }
   });
 
@@ -389,24 +583,35 @@ export const openBillingPortal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ url: string }> => {
     const env = getPaymentsEnvironment();
-    const { data: subs } = await context.supabase.from("subscriptions").select("stripe_customer_id")
-      .eq("user_id", context.userId).eq("environment", env)
+    const { data: subs } = await context.supabase
+      .from("subscriptions")
+      .select("stripe_customer_id")
+      .eq("user_id", context.userId)
+      .eq("environment", env)
       .not("stripe_customer_id", "is", null)
-      .order("created_at", { ascending: false }).limit(1);
+      .order("created_at", { ascending: false })
+      .limit(1);
     let customer = subs?.[0]?.stripe_customer_id ?? null;
     // A branding kit is a subscription of its own, so a member with no plan still has billing to manage (founder,
     // 2026-11-19). The customer is found by the userId on it, never by anything the browser sends.
     if (!customer) {
       try {
-        const found = await stripeClient(env).customers.search({ query: `metadata['userId']:'${context.userId}'`, limit: 1 });
+        const found = await stripeClient(env).customers.search({
+          query: `metadata['userId']:'${context.userId}'`,
+          limit: 1,
+        });
         customer = found.data[0]?.id ?? null;
       } catch (e) {
         console.error("Billing customer lookup failed:", getStripeErrorMessage(e));
       }
     }
-    if (!customer) throw new Error("No billing on this account yet. Add a plan or a branding kit first.");
+    if (!customer)
+      throw new Error("No billing on this account yet. Add a plan or a branding kit first.");
     try {
-      const portal = await stripeClient(env).billingPortal.sessions.create({ customer, return_url: `${await appOrigin()}/workspace` });
+      const portal = await stripeClient(env).billingPortal.sessions.create({
+        customer,
+        return_url: `${await appOrigin()}/workspace`,
+      });
       return { url: portal.url };
     } catch (e) {
       console.error("Stripe portal failed:", getStripeErrorMessage(e));

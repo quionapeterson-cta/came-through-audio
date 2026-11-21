@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { resolveAccess } from "./departments";
 import { ESCALATION_DEPARTMENTS } from "./escalation-departments";
-import { ESCALATION_TAGS, escalationDepartments, escalationLeadLabels, leadTagsFor } from "./support-escalation-routing";
+import {
+  ESCALATION_TAGS,
+  escalationDepartments,
+  escalationLeadLabels,
+  leadTagsFor,
+} from "./support-escalation-routing";
 
 describe("escalationDepartments", () => {
   it("names the department behind a handoff, so its lead can be told", () => {
@@ -29,12 +34,18 @@ describe("escalationDepartments", () => {
 
 describe("leadTagsFor", () => {
   it("gives a department lead the tags of the department they lead", () => {
-    expect(leadTagsFor(resolveAccess([{ role: "department_lead", departments: ["marketing"] }]))).toEqual(["marketing"]);
+    expect(
+      leadTagsFor(resolveAccess([{ role: "department_lead", departments: ["marketing"] }])),
+    ).toEqual(["marketing"]);
   });
 
   it("leaves another department's lead and the team's employees out", () => {
-    expect(leadTagsFor(resolveAccess([{ role: "department_lead", departments: ["support"] }]))).toEqual([]);
-    expect(leadTagsFor(resolveAccess([{ role: "employee", departments: ["marketing"] }]))).toEqual([]);
+    expect(
+      leadTagsFor(resolveAccess([{ role: "department_lead", departments: ["support"] }])),
+    ).toEqual([]);
+    expect(leadTagsFor(resolveAccess([{ role: "employee", departments: ["marketing"] }]))).toEqual(
+      [],
+    );
     expect(leadTagsFor(null)).toEqual([]);
   });
 

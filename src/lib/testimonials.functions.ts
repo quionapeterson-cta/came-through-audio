@@ -45,7 +45,10 @@ type Ctx = {
 const adminDb = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 
 async function accessOf(context: Ctx): Promise<StaffAccess | null> {
-  const { data } = await context.supabase.from("user_roles").select("role, departments").eq("user_id", context.userId);
+  const { data } = await context.supabase
+    .from("user_roles")
+    .select("role, departments")
+    .eq("user_id", context.userId);
   return resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]);
 }
 
@@ -59,7 +62,8 @@ async function requireEditor(context: Ctx): Promise<void> {
 /** A Marketing or Branding lead (or a super admin) sends a version to a super admin. */
 async function requireSubmitter(context: Ctx): Promise<void> {
   const access = await accessOf(context);
-  if (!canEditTestimonials(access)) throw new Error("Homepage testimonials are for Marketing, Branding and super admins.");
+  if (!canEditTestimonials(access))
+    throw new Error("Homepage testimonials are for Marketing, Branding and super admins.");
   if (!canSubmitTestimonials(access)) {
     throw new Error("Only a Marketing or Branding lead can send the section for approval.");
   }
@@ -80,7 +84,8 @@ async function readContent(id: string): Promise<SettingContent> {
   return ((data?.content ?? null) as SettingContent) ?? null;
 }
 
-const itemsOf = (content: SettingContent): unknown => (content && "items" in content ? content["items"] : null);
+const itemsOf = (content: SettingContent): unknown =>
+  content && "items" in content ? content["items"] : null;
 
 /**
  * What the editor works on: the saved draft, or the live cards, or the file's list. The review state is separate so a
@@ -105,7 +110,11 @@ async function workspace(): Promise<TestimonialWorkspace> {
 }
 
 /** Writes the working copy only. Nothing on the homepage is touched until a super admin approves. */
-async function writeDraft(items: EditableTestimonial[], review: TestimonialReview, filter: TestimonialFilter) {
+async function writeDraft(
+  items: EditableTestimonial[],
+  review: TestimonialReview,
+  filter: TestimonialFilter,
+) {
   const db = await adminDb();
   const { error } = await db.from("site_settings").upsert({
     id: DRAFT_ID,
@@ -150,8 +159,9 @@ export const getTestimonials = createServerFn({ method: "GET" }).handler(
         .maybeSingle();
       const items = (data?.content as { items?: unknown } | null)?.items;
       if (!Array.isArray(items)) return TESTIMONIALS;
-      return publishableTestimonials(cleanTestimonials(items))
-        .map(({ id: _id, published: _p, releaseSignedOn: _r, ...t }) => t);
+      return publishableTestimonials(cleanTestimonials(items)).map(
+        ({ id: _id, published: _p, releaseSignedOn: _r, ...t }) => t,
+      );
     } catch {
       return TESTIMONIALS;
     }
@@ -288,7 +298,12 @@ export const decideTestimonials = createServerFn({ method: "POST" })
     await writeDraft(
       current.items,
       {
-        status: data.decision === "approve" ? "approved" : data.decision === "deny" ? "denied" : "changes_requested",
+        status:
+          data.decision === "approve"
+            ? "approved"
+            : data.decision === "deny"
+              ? "denied"
+              : "changes_requested",
         submittedBy: current.review.submittedBy,
         submittedAt: current.review.submittedAt,
         decidedBy: context.userId,

@@ -1,5 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { readWorkingAs, rememberWorkingAs, scopedTier, switchable, workTierFor, workingProfiles, type WorkingProfile } from "./profile-switch";
+import {
+  readWorkingAs,
+  rememberWorkingAs,
+  scopedTier,
+  switchable,
+  workTierFor,
+  workingProfiles,
+  type WorkingProfile,
+} from "./profile-switch";
 
 // The switcher remembers its pick in this browser; node has no storage, so the test brings its own.
 beforeAll(() => {
@@ -8,8 +16,12 @@ beforeAll(() => {
     configurable: true,
     value: {
       getItem: (k: string) => store.get(k) ?? null,
-      setItem: (k: string, v: string) => { store.set(k, v); },
-      removeItem: (k: string) => { store.delete(k); },
+      setItem: (k: string, v: string) => {
+        store.set(k, v);
+      },
+      removeItem: (k: string) => {
+        store.delete(k);
+      },
     },
   });
 });

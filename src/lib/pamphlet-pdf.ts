@@ -1,5 +1,19 @@
 import type { jsPDF as JsPDF } from "jspdf";
-import { brandFooter, brandHeader, newBrandedPdf, ensureSpace, font, headerDate, INK, label, MARGIN, MUTED, PANEL, accentOf, sectionTitle } from "@/lib/brand-pdf";
+import {
+  brandFooter,
+  brandHeader,
+  newBrandedPdf,
+  ensureSpace,
+  font,
+  headerDate,
+  INK,
+  label,
+  MARGIN,
+  MUTED,
+  PANEL,
+  accentOf,
+  sectionTitle,
+} from "@/lib/brand-pdf";
 import { saveBlob } from "@/lib/catalog";
 import type { Pamphlet } from "@/lib/waiting-area";
 
@@ -10,7 +24,13 @@ import type { Pamphlet } from "@/lib/waiting-area";
  */
 const width = (pdf: JsPDF) => pdf.internal.pageSize.getWidth() - MARGIN * 2;
 
-function para(pdf: JsPDF, y: number, text: string, size = 11, color: [number, number, number] = INK) {
+function para(
+  pdf: JsPDF,
+  y: number,
+  text: string,
+  size = 11,
+  color: [number, number, number] = INK,
+) {
   font(pdf, "regular", size).setTextColor(...color);
   const lines = pdf.splitTextToSize(text, width(pdf)) as string[];
   y = ensureSpace(pdf, y, lines.length * size * 0.45);
@@ -27,7 +47,11 @@ export async function buildPamphletPdf(p: Pamphlet, title: string) {
   // The same three readings the drawer shows, under the same names.
   y = ensureSpace(pdf, y + 2, 40);
   y = sectionTitle(pdf, y, "Readings");
-  const rows: [string, string][] = [["Healthy reading", p.healthy], ["Bad reading", p.unhealthy], ["In your report", p.meaning]];
+  const rows: [string, string][] = [
+    ["Healthy reading", p.healthy],
+    ["Bad reading", p.unhealthy],
+    ["In your report", p.meaning],
+  ];
   for (const [k, v] of rows) {
     font(pdf, "regular", 10);
     const lines = pdf.splitTextToSize(v, width(pdf) - 44) as string[];
@@ -40,7 +64,13 @@ export async function buildPamphletPdf(p: Pamphlet, title: string) {
     y += h + 2;
   }
   y = ensureSpace(pdf, y + 4, 12);
-  para(pdf, y, "General information to help you understand your royalties, not legal or financial advice. Each agency's own rules decide what it pays.", 8.5, MUTED);
+  para(
+    pdf,
+    y,
+    "General information to help you understand your royalties, not legal or financial advice. Each agency's own rules decide what it pays.",
+    8.5,
+    MUTED,
+  );
   brandFooter(pdf);
   return pdf;
 }

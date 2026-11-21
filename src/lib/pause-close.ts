@@ -7,7 +7,8 @@
 
 /** Stripe refuses a cancel for many reasons (stale id, mode/key mismatch, rate limit, a 5xx). None of them means the
  *  charge stopped, so the pause has to stay open and the refusal is recorded for staff. */
-export const VAULT_STILL_BILLING = "The monthly Vault charge could not be stopped, so the pause is still on. Try again in a moment; nothing else has changed.";
+export const VAULT_STILL_BILLING =
+  "The monthly Vault charge could not be stopped, so the pause is still on. Try again in a moment; nothing else has changed.";
 
 export type VaultStopDeps = {
   /** Cancel the Vault subscription; rejects when Stripe refuses. */
@@ -29,7 +30,9 @@ export async function vaultStopped(deps: VaultStopDeps): Promise<boolean> {
   } catch (e) {
     try {
       if ((await deps.status()) === "canceled") return true;
-    } catch { /* report the cancel failure below, not the read-back */ }
+    } catch {
+      /* report the cancel failure below, not the read-back */
+    }
     await deps.alert(e);
     return false;
   }

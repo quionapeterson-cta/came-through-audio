@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { deflectionFor, FORM_TIPS, HELP_AREAS, HELP_CATEGORIES, helpArticles, TICKET_AREA_NAMES } from "./help-center";
+import {
+  deflectionFor,
+  FORM_TIPS,
+  HELP_AREAS,
+  HELP_CATEGORIES,
+  helpArticles,
+  TICKET_AREA_NAMES,
+} from "./help-center";
 import { GENERAL_AREA } from "./support-topics";
 import { SUPPORT_FAQS } from "./support-faq";
 
@@ -13,7 +20,8 @@ describe("Help Center topics", () => {
       const articles = helpArticles(c);
       expect(articles.length, c.title).toBeGreaterThan(3);
       expect(new Set(articles.map((a) => a.q)).size).toBe(articles.length);
-      for (const a of articles) expect(a.a.trim().length, `${c.title} / ${a.q}`).toBeGreaterThan(40);
+      for (const a of articles)
+        expect(a.a.trim().length, `${c.title} / ${a.q}`).toBeGreaterThan(40);
     }
   });
 

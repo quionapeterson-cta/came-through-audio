@@ -14,27 +14,54 @@ import type { CatalogTrack } from "@/lib/catalog";
  *
  * Dev-only: `import.meta.env.DEV` is settled at build time, so a production build keeps the URL and renders "Not found".
  */
-export const Route = createFileRoute("/dev/fill")({ component: import.meta.env.DEV ? FillLab : NotInThisBuild });
+export const Route = createFileRoute("/dev/fill")({
+  component: import.meta.env.DEV ? FillLab : NotInThisBuild,
+});
 
 function NotInThisBuild() {
   return (
     <div className="min-h-screen bg-background p-8 text-foreground">
       <h1 className="text-2xl font-bold">Not found</h1>
-      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">This page exists in the development build only.</p>
+      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+        This page exists in the development build only.
+      </p>
     </div>
   );
 }
 
-const track = (id: string, title: string, album: string, releaseType: string, instrumental = false, writers: Contributor[] = []): CatalogTrack => ({
+const track = (
+  id: string,
+  title: string,
+  album: string,
+  releaseType: string,
+  instrumental = false,
+  writers: Contributor[] = [],
+): CatalogTrack => ({
   id,
   title,
   artist: "Karma Came",
   updatedAt: "",
-  metadata: { ...emptyMetadata(), title, artist: "Karma Came", album, releaseType, instrumental, writers, publishers: [], composers: [] },
+  metadata: {
+    ...emptyMetadata(),
+    title,
+    artist: "Karma Came",
+    album,
+    releaseType,
+    instrumental,
+    writers,
+    publishers: [],
+    composers: [],
+  },
 });
 
 /** A writer the catalog already holds under a different spelling or share, so the sample list differs. */
-const writer = (name: string, percentage: string) => ({ ...emptyContributor(), name, legalName: name, role: "Author/Composer", percentage });
+const writer = (name: string, percentage: string) => ({
+  ...emptyContributor(),
+  name,
+  legalName: name,
+  role: "Author/Composer",
+  percentage,
+});
 
 const catalog = [
   track("b", "Second Wind", "BAM", "Album"),
@@ -66,7 +93,10 @@ function FillLab() {
     let stopped = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const wait = (ms: number) => new Promise((r) => timers.push(setTimeout(r, ms)));
-    const fillButton = () => [...document.querySelectorAll("button")].find((b) => /Fill my catalog/i.test(b.textContent ?? ""));
+    const fillButton = () =>
+      [...document.querySelectorAll("button")].find((b) =>
+        /Fill my catalog/i.test(b.textContent ?? ""),
+      );
     const dialogOpen = () => !!document.querySelector('[role="dialog"]');
     void (async () => {
       // The page hydrates a moment after it paints (this route's own chunk arrives last), and a change event sent before
@@ -76,7 +106,10 @@ function FillLab() {
         await wait(attempt ? 500 : 400);
         if (stopped) return;
         const fill = fillButton();
-        if (fill) { fill.click(); continue; }
+        if (fill) {
+          fill.click();
+          continue;
+        }
         const input = document.querySelector<HTMLInputElement>('input[type="file"]');
         if (!input) continue;
         const dt = new DataTransfer();
@@ -85,16 +118,20 @@ function FillLab() {
         input.dispatchEvent(new Event("change", { bubbles: true }));
       }
     })();
-    return () => { stopped = true; timers.forEach(clearTimeout); };
+    return () => {
+      stopped = true;
+      timers.forEach(clearTimeout);
+    };
   }, []);
 
   return (
     <div className="min-h-screen bg-background p-8 text-foreground">
       <h1 className="text-2xl font-bold">Catalog fill lab</h1>
       <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-        Development only. The real <code>AgencyLists</code> with a small catalog and a sample BMI list that loads itself,
-        so the dialog opens on its own — no agency download needed. A release typed by hand is saved with the signed-in
-        account; with no session the server refuses it and the dialog says so.
+        Development only. The real <code>AgencyLists</code> with a small catalog and a sample BMI
+        list that loads itself, so the dialog opens on its own — no agency download needed. A
+        release typed by hand is saved with the signed-in account; with no session the server
+        refuses it and the dialog says so.
       </p>
       <div className="mt-6 max-w-4xl">
         <AgencyLists

@@ -3,7 +3,8 @@ import { LegalPage } from "@/components/LegalPage";
 import { PRIVACY } from "@/lib/legal-docs";
 import { loadLegalOverrides } from "@/lib/legal-overrides";
 
-const d = "How Came Through Audio, LLC collects, uses and protects your personal data and music assets.";
+const d =
+  "How Came Through Audio, LLC collects, uses and protects your personal data and music assets.";
 
 export const Route = createFileRoute("/privacy-policy")({
   head: () => ({
@@ -22,7 +23,5 @@ export const Route = createFileRoute("/privacy-policy")({
 });
 
 function Privacy() {
-  return (
-    <LegalPage {...PRIVACY} overrides={Route.useLoaderData()} />
-  );
+  return <LegalPage {...PRIVACY} overrides={Route.useLoaderData()} />;
 }

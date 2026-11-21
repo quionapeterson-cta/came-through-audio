@@ -7,7 +7,10 @@ describe("split totals", () => {
   it("caps a share at what the others leave", () => {
     expect(capShare(rows("35", "35", ""), 2, "50")).toEqual({ value: "30", cappedAt: 30 });
     expect(capShare(rows("35", "35", ""), 2, "30")).toEqual({ value: "30" });
-    expect(capShare(rows("33.33", "33.33", ""), 2, "40")).toEqual({ value: "33.34", cappedAt: 33.34 });
+    expect(capShare(rows("33.33", "33.33", ""), 2, "40")).toEqual({
+      value: "33.34",
+      cappedAt: 33.34,
+    });
   });
   it("always allows blank and lowering, even when already over 100%", () => {
     expect(capShare(rows("60", "60"), 0, "")).toEqual({ value: "" });

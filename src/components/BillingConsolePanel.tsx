@@ -5,13 +5,40 @@ import { toast } from "sonner";
 import { Search, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { REFUND_REASON_LABEL, REFUND_REASONS, dollarsToCents, formatUsd, type RefundReason } from "@/lib/billing-console";
-import { DUPLICATE_CHECKS, dayLabel, readCharge, type DuplicateCheck } from "@/lib/duplicate-charges";
 import {
-  checkDuplicateCharges, latestPlanCharge, listBillingActions, lookupBillingMember, purchasePaymentInfo,
-  refundLatestPlanCharge, refundPurchase, setSubscriptionCancellation,
-  type BillingMember, type BillingPurchase, type BillingSubscription, type DuplicateChargeRow, type PaymentInfo,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  REFUND_REASON_LABEL,
+  REFUND_REASONS,
+  dollarsToCents,
+  formatUsd,
+  type RefundReason,
+} from "@/lib/billing-console";
+import {
+  DUPLICATE_CHECKS,
+  dayLabel,
+  readCharge,
+  type DuplicateCheck,
+} from "@/lib/duplicate-charges";
+import {
+  checkDuplicateCharges,
+  latestPlanCharge,
+  listBillingActions,
+  lookupBillingMember,
+  purchasePaymentInfo,
+  refundLatestPlanCharge,
+  refundPurchase,
+  setSubscriptionCancellation,
+  type BillingMember,
+  type BillingPurchase,
+  type BillingSubscription,
+  type DuplicateChargeRow,
+  type PaymentInfo,
   type PlanChargeInfo,
 } from "@/lib/billing.functions";
 
@@ -19,7 +46,14 @@ const msg = (e: unknown) => (e instanceof Error ? e.message : "That didn't go th
 const day = (iso: string | null) => (iso ? iso.slice(0, 10) : "—");
 
 /** Amount, reason and a note, then the one button that actually moves money. */
-function RefundBox({ maxCents, defaultCents, needsNote, busy, onCancel, onConfirm }: {
+function RefundBox({
+  maxCents,
+  defaultCents,
+  needsNote,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
   maxCents: number;
   defaultCents?: number | undefined;
   needsNote: boolean;
@@ -27,7 +61,7 @@ function RefundBox({ maxCents, defaultCents, needsNote, busy, onCancel, onConfir
   onCancel: () => void;
   onConfirm: (cents: number, reason: RefundReason, note: string, checks: DuplicateCheck[]) => void;
 }) {
-  const [dollars, setDollars] = useState(((((defaultCents ?? maxCents)) / 100)).toFixed(2));
+  const [dollars, setDollars] = useState(((defaultCents ?? maxCents) / 100).toFixed(2));
   const [reason, setReason] = useState<RefundReason>("requested_by_customer");
   const [note, setNote] = useState("");
   const [checks, setChecks] = useState<DuplicateCheck[]>([]);
@@ -39,31 +73,61 @@ function RefundBox({ maxCents, defaultCents, needsNote, busy, onCancel, onConfir
   return (
     <div className="mt-3 rounded-xl border border-border bg-background p-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="text-xs font-semibold text-muted-foreground">Amount (USD)
-          <Input className="mt-1" value={dollars} inputMode="decimal" onChange={(e) => setDollars(e.target.value)} />
+        <label className="text-xs font-semibold text-muted-foreground">
+          Amount (USD)
+          <Input
+            className="mt-1"
+            value={dollars}
+            inputMode="decimal"
+            onChange={(e) => setDollars(e.target.value)}
+          />
         </label>
-        <label className="text-xs font-semibold text-muted-foreground">Why
+        <label className="text-xs font-semibold text-muted-foreground">
+          Why
           <Select value={reason} onValueChange={(v) => setReason(v as RefundReason)}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {REFUND_REASONS.map((r) => <SelectItem key={r} value={r}>{REFUND_REASON_LABEL[r]}</SelectItem>)}
+              {REFUND_REASONS.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {REFUND_REASON_LABEL[r]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </label>
-        <label className="text-xs font-semibold text-muted-foreground">Note for the log
-          <Input className="mt-1" value={note} placeholder="What they asked for" onChange={(e) => setNote(e.target.value)} />
+        <label className="text-xs font-semibold text-muted-foreground">
+          Note for the log
+          <Input
+            className="mt-1"
+            value={note}
+            placeholder="What they asked for"
+            onChange={(e) => setNote(e.target.value)}
+          />
         </label>
       </div>
       {needsDuplicate ? (
         <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
           <p className="text-xs font-semibold">Before refunding a &quot;duplicate&quot;</p>
-          <p className="mt-1 text-xs text-muted-foreground">Same amount is not the same charge. A hold, a refund, or two different products are not duplicates.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Same amount is not the same charge. A hold, a refund, or two different products are not
+            duplicates.
+          </p>
           <ul className="mt-2 space-y-1.5">
             {DUPLICATE_CHECKS.map((c) => (
               <li key={c.id}>
                 <label className="flex cursor-pointer items-start gap-2 text-xs">
-                  <input type="checkbox" className="mt-0.5" checked={checks.includes(c.id)}
-                    onChange={(e) => setChecks((prev) => (e.target.checked ? [...prev, c.id] : prev.filter((x) => x !== c.id)))} />
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={checks.includes(c.id)}
+                    onChange={(e) =>
+                      setChecks((prev) =>
+                        e.target.checked ? [...prev, c.id] : prev.filter((x) => x !== c.id),
+                      )
+                    }
+                  />
                   <span>{c.label}</span>
                 </label>
               </li>
@@ -72,21 +136,39 @@ function RefundBox({ maxCents, defaultCents, needsNote, busy, onCancel, onConfir
         </div>
       ) : null}
       <p className="mt-2 text-xs text-muted-foreground">
-        Most you can refund here: <b>{formatUsd(maxCents)}</b> — the payment is the ceiling, there is no fixed cap.
-        {needsNote ? " This one is past 30 days, so the note is required: a refund is cheaper than a dispute." : " The card is refunded here; nothing else is typed there."}
+        Most you can refund here: <b>{formatUsd(maxCents)}</b> — the payment is the ceiling, there
+        is no fixed cap.
+        {needsNote
+          ? " This one is past 30 days, so the note is required: a refund is cheaper than a dispute."
+          : " The card is refunded here; nothing else is typed there."}
         {needsDuplicate && !duplicateReady ? " Tick all four checks first." : ""}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button disabled={busy || cents === null || (needsNote && !note.trim()) || !duplicateReady} onClick={() => { if (cents) onConfirm(cents, reason, note, checks); }}>
+        <Button
+          disabled={busy || cents === null || (needsNote && !note.trim()) || !duplicateReady}
+          onClick={() => {
+            if (cents) onConfirm(cents, reason, note, checks);
+          }}
+        >
           {busy ? "Refunding…" : cents === null ? "Enter an amount" : `Refund ${formatUsd(cents)}`}
         </Button>
-        <Button variant="ghost" disabled={busy} onClick={onCancel}>Cancel</Button>
+        <Button variant="ghost" disabled={busy} onClick={onCancel}>
+          Cancel
+        </Button>
       </div>
     </div>
   );
 }
 
-function PurchaseRow({ purchase, member, onDone }: { purchase: BillingPurchase; member: BillingMember; onDone: () => void }) {
+function PurchaseRow({
+  purchase,
+  member,
+  onDone,
+}: {
+  purchase: BillingPurchase;
+  member: BillingMember;
+  onDone: () => void;
+}) {
   const info = useServerFn(purchasePaymentInfo);
   const refund = useServerFn(refundPurchase);
   const [payment, setPayment] = useState<PaymentInfo | null>(null);
@@ -94,17 +176,41 @@ function PurchaseRow({ purchase, member, onDone }: { purchase: BillingPurchase; 
 
   async function open() {
     setBusy(true);
-    try { setPayment(await info({ data: { purchaseId: purchase.id } })); } catch (e) { toast.error(msg(e)); } finally { setBusy(false); }
+    try {
+      setPayment(await info({ data: { purchaseId: purchase.id } }));
+    } catch (e) {
+      toast.error(msg(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
-  async function confirm(cents: number, reason: RefundReason, note: string, checks: DuplicateCheck[]) {
+  async function confirm(
+    cents: number,
+    reason: RefundReason,
+    note: string,
+    checks: DuplicateCheck[],
+  ) {
     setBusy(true);
     try {
-      await refund({ data: { purchaseId: purchase.id, amountCents: cents, reason, note: note || undefined, duplicateChecks: checks.length ? checks : undefined, requestId: crypto.randomUUID() } });
+      await refund({
+        data: {
+          purchaseId: purchase.id,
+          amountCents: cents,
+          reason,
+          note: note || undefined,
+          duplicateChecks: checks.length ? checks : undefined,
+          requestId: crypto.randomUUID(),
+        },
+      });
       toast.success(`${formatUsd(cents)} refunded to ${member.email}.`);
       setPayment(null);
       onDone();
-    } catch (e) { toast.error(msg(e)); } finally { setBusy(false); }
+    } catch (e) {
+      toast.error(msg(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -114,14 +220,22 @@ function PurchaseRow({ purchase, member, onDone }: { purchase: BillingPurchase; 
           <p className="text-sm font-semibold">{purchase.label}</p>
           <p className="text-xs text-muted-foreground">
             {day(purchase.createdAt)}
-            {purchase.refundedAt ? " · refunded in full" : purchase.windowDaysLeft > 0 ? ` · ${purchase.windowDaysLeft} day${purchase.windowDaysLeft === 1 ? "" : "s"} of the refund window left` : " · past 30 days, a note is needed"}
+            {purchase.refundedAt
+              ? " · refunded in full"
+              : purchase.windowDaysLeft > 0
+                ? ` · ${purchase.windowDaysLeft} day${purchase.windowDaysLeft === 1 ? "" : "s"} of the refund window left`
+                : " · past 30 days, a note is needed"}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {purchase.refundedAt ? (
-            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">Refunded</span>
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+              Refunded
+            </span>
           ) : (
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => void open()}><Undo2 /> Refund…</Button>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void open()}>
+              <Undo2 /> Refund…
+            </Button>
           )}
         </div>
       </div>
@@ -148,25 +262,59 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
   async function toggle(next: boolean) {
     setBusy(true);
     try {
-      await cancel({ data: { subscriptionId: sub.id, cancel: next, requestId: crypto.randomUUID() } });
-      toast.success(next ? "The plan stops at its renewal date. They keep it until then." : "The plan renews again.");
+      await cancel({
+        data: { subscriptionId: sub.id, cancel: next, requestId: crypto.randomUUID() },
+      });
+      toast.success(
+        next
+          ? "The plan stops at its renewal date. They keep it until then."
+          : "The plan renews again.",
+      );
       onDone();
-    } catch (e) { toast.error(msg(e)); } finally { setBusy(false); }
+    } catch (e) {
+      toast.error(msg(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function openRefund() {
     setBusy(true);
-    try { setCharge(await preview({ data: { subscriptionId: sub.id } })); } catch (e) { toast.error(msg(e)); } finally { setBusy(false); }
+    try {
+      setCharge(await preview({ data: { subscriptionId: sub.id } }));
+    } catch (e) {
+      toast.error(msg(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
-  async function confirmRefund(cents: number, reason: RefundReason, note: string, checks: DuplicateCheck[]) {
+  async function confirmRefund(
+    cents: number,
+    reason: RefundReason,
+    note: string,
+    checks: DuplicateCheck[],
+  ) {
     setBusy(true);
     try {
-      await refund({ data: { subscriptionId: sub.id, amountCents: cents, reason, note: note || undefined, duplicateChecks: checks.length ? checks : undefined, requestId: crypto.randomUUID() } });
+      await refund({
+        data: {
+          subscriptionId: sub.id,
+          amountCents: cents,
+          reason,
+          note: note || undefined,
+          duplicateChecks: checks.length ? checks : undefined,
+          requestId: crypto.randomUUID(),
+        },
+      });
       toast.success(`${formatUsd(cents)} refunded on the last charge.`);
       setCharge(null);
       onDone();
-    } catch (e) { toast.error(msg(e)); } finally { setBusy(false); }
+    } catch (e) {
+      toast.error(msg(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -175,12 +323,22 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
         <div className="min-w-0">
           <p className="text-sm font-semibold">{sub.tier}</p>
           <p className="text-xs text-muted-foreground">
-            {sub.status.replace(/_/g, " ")} · {sub.cancelAtPeriodEnd ? `stops ${day(sub.currentPeriodEnd)}` : `renews ${day(sub.currentPeriodEnd)}`}
+            {sub.status.replace(/_/g, " ")} ·{" "}
+            {sub.cancelAtPeriodEnd
+              ? `stops ${day(sub.currentPeriodEnd)}`
+              : `renews ${day(sub.currentPeriodEnd)}`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => void openRefund()}>Refund last charge…</Button>
-          <Button size="sm" variant={sub.cancelAtPeriodEnd ? "default" : "outline"} disabled={busy} onClick={() => void toggle(!sub.cancelAtPeriodEnd)}>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => void openRefund()}>
+            Refund last charge…
+          </Button>
+          <Button
+            size="sm"
+            variant={sub.cancelAtPeriodEnd ? "default" : "outline"}
+            disabled={busy}
+            onClick={() => void toggle(!sub.cancelAtPeriodEnd)}
+          >
             {sub.cancelAtPeriodEnd ? "Keep it renewing" : "Stop at renewal"}
           </Button>
         </div>
@@ -192,7 +350,9 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
           needsNote={charge.windowDaysLeft <= 0}
           busy={busy}
           onCancel={() => setCharge(null)}
-          onConfirm={(cents, reason, note, checks) => void confirmRefund(cents, reason, note, checks)}
+          onConfirm={(cents, reason, note, checks) =>
+            void confirmRefund(cents, reason, note, checks)
+          }
         />
       )}
     </li>
@@ -206,41 +366,76 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
  */
 function DuplicateWatch({ userId }: { userId: string }) {
   const check = useServerFn(checkDuplicateCharges);
-  const q = useQuery({ queryKey: ["duplicate-check", userId], queryFn: () => check({ data: { userId } }), refetchOnWindowFocus: false });
+  const q = useQuery({
+    queryKey: ["duplicate-check", userId],
+    queryFn: () => check({ data: { userId } }),
+    refetchOnWindowFocus: false,
+  });
   const groups = q.data?.groups ?? [];
   // The serialized server-fn type loses the `reading` intersection, so say what the server returns.
   const rows = (q.data?.charges ?? []) as DuplicateChargeRow[];
-  const VERDICT: Record<string, string> = { real_duplicate: "Real duplicate: ", wait: "Wait — not a payment yet: ", already_refunded: "Already refunded: ", not_duplicate: "Not a duplicate: " };
+  const VERDICT: Record<string, string> = {
+    real_duplicate: "Real duplicate: ",
+    wait: "Wait — not a payment yet: ",
+    already_refunded: "Already refunded: ",
+    not_duplicate: "Not a duplicate: ",
+  };
   return (
     <div className="mt-5">
       <h4 className="text-sm font-bold">Possible duplicate payments</h4>
       <p className="mt-1 text-xs text-muted-foreground">
-        Checked against the live payment record, not the bank app. A hold looks exactly like a charge and clears by itself; two settled
-        payments for the same thing are the only real duplicate.
+        Checked against the live payment record, not the bank app. A hold looks exactly like a
+        charge and clears by itself; two settled payments for the same thing are the only real
+        duplicate.
       </p>
-      {q.isLoading ? <p className="mt-2 text-sm text-muted-foreground">Checking the payments…</p> : null}
-      {q.isError ? <p className="mt-2 text-sm text-destructive">Couldn&apos;t read the payments. Don&apos;t refund a duplicate until you can.</p> : null}
+      {q.isLoading ? (
+        <p className="mt-2 text-sm text-muted-foreground">Checking the payments…</p>
+      ) : null}
+      {q.isError ? (
+        <p className="mt-2 text-sm text-destructive">
+          Couldn&apos;t read the payments. Don&apos;t refund a duplicate until you can.
+        </p>
+      ) : null}
       {!q.isLoading && !q.isError && !groups.length ? (
         <p className="mt-2 text-sm text-muted-foreground">
-          No two payments of the same amount within 72 hours. If the member still sees two lines, it is a hold, a refund,
-          or one payment shown twice — not a second charge.
+          No two payments of the same amount within 72 hours. If the member still sees two lines, it
+          is a hold, a refund, or one payment shown twice — not a second charge.
         </p>
       ) : null}
       {groups.length ? (
         <ul className="mt-2 space-y-2">
           {groups.map((g) => (
-            <li key={`${g.amountCents}-${g.charges[0]?.id ?? "x"}`} className="rounded-xl border border-border p-3">
-              <p className="text-sm font-semibold">{formatUsd(g.amountCents)} × {g.charges.length}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{VERDICT[g.verdict.kind] ?? ""}{g.verdict.why}</p>
+            <li
+              key={`${g.amountCents}-${g.charges[0]?.id ?? "x"}`}
+              className="rounded-xl border border-border p-3"
+            >
+              <p className="text-sm font-semibold">
+                {formatUsd(g.amountCents)} × {g.charges.length}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {VERDICT[g.verdict.kind] ?? ""}
+                {g.verdict.why}
+              </p>
               {g.verdict.kind === "wait" ? (
-                <p className="mt-1 text-xs font-semibold text-primary">Should be gone by {dayLabel(g.verdict.clearsBy)} on its own — don&apos;t refund it.</p>
+                <p className="mt-1 text-xs font-semibold text-primary">
+                  Should be gone by {dayLabel(g.verdict.clearsBy)} on its own — don&apos;t refund
+                  it.
+                </p>
               ) : null}
               {g.verdict.kind === "real_duplicate" ? (
-                <p className="mt-1 text-xs font-semibold text-primary">Refund the newer one below with the reason &quot;Duplicate charge&quot;, after the four checks.</p>
+                <p className="mt-1 text-xs font-semibold text-primary">
+                  Refund the newer one below with the reason &quot;Duplicate charge&quot;, after the
+                  four checks.
+                </p>
               ) : null}
               <ul className="mt-2 space-y-1">
                 {g.charges.map((c) => (
-                  <li key={c.id} className="text-xs text-muted-foreground"><b className="text-foreground">{day(c.createdAt)} · {c.item}</b> — {readCharge(c).line}</li>
+                  <li key={c.id} className="text-xs text-muted-foreground">
+                    <b className="text-foreground">
+                      {day(c.createdAt)} · {c.item}
+                    </b>{" "}
+                    — {readCharge(c).line}
+                  </li>
                 ))}
               </ul>
             </li>
@@ -249,10 +444,17 @@ function DuplicateWatch({ userId }: { userId: string }) {
       ) : null}
       {rows.length ? (
         <details className="mt-3">
-          <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">Every payment we checked ({rows.length})</summary>
+          <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
+            Every payment we checked ({rows.length})
+          </summary>
           <ul className="mt-2 space-y-1">
             {rows.map((c) => (
-              <li key={c.id} className="text-xs text-muted-foreground"><b className="text-foreground">{day(c.createdAt)} · {c.item} · {formatUsd(c.amountCents)}</b> — {c.reading.line}</li>
+              <li key={c.id} className="text-xs text-muted-foreground">
+                <b className="text-foreground">
+                  {day(c.createdAt)} · {c.item} · {formatUsd(c.amountCents)}
+                </b>{" "}
+                — {c.reading.line}
+              </li>
             ))}
           </ul>
         </details>
@@ -277,7 +479,11 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
   const lookup = useServerFn(lookupBillingMember);
   const listActions = useServerFn(listBillingActions);
   const qc = useQueryClient();
-  const log = useQuery({ queryKey: ["billing-actions"], queryFn: () => listActions(), refetchOnWindowFocus: false });
+  const log = useQuery({
+    queryKey: ["billing-actions"],
+    queryFn: () => listActions(),
+    refetchOnWindowFocus: false,
+  });
   const [email, setEmail] = useState("");
   const [member, setMember] = useState<BillingMember | null>(null);
   const [busy, setBusy] = useState(false);
@@ -293,13 +499,19 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
     } catch (err) {
       setMember(null);
       toast.error(msg(err));
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function refresh() {
     await qc.invalidateQueries({ queryKey: ["billing-actions"] });
     if (member) {
-      try { setMember(await lookup({ data: { email: member.email } })); } catch { /* keep what's on screen */ }
+      try {
+        setMember(await lookup({ data: { email: member.email } }));
+      } catch {
+        /* keep what's on screen */
+      }
     }
   }
 
@@ -308,22 +520,32 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
       <section className="rounded-2xl border border-border bg-card p-5">
         <h3 className="text-lg font-bold">Refunds and plan changes</h3>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          Look a member up by the email they paid with, then refund a charge or stop a plan from renewing. The card is
-          refunded right here; nobody needs a dashboard login, and every action below is logged. Refund up to
-          what they paid, with no fixed ceiling. Past 30 days it still goes through but needs a note, because a dispute
-          costs more than the refund.
+          Look a member up by the email they paid with, then refund a charge or stop a plan from
+          renewing. The card is refunded right here; nobody needs a dashboard login, and every
+          action below is logged. Refund up to what they paid, with no fixed ceiling. Past 30 days
+          it still goes through but needs a note, because a dispute costs more than the refund.
           {isSuper ? " As founder, every refund is yours to approve." : ""}
         </p>
         <form onSubmit={(e) => void search(e)} className="mt-4 flex flex-wrap items-end gap-2">
-          <label className="min-w-[240px] flex-1 text-xs font-semibold text-muted-foreground">Member's email
-            <Input className="mt-1" value={email} placeholder="them@example.com" onChange={(e) => setEmail(e.target.value)} />
+          <label className="min-w-[240px] flex-1 text-xs font-semibold text-muted-foreground">
+            Member's email
+            <Input
+              className="mt-1"
+              value={email}
+              placeholder="them@example.com"
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </label>
-          <Button type="submit" disabled={busy || !email.trim()}><Search /> {busy ? "Looking…" : "Find member"}</Button>
+          <Button type="submit" disabled={busy || !email.trim()}>
+            <Search /> {busy ? "Looking…" : "Find member"}
+          </Button>
         </form>
       </section>
 
       {searched && !member && !busy && (
-        <p className="text-sm text-muted-foreground">No account with that email. Try the address on the receipt.</p>
+        <p className="text-sm text-muted-foreground">
+          No account with that email. Try the address on the receipt.
+        </p>
       )}
 
       {member && (
@@ -331,26 +553,43 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
               <h3 className="text-lg font-bold">{member.name}</h3>
-              <p className="text-sm text-muted-foreground">{member.email}{member.confirmed ? "" : " · email not confirmed"}</p>
+              <p className="text-sm text-muted-foreground">
+                {member.email}
+                {member.confirmed ? "" : " · email not confirmed"}
+              </p>
             </div>
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-              {member.subscriptions.length} plan{member.subscriptions.length === 1 ? "" : "s"} · {member.purchases.length} purchase{member.purchases.length === 1 ? "" : "s"}
+              {member.subscriptions.length} plan{member.subscriptions.length === 1 ? "" : "s"} ·{" "}
+              {member.purchases.length} purchase{member.purchases.length === 1 ? "" : "s"}
             </span>
           </div>
 
           <h4 className="mt-5 text-sm font-bold">Plans</h4>
           {member.subscriptions.length ? (
             <ul className="mt-2 space-y-2">
-              {member.subscriptions.map((s) => <SubscriptionRow key={s.id} sub={s} onDone={() => void refresh()} />)}
+              {member.subscriptions.map((s) => (
+                <SubscriptionRow key={s.id} sub={s} onDone={() => void refresh()} />
+              ))}
             </ul>
-          ) : <p className="mt-1 text-sm text-muted-foreground">No plan on this account.</p>}
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">No plan on this account.</p>
+          )}
 
           <h4 className="mt-5 text-sm font-bold">One-time purchases</h4>
           {member.purchases.length ? (
             <ul className="mt-2 space-y-2">
-              {member.purchases.map((p) => <PurchaseRow key={p.id} purchase={p} member={member} onDone={() => void refresh()} />)}
+              {member.purchases.map((p) => (
+                <PurchaseRow
+                  key={p.id}
+                  purchase={p}
+                  member={member}
+                  onDone={() => void refresh()}
+                />
+              ))}
             </ul>
-          ) : <p className="mt-1 text-sm text-muted-foreground">Nothing bought on its own yet.</p>}
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">Nothing bought on its own yet.</p>
+          )}
 
           <DuplicateWatch userId={member.userId} />
         </section>
@@ -358,23 +597,36 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <h3 className="text-lg font-bold">What the team has done</h3>
-        <p className="mt-1 text-sm text-muted-foreground">The last 25 billing actions, refusals included, newest first.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          The last 25 billing actions, refusals included, newest first.
+        </p>
         {log.isError ? (
-          <p className="mt-3 text-sm text-destructive">Couldn't load the log. Has migration 20261105150000 been run?</p>
+          <p className="mt-3 text-sm text-destructive">
+            Couldn't load the log. Has migration 20261105150000 been run?
+          </p>
         ) : !log.data?.length ? (
           <p className="mt-3 text-sm text-muted-foreground">Nothing yet.</p>
         ) : (
           <ul className="mt-3 divide-y divide-border">
             {log.data.map((a, i) => (
-              <li key={`${a.createdAt}-${i}`} className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm">
+              <li
+                key={`${a.createdAt}-${i}`}
+                className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"
+              >
                 <span className="min-w-0">
-                  <b>{a.actorEmail || "someone"}</b>{" "}
-                  {ACTION_LABEL[a.action] ?? a.action}
+                  <b>{a.actorEmail || "someone"}</b> {ACTION_LABEL[a.action] ?? a.action}
                   {a.amountCents ? ` ${formatUsd(a.amountCents)}` : ""}
                   {a.targetEmail ? ` · ${a.targetEmail}` : ""}
-                  {a.status === "failed" ? <span className="text-destructive"> · refused: {a.error ?? "no reason given"}</span> : null}
+                  {a.status === "failed" ? (
+                    <span className="text-destructive">
+                      {" "}
+                      · refused: {a.error ?? "no reason given"}
+                    </span>
+                  ) : null}
                 </span>
-                <span className="text-xs text-muted-foreground">{a.createdAt.slice(0, 16).replace("T", " ")}</span>
+                <span className="text-xs text-muted-foreground">
+                  {a.createdAt.slice(0, 16).replace("T", " ")}
+                </span>
               </li>
             ))}
           </ul>

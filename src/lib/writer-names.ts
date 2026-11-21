@@ -10,7 +10,20 @@
  */
 
 /** Words that are never part of the name that was registered. */
-const SUFFIXES = new Set(["MR", "MRS", "MS", "MISS", "DR", "JR", "SR", "II", "III", "IV", "V", "ESQ"]);
+const SUFFIXES = new Set([
+  "MR",
+  "MRS",
+  "MS",
+  "MISS",
+  "DR",
+  "JR",
+  "SR",
+  "II",
+  "III",
+  "IV",
+  "V",
+  "ESQ",
+]);
 
 const words = (name: string) =>
   name
@@ -23,7 +36,10 @@ const words = (name: string) =>
 const key = (w: string) => w.toLowerCase().replace(/[^a-z0-9-]/g, "");
 
 /** A word the registration adds, written the way a name is written ("LASHAY" → "Lashay"). */
-const titled = (w: string) => w.toLowerCase().replace(/(^|[-'])([a-z])/g, (_m, sep: string, ch: string) => sep + ch.toUpperCase());
+const titled = (w: string) =>
+  w
+    .toLowerCase()
+    .replace(/(^|[-'])([a-z])/g, (_m, sep: string, ch: string) => sep + ch.toUpperCase());
 
 /**
  * The catalog's name with the registration's missing words in place: "Qui-Ona Peterson" + "PETERSON QUI ONA LASHAY" →

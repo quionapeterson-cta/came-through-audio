@@ -1,7 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { money, purchaseKind, purchaseLanding, purchasedPlan, receiptCopy, type PurchaseKind } from "./purchase-receipt";
+import {
+  money,
+  purchaseKind,
+  purchaseLanding,
+  purchasedPlan,
+  receiptCopy,
+  type PurchaseKind,
+} from "./purchase-receipt";
 
-const KINDS: PurchaseKind[] = ["plan", "seat", "vault", "branding", "contract", "ai", "expert", "renew"];
+const KINDS: PurchaseKind[] = [
+  "plan",
+  "seat",
+  "vault",
+  "branding",
+  "contract",
+  "ai",
+  "expert",
+  "renew",
+];
 
 describe("purchaseLanding", () => {
   it("sends every purchase back to the page it unlocked, marked as a checkout return", () => {
@@ -10,7 +26,9 @@ describe("purchaseLanding", () => {
     expect(purchaseLanding("vault")).toBe("/workspace?checkout=success&bought=vault");
     expect(purchaseLanding("ai")).toBe("/workspace?tab=protect&checkout=success&bought=ai");
     expect(purchaseLanding("expert")).toBe("/workspace?tab=health&checkout=success&bought=expert");
-    expect(purchaseLanding("contract")).toBe("/workspace?tab=learn&checkout=success&bought=contract");
+    expect(purchaseLanding("contract")).toBe(
+      "/workspace?tab=learn&checkout=success&bought=contract",
+    );
     expect(purchaseLanding("branding")).toBe("/profile?checkout=success&bought=branding#brand-kit");
     expect(purchaseLanding("renew")).toBe("/profile?checkout=success&bought=renew");
   });
@@ -76,8 +94,12 @@ describe("money", () => {
 
 describe("receiptCopy", () => {
   it("names the plan that was bought", () => {
-    expect(receiptCopy({ kind: "plan", plan: "plus" }).subject).toBe("Your Catalog Plus plan is active");
-    expect(receiptCopy({ kind: "plan", plan: "management" }).heading).toContain("Catalog Management");
+    expect(receiptCopy({ kind: "plan", plan: "plus" }).subject).toBe(
+      "Your Catalog Plus plan is active",
+    );
+    expect(receiptCopy({ kind: "plan", plan: "management" }).heading).toContain(
+      "Catalog Management",
+    );
   });
 
   it("falls back to a plain plan name when Stripe didn't name one", () => {
@@ -85,7 +107,9 @@ describe("receiptCopy", () => {
   });
 
   it("carries the real charge, and no figure at all when there isn't one", () => {
-    expect(receiptCopy({ kind: "plan", plan: "plus", paid: "$24.99" }).paragraphs[0]).toBe("We charged $24.99.");
+    expect(receiptCopy({ kind: "plan", plan: "plus", paid: "$24.99" }).paragraphs[0]).toBe(
+      "We charged $24.99.",
+    );
     const without = receiptCopy({ kind: "contract" });
     expect(without.paragraphs.join(" ")).not.toContain("$");
     expect(without.paragraphs[0]).toBe("Your payment went through.");
@@ -107,7 +131,9 @@ describe("receiptCopy", () => {
     expect(moved.subject).toBe("Your plan now renews on October 23, 2028");
     // An unknown or broken date says nothing rather than guessing.
     expect(receiptCopy({ kind: "renew" }).paragraphs.join(" ")).not.toContain("renews on");
-    expect(receiptCopy({ kind: "renew", renewsOn: "not-a-date" }).paragraphs.join(" ")).not.toContain("renews on");
+    expect(
+      receiptCopy({ kind: "renew", renewsOn: "not-a-date" }).paragraphs.join(" "),
+    ).not.toContain("renews on");
   });
 
   it("says a pause is not a cancellation, as the policy does", () => {
@@ -141,13 +167,22 @@ describe("receiptCopy", () => {
 
   it("mentions Link's own receipt only when Link sold it", () => {
     expect(receiptCopy({ kind: "ai", managed: true }).paragraphs.join(" ")).toContain("Link");
-    expect(receiptCopy({ kind: "expert", managed: false }).paragraphs.join(" ")).not.toContain("Link");
+    expect(receiptCopy({ kind: "expert", managed: false }).paragraphs.join(" ")).not.toContain(
+      "Link",
+    );
   });
 
   it("never promises a time, a date or a guarantee", () => {
     for (const kind of KINDS) {
-      const text = [receiptCopy({ kind }).subject, receiptCopy({ kind }).heading, ...receiptCopy({ kind }).paragraphs].join(" ").toLowerCase();
-      for (const forbidden of ["guarantee", "within", "{{", "instant"]) expect(text).not.toContain(forbidden);
+      const text = [
+        receiptCopy({ kind }).subject,
+        receiptCopy({ kind }).heading,
+        ...receiptCopy({ kind }).paragraphs,
+      ]
+        .join(" ")
+        .toLowerCase();
+      for (const forbidden of ["guarantee", "within", "{{", "instant"])
+        expect(text).not.toContain(forbidden);
     }
   });
 });

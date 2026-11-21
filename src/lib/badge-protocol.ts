@@ -55,7 +55,10 @@ export function setFolderProblem(set: string): string | null {
  * Exactly where the two files go. The founder copies these keys into the R2 dashboard; nothing in the app builds a
  * bucket path by hand (see `artUrl()`), so a wrong key would ship a broken picture.
  */
-export function badgeKeys(o: { scope: BadgeScope; slug: string; set?: string | null }): { web: string; master: string } {
+export function badgeKeys(o: { scope: BadgeScope; slug: string; set?: string | null }): {
+  web: string;
+  master: string;
+} {
   const set = badgeSlug(o.set ?? "");
   const folder = set ? `${o.scope}/${set}` : o.scope;
   return {
@@ -70,18 +73,37 @@ export function badgeKeys(o: { scope: BadgeScope; slug: string; set?: string | n
  * background shows as a square behind the art.
  */
 export const FILE_RULES = [
-  { file: "Web copy", spec: "512 × 512 px, transparent WebP, 120 KB or smaller, named <slug>.webp" },
-  { file: "4K master", spec: "The full-resolution original, transparent PNG, named <slug>.png (never requested by the app)" },
-  { file: "Background", spec: "Transparent, always: no white box, no solid plate and no shadow baked in. Art is drawn on the app's own surface, so anything opaque shows as a square" },
+  {
+    file: "Web copy",
+    spec: "512 × 512 px, transparent WebP, 120 KB or smaller, named <slug>.webp",
+  },
+  {
+    file: "4K master",
+    spec: "The full-resolution original, transparent PNG, named <slug>.png (never requested by the app)",
+  },
+  {
+    file: "Background",
+    spec: "Transparent, always: no white box, no solid plate and no shadow baked in. Art is drawn on the app's own surface, so anything opaque shows as a square",
+  },
 ] as const;
 
 /** The naming conditions, in the order the panel lists them. */
 export const NAMING_RULES = [
   { rule: "Lowercase", detail: "No capitals anywhere in a badge name or set folder." },
-  { rule: "Hyphens, not spaces", detail: "`holiday-2026`, never `Holiday 2026` or `holiday_2026`. No double hyphens." },
+  {
+    rule: "Hyphens, not spaces",
+    detail: "`holiday-2026`, never `Holiday 2026` or `holiday_2026`. No double hyphens.",
+  },
   { rule: "Start with a letter", detail: "No leading hyphen or digit; 48 characters at most." },
-  { rule: "One name for both files", detail: "The web copy and the 4K master share the slug; only the extension differs." },
-  { rule: "Same name in the app", detail: "The badge's `src` uses the slug too, so the app, the bucket and this queue always match." },
+  {
+    rule: "One name for both files",
+    detail: "The web copy and the 4K master share the slug; only the extension differs.",
+  },
+  {
+    rule: "Same name in the app",
+    detail:
+      "The badge's `src` uses the slug too, so the app, the bucket and this queue always match.",
+  },
 ] as const;
 
 export type ProtocolStep = { title: string; body: string; who: string };
@@ -156,7 +178,12 @@ export const ENGINEERING_STEPS: ProtocolStep[] = [
  * and a super admin can still only decide while the founder seat is unclaimed. The rule lives here so the panel, the
  * server and the tests agree, rather than being spelled out in a component.
  */
-export function mayApproveBadgeArt(o: { founder: boolean; brandingLead: boolean; superAdmin: boolean; seatClaimed: boolean }): boolean {
+export function mayApproveBadgeArt(o: {
+  founder: boolean;
+  brandingLead: boolean;
+  superAdmin: boolean;
+  seatClaimed: boolean;
+}): boolean {
   if (o.founder) return true;
   if (o.brandingLead) return true;
   return !o.seatClaimed && o.superAdmin;

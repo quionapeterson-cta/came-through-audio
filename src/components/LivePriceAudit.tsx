@@ -68,9 +68,9 @@ export function LivePriceAudit() {
           <h3 className="text-lg font-bold">Live Stripe prices</h3>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
             Every lookup key the site sells, checked against the live Stripe account: it must exist,
-            be active, be in USD, be the billing type below (yearly, monthly or one-time), and charge
-            exactly the published amount. A key that fails here fails at Buy, so fix it in Stripe before a member finds
-            it.
+            be active, be in USD, be the billing type below (yearly, monthly or one-time), and
+            charge exactly the published amount. A key that fails here fails at Buy, so fix it in
+            Stripe before a member finds it.
           </p>
         </div>
         <Button

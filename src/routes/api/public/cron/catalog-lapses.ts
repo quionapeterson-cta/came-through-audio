@@ -16,14 +16,32 @@ export const Route = createFileRoute("/api/public/cron/catalog-lapses")({
         if (!secret || auth !== `Bearer ${secret}`) {
           return new Response("Unauthorized", { status: 401 });
         }
-        const { runCatalogLapses, runVaultEndings, sendRenewalReminders } = await import("@/lib/retention.server");
+        const { runCatalogLapses, runVaultEndings, sendRenewalReminders } =
+          await import("@/lib/retention.server");
         const { runStaffOffboarding } = await import("@/lib/staff-offboarding.server");
         const { runSeatEndings } = await import("@/lib/seats.server");
         const { runInactiveAccounts } = await import("@/lib/inactivity.server");
         // Each part runs even if another fails, so a reminder problem never holds up the offboarding or a deletion.
-        const [renewals, lapses, offboarding, seats, inactivity, vaults] = await Promise.allSettled([sendRenewalReminders(), runCatalogLapses(), runStaffOffboarding(), runSeatEndings(), runInactiveAccounts(), runVaultEndings()]);
-        const out = (r: PromiseSettledResult<object>) => (r.status === "fulfilled" ? r.value : { error: String(r.reason) });
-        return Response.json({ ...out(renewals), ...out(lapses), ...out(offboarding), ...out(seats), ...out(inactivity), ...out(vaults) });
+        const [renewals, lapses, offboarding, seats, inactivity, vaults] = await Promise.allSettled(
+          [
+            sendRenewalReminders(),
+            runCatalogLapses(),
+            runStaffOffboarding(),
+            runSeatEndings(),
+            runInactiveAccounts(),
+            runVaultEndings(),
+          ],
+        );
+        const out = (r: PromiseSettledResult<object>) =>
+          r.status === "fulfilled" ? r.value : { error: String(r.reason) };
+        return Response.json({
+          ...out(renewals),
+          ...out(lapses),
+          ...out(offboarding),
+          ...out(seats),
+          ...out(inactivity),
+          ...out(vaults),
+        });
       },
     },
   },

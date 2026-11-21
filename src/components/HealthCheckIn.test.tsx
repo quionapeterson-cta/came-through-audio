@@ -8,23 +8,83 @@ import { songScope } from "@/lib/health-reports";
 import { countryByCode } from "@/lib/repertoires";
 
 const us = countryByCode("US")!;
-const t = (pro: string) => ({ id: "a", title: "Midnight", artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title: "Midnight", artist: "Q", isrc: "USCTA2600001",
-  writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro, ipi: "00123456789", percentage: "100" }], composers: [], publishers: [] } });
+const t = (pro: string) => ({
+  id: "a",
+  title: "Midnight",
+  artist: "Q",
+  updatedAt: "",
+  metadata: {
+    ...emptyMetadata(),
+    title: "Midnight",
+    artist: "Q",
+    isrc: "USCTA2600001",
+    writers: [
+      {
+        name: "",
+        legalName: "Ann Lee",
+        role: "Author/Composer",
+        pro,
+        ipi: "00123456789",
+        percentage: "100",
+      },
+    ],
+    composers: [],
+    publishers: [],
+  },
+});
 const setup = (pro = "ASCAP") => {
-  const track = t(pro), r = trackReport(track, us, []);
-  const onAnswer = vi.fn(), onSelfPublished = vi.fn(), onBmiWriter = vi.fn(), onRun = vi.fn();
-  render(<HealthCheckIn scope={songScope(track)} options={[songScope(track)]} onScope={vi.fn()} rows={[{ r, c: songChecklist(r, us) }]} countryPicker={null}
-    onAnswer={onAnswer} onSelfPublished={onSelfPublished} onBmiWriter={onBmiWriter} onFixField={vi.fn()} onRun={onRun} onBack={vi.fn()} />);
+  const track = t(pro),
+    r = trackReport(track, us, []);
+  const onAnswer = vi.fn(),
+    onSelfPublished = vi.fn(),
+    onBmiWriter = vi.fn(),
+    onRun = vi.fn();
+  render(
+    <HealthCheckIn
+      scope={songScope(track)}
+      options={[songScope(track)]}
+      onScope={vi.fn()}
+      rows={[{ r, c: songChecklist(r, us) }]}
+      countryPicker={null}
+      onAnswer={onAnswer}
+      onSelfPublished={onSelfPublished}
+      onBmiWriter={onBmiWriter}
+      onFixField={vi.fn()}
+      onRun={onRun}
+      onBack={vi.fn()}
+    />,
+  );
   return { onAnswer, onSelfPublished, onBmiWriter, onRun };
 };
 
 describe("HealthCheckIn", () => {
   it("saves registration answers as the checklist's own ticks and runs the check", () => {
     const { onAnswer, onRun } = setup();
-    fireEvent.click(within(screen.getByRole("radiogroup", { name: /Registered with your PRO \(ASCAP\)/ })).getByRole("radio", { name: "Yes" }));
-    expect(onAnswer).toHaveBeenCalledWith([{ id: "a", steps: expect.objectContaining({ "registered:ascap": expect.any(String), "checkin:ascap": null }) }]);
-    fireEvent.click(within(screen.getByRole("radiogroup", { name: /The MLC/ })).getByRole("radio", { name: "Not sure" }));
-    expect(onAnswer).toHaveBeenLastCalledWith([{ id: "a", steps: expect.objectContaining({ "registered:mlc": null, "checkin:mlc": "unsure" }) }]);
+    fireEvent.click(
+      within(
+        screen.getByRole("radiogroup", { name: /Registered with your PRO \(ASCAP\)/ }),
+      ).getByRole("radio", { name: "Yes" }),
+    );
+    expect(onAnswer).toHaveBeenCalledWith([
+      {
+        id: "a",
+        steps: expect.objectContaining({
+          "registered:ascap": expect.any(String),
+          "checkin:ascap": null,
+        }),
+      },
+    ]);
+    fireEvent.click(
+      within(screen.getByRole("radiogroup", { name: /The MLC/ })).getByRole("radio", {
+        name: "Not sure",
+      }),
+    );
+    expect(onAnswer).toHaveBeenLastCalledWith([
+      {
+        id: "a",
+        steps: expect.objectContaining({ "registered:mlc": null, "checkin:mlc": "unsure" }),
+      },
+    ]);
     fireEvent.click(screen.getByRole("button", { name: /Run my Royalty Health Check/ }));
     expect(onRun).toHaveBeenCalled();
   });
@@ -32,25 +92,58 @@ describe("HealthCheckIn", () => {
   it("offers BMI writers their own answer, and explains BMI pays both halves", () => {
     const bmi = setup("BMI");
     expect(screen.getByText(/BMI pays you both halves/)).toBeTruthy();
-    fireEvent.click(within(screen.getByRole("radiogroup", { name: "Do you have a publisher?" })).getByRole("radio", { name: "No, I'm a BMI writer with no publishing company" }));
+    fireEvent.click(
+      within(screen.getByRole("radiogroup", { name: "Do you have a publisher?" })).getByRole(
+        "radio",
+        { name: "No, I'm a BMI writer with no publishing company" },
+      ),
+    );
     expect(bmi.onBmiWriter).toHaveBeenCalledWith(["a"]);
     expect(bmi.onSelfPublished).not.toHaveBeenCalled();
   });
   it("doesn't offer the BMI answer to writers at other PROs", () => {
     setup("ASCAP");
-    expect(screen.queryByRole("radio", { name: "No, I'm a BMI writer with no publishing company" })).toBeNull();
+    expect(
+      screen.queryByRole("radio", { name: "No, I'm a BMI writer with no publishing company" }),
+    ).toBeNull();
   });
   it("ticks Self-published for writers at other PROs", () => {
     const { onSelfPublished } = setup("ASCAP");
-    fireEvent.click(within(screen.getByRole("radiogroup", { name: "Do you have a publisher?" })).getByRole("radio", { name: "No, I'm self-published" }));
+    fireEvent.click(
+      within(screen.getByRole("radiogroup", { name: "Do you have a publisher?" })).getByRole(
+        "radio",
+        { name: "No, I'm self-published" },
+      ),
+    );
     expect(onSelfPublished).toHaveBeenCalledWith(["a"]);
   });
 
   it("opens the intake options inside check-in, not from a dropdown on the Hub", () => {
-    const track = t("ASCAP"), r = trackReport(track, us, []);
-    const props = { scope: songScope(track), options: [songScope(track)], onScope: vi.fn(), rows: [{ r, c: songChecklist(r, us) }], countryPicker: null,
-      onAnswer: vi.fn(), onSelfPublished: vi.fn(), onBmiWriter: vi.fn(), onFixField: vi.fn(), onRun: vi.fn(), onBack: vi.fn() };
-    render(<HealthCheckIn {...props} intake={{ streaming: <p>streaming panel</p>, agencies: <p>agency panel</p>, single: <p>single panel</p> }} />);
+    const track = t("ASCAP"),
+      r = trackReport(track, us, []);
+    const props = {
+      scope: songScope(track),
+      options: [songScope(track)],
+      onScope: vi.fn(),
+      rows: [{ r, c: songChecklist(r, us) }],
+      countryPicker: null,
+      onAnswer: vi.fn(),
+      onSelfPublished: vi.fn(),
+      onBmiWriter: vi.fn(),
+      onFixField: vi.fn(),
+      onRun: vi.fn(),
+      onBack: vi.fn(),
+    };
+    render(
+      <HealthCheckIn
+        {...props}
+        intake={{
+          streaming: <p>streaming panel</p>,
+          agencies: <p>agency panel</p>,
+          single: <p>single panel</p>,
+        }}
+      />,
+    );
     expect(screen.queryByText("streaming panel")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Streaming Profile/ }));
     expect(screen.getByText("streaming panel")).toBeTruthy();
@@ -64,11 +157,29 @@ describe("HealthCheckIn", () => {
   });
 
   it("can open straight onto the intake the visit was started for", () => {
-    const track = t("ASCAP"), r = trackReport(track, us, []);
-    render(<HealthCheckIn scope={songScope(track)} options={[songScope(track)]} onScope={vi.fn()} rows={[{ r, c: songChecklist(r, us) }]} countryPicker={null}
-      initialIntake="agencies" onAnswer={vi.fn()} onSelfPublished={vi.fn()} onBmiWriter={vi.fn()} onFixField={vi.fn()} onRun={vi.fn()} onBack={vi.fn()}
-      intake={{ streaming: <p>streaming panel</p>, agencies: <p>agency panel</p>, single: <p>single panel</p> }} />);
+    const track = t("ASCAP"),
+      r = trackReport(track, us, []);
+    render(
+      <HealthCheckIn
+        scope={songScope(track)}
+        options={[songScope(track)]}
+        onScope={vi.fn()}
+        rows={[{ r, c: songChecklist(r, us) }]}
+        countryPicker={null}
+        initialIntake="agencies"
+        onAnswer={vi.fn()}
+        onSelfPublished={vi.fn()}
+        onBmiWriter={vi.fn()}
+        onFixField={vi.fn()}
+        onRun={vi.fn()}
+        onBack={vi.fn()}
+        intake={{
+          streaming: <p>streaming panel</p>,
+          agencies: <p>agency panel</p>,
+          single: <p>single panel</p>,
+        }}
+      />,
+    );
     expect(screen.getByText("agency panel")).toBeTruthy();
   });
 });
-

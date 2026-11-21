@@ -63,11 +63,16 @@ export function refundVerdict(o: {
   paidAt: string;
   now?: Date;
 }): RefundVerdict {
-  if (!Number.isFinite(o.amountCents) || o.amountCents <= 0) return { ok: false, reason: "Enter an amount above zero." };
+  if (!Number.isFinite(o.amountCents) || o.amountCents <= 0)
+    return { ok: false, reason: "Enter an amount above zero." };
   if (o.paidCents <= 0) return { ok: false, reason: "There is no payment to refund here." };
   const left = Math.max(0, o.paidCents - o.refundedCents);
   if (left <= 0) return { ok: false, reason: "This payment has already been refunded in full." };
-  if (o.amountCents > left) return { ok: false, reason: `The most you can refund is ${formatUsd(left)}, which is what they paid.` };
+  if (o.amountCents > left)
+    return {
+      ok: false,
+      reason: `The most you can refund is ${formatUsd(left)}, which is what they paid.`,
+    };
   return { ok: true, discretionary: refundDaysLeft(o.paidAt, o.now) <= 0 };
 }
 

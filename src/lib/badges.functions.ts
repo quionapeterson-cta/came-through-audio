@@ -8,11 +8,35 @@ import { getPaymentsEnvironment } from "@/lib/payments-env";
 
 /** One earning of a badge; `pick` is the art the user chose, for badges with choices. */
 export type BadgeEarning = { at: string; pick?: string | null };
-export type EarnedBadge = { id: string; times: number; earnedAt: string; seenAt: string | null; log: BadgeEarning[] };
-type HeldRow = { badge_id: string; times: number; earned_at: string; seen_at: string | null; log: BadgeEarning[] | null };
-export type BadgeCheck = { earned: EarnedBadge[]; metrics: Record<string, number>; disabled: string[]; /** Founder-replaced art, by badge id. */ art: Record<string, string> };
+export type EarnedBadge = {
+  id: string;
+  times: number;
+  earnedAt: string;
+  seenAt: string | null;
+  log: BadgeEarning[];
+};
+type HeldRow = {
+  badge_id: string;
+  times: number;
+  earned_at: string;
+  seen_at: string | null;
+  log: BadgeEarning[] | null;
+};
+export type BadgeCheck = {
+  earned: EarnedBadge[];
+  metrics: Record<string, number>;
+  disabled: string[];
+  /** Founder-replaced art, by badge id. */ art: Record<string, string>;
+};
 
-const validZone = (tz: string) => { try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; } };
+const validZone = (tz: string) => {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 /**
  * Re-counts the caller's own saved work and records any badge they've reached. Reads go through the caller's
@@ -21,30 +45,81 @@ const validZone = (tz: string) => { try { new Intl.DateTimeFormat("en-US", { tim
  */
 export const checkBadges = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ timeZone: z.string().max(64).refine(validZone).catch("UTC") }).parse(d))
+  .inputValidator((d) =>
+    z.object({ timeZone: z.string().max(64).refine(validZone).catch("UTC") }).parse(d),
+  )
   .handler(async ({ data, context }): Promise<BadgeCheck> => {
-    const db = context.supabase, uid = context.userId;
+    const db = context.supabase,
+      uid = context.userId;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const fail = (what: string) => { throw new Error(`Couldn't check badges (${what}).`); };
+    const fail = (what: string) => {
+      throw new Error(`Couldn't check badges (${what}).`);
+    };
 
-    const [catalogs, splits, contracts, checks, certs, events, workbench, profile, settings, held, artRows, account] = await Promise.all([
+    const [
+      catalogs,
+      splits,
+      contracts,
+      checks,
+      certs,
+      events,
+      workbench,
+      profile,
+      settings,
+      held,
+      artRows,
+      account,
+    ] = await Promise.all([
       db.from("catalogs").select("*").eq("user_id", uid),
       db.from("split_sheets").select("catalog_id, is_owner, role, signed_at"),
-      db.from("contracts" as never).select("status, blueprint, contract_parties(is_owner, signed_at)").eq("user_id", uid),
-      db.from("repertoire_checks").select("track_id, society, status, source, work_id, details, checked_at").eq("user_id", uid),
-      db.from("ai_protection_certificates").select("catalog_id, track_title, ots_receipt").eq("user_id", uid),
-      db.from("badge_events" as never).select("kind").eq("user_id", uid),
+      db
+        .from("contracts" as never)
+        .select("status, blueprint, contract_parties(is_owner, signed_at)")
+        .eq("user_id", uid),
+      db
+        .from("repertoire_checks")
+        .select("track_id, society, status, source, work_id, details, checked_at")
+        .eq("user_id", uid),
+      db
+        .from("ai_protection_certificates")
+        .select("catalog_id, track_title, ots_receipt")
+        .eq("user_id", uid),
+      db
+        .from("badge_events" as never)
+        .select("kind")
+        .eq("user_id", uid),
       // One row per run of a blueprint; read with the member's own session, so it is only ever their checklist.
-      db.from("workbench_items" as never).select("item_id, checked").eq("user_id", uid).eq("kind", "blueprint"),
+      db
+        .from("workbench_items" as never)
+        .select("item_id, checked")
+        .eq("user_id", uid)
+        .eq("kind", "blueprint"),
       db.from("profiles").select("onboarding, stage_name, legal_name").eq("id", uid).maybeSingle(),
       // Read with the server client: badge settings are staff-only rows, members only need the switched-off ids.
-      supabaseAdmin.from("badge_settings" as never).select("badge_id").eq("enabled", false),
+      supabaseAdmin
+        .from("badge_settings" as never)
+        .select("badge_id")
+        .eq("enabled", false),
       // Until the badge-log migration runs there's no log column; badges still work, just without per-earning dates.
-      supabaseAdmin.from("user_badges" as never).select("badge_id, times, earned_at, seen_at, log").eq("user_id", uid)
-        .then((r) => (r.error ? supabaseAdmin.from("user_badges" as never).select("badge_id, times, earned_at, seen_at").eq("user_id", uid) : r)),
+      supabaseAdmin
+        .from("user_badges" as never)
+        .select("badge_id, times, earned_at, seen_at, log")
+        .eq("user_id", uid)
+        .then((r) =>
+          r.error
+            ? supabaseAdmin
+                .from("user_badges" as never)
+                .select("badge_id, times, earned_at, seen_at")
+                .eq("user_id", uid)
+            : r,
+        ),
       // Art the founder replaced from Admin → Badges (founder, 2026-11-06); missing until its migration runs.
-      supabaseAdmin.from("badge_art" as never).select("badge_id, src")
-        .then((r) => (r.error ? { data: [] as { badge_id: string; src: string }[], error: null } : r)),
+      supabaseAdmin
+        .from("badge_art" as never)
+        .select("badge_id, src")
+        .then((r) =>
+          r.error ? { data: [] as { badge_id: string; src: string }[], error: null } : r,
+        ),
       supabaseAdmin.auth.admin.getUserById(uid),
     ]);
     if (catalogs.error) fail("catalog");
@@ -52,37 +127,113 @@ export const checkBadges = createServerFn({ method: "POST" })
 
     // Songs already sent to the agencies for registration assistance: a submission is stamped, a saved draft isn't.
     const [registrationSubmissions, brandBuys, seats] = await Promise.all([
-      db.from("registration_songs" as never).select("submitted_at").eq("user_id", uid)
-        .then((r) => (r.error ? 0 : ((r.data ?? []) as { submitted_at: string | null }[]).filter((s) => s.submitted_at).length)),
+      db
+        .from("registration_songs" as never)
+        .select("submitted_at")
+        .eq("user_id", uid)
+        .then((r) =>
+          r.error
+            ? 0
+            : ((r.data ?? []) as { submitted_at: string | null }[]).filter((s) => s.submitted_at)
+                .length,
+        ),
       // Brand kits the member bought: a refunded purchase unlocks nothing, here as everywhere else, and only the rows
       // from the environment being served count, so a sandbox test buy never earns a live badge (founder, 2026-11-08).
-      db.from("purchases").select("kind, details").eq("user_id", uid).eq("kind", "branding").eq("environment", getPaymentsEnvironment())
-        .then((r) => (r.error ? 0 : ((r.data ?? []) as { details: Record<string, unknown> | null }[]).filter((p) => !(p.details ?? {})["refunded_at"]).length)),
+      db
+        .from("purchases")
+        .select("kind, details")
+        .eq("user_id", uid)
+        .eq("kind", "branding")
+        .eq("environment", getPaymentsEnvironment())
+        .then((r) =>
+          r.error
+            ? 0
+            : ((r.data ?? []) as { details: Record<string, unknown> | null }[]).filter(
+                (p) => !(p.details ?? {})["refunded_at"],
+              ).length,
+        ),
       // Seats this member owns: one key for the invite, another when the artist accepts it.
-      db.from("artist_seats" as never).select("invite_email, accepted_at").eq("owner_id", uid)
-        .then((r) => (r.error ? [] : ((r.data ?? []) as { invite_email: string | null; accepted_at: string | null }[]))),
+      db
+        .from("artist_seats" as never)
+        .select("invite_email, accepted_at")
+        .eq("owner_id", uid)
+        .then((r) =>
+          r.error
+            ? []
+            : ((r.data ?? []) as { invite_email: string | null; accepted_at: string | null }[]),
+        ),
     ]);
     const seatsInvited = seats.filter((s) => !!s.invite_email).length;
     const seatsAccepted = seats.filter((s) => !!s.accepted_at).length;
 
-    const ob = (profile.data?.onboarding ?? {}) as { welcomed?: boolean; stageName?: string; legalName?: string; healthCountry?: string };
-    const count = (kind: string) => ((events.data ?? []) as { kind: string }[]).filter((e) => e.kind === kind).length;
+    const ob = (profile.data?.onboarding ?? {}) as {
+      welcomed?: boolean;
+      stageName?: string;
+      legalName?: string;
+      healthCountry?: string;
+    };
+    const count = (kind: string) =>
+      ((events.data ?? []) as { kind: string }[]).filter((e) => e.kind === kind).length;
     const input: BadgeData = {
-      tracks: (catalogs.data ?? []).map((r) => ({ ...fromCatalogRow(r as Record<string, unknown>), createdAt: (r.created_at ?? r.updated_at) as string })),
-      splits: (splits.data ?? []).filter((r) => r.catalog_id).map((r) => ({ catalogId: r.catalog_id!, isOwner: r.is_owner, role: r.role, signedAt: r.signed_at })),
-      contracts: ((contracts.data ?? []) as { status: string; blueprint: string; contract_parties: { is_owner: boolean; signed_at: string | null }[] }[])
-        .map((c) => ({ status: c.status, blueprint: c.blueprint, parties: (c.contract_parties ?? []).map((p) => ({ isOwner: p.is_owner, signedAt: p.signed_at })) })),
-      checks: (checks.data ?? []).map((r) => ({ trackId: r.track_id, society: r.society, status: r.status as "found" | "not_listed", source: r.source as "self" | "auto", workId: r.work_id, details: r.details, checkedAt: r.checked_at })),
-      certificates: (certs.data ?? []).map((c) => ({ catalogId: c.catalog_id, trackTitle: c.track_title ?? "", timestamped: !!c.ots_receipt })),
-      events: { agency_export: count("agency_export"), master_download: count("master_download"), blueprint_read: count("blueprint_read") },
-      blueprints: ((workbench.data ?? []) as { item_id: string; checked: string[] | null }[])
-        .map((r) => ({ itemId: r.item_id, checked: r.checked ?? [] })),
+      tracks: (catalogs.data ?? []).map((r) => ({
+        ...fromCatalogRow(r as Record<string, unknown>),
+        createdAt: (r.created_at ?? r.updated_at) as string,
+      })),
+      splits: (splits.data ?? [])
+        .filter((r) => r.catalog_id)
+        .map((r) => ({
+          catalogId: r.catalog_id!,
+          isOwner: r.is_owner,
+          role: r.role,
+          signedAt: r.signed_at,
+        })),
+      contracts: (
+        (contracts.data ?? []) as {
+          status: string;
+          blueprint: string;
+          contract_parties: { is_owner: boolean; signed_at: string | null }[];
+        }[]
+      ).map((c) => ({
+        status: c.status,
+        blueprint: c.blueprint,
+        parties: (c.contract_parties ?? []).map((p) => ({
+          isOwner: p.is_owner,
+          signedAt: p.signed_at,
+        })),
+      })),
+      checks: (checks.data ?? []).map((r) => ({
+        trackId: r.track_id,
+        society: r.society,
+        status: r.status as "found" | "not_listed",
+        source: r.source as "self" | "auto",
+        workId: r.work_id,
+        details: r.details,
+        checkedAt: r.checked_at,
+      })),
+      certificates: (certs.data ?? []).map((c) => ({
+        catalogId: c.catalog_id,
+        trackTitle: c.track_title ?? "",
+        timestamped: !!c.ots_receipt,
+      })),
+      events: {
+        agency_export: count("agency_export"),
+        master_download: count("master_download"),
+        blueprint_read: count("blueprint_read"),
+      },
+      blueprints: ((workbench.data ?? []) as { item_id: string; checked: string[] | null }[]).map(
+        (r) => ({ itemId: r.item_id, checked: r.checked ?? [] }),
+      ),
       registrationSubmissions,
       brandKits: brandBuys,
       seatsInvited,
       seatsAccepted,
       welcomed: !!ob.welcomed,
-      names: [ob.stageName, ob.legalName, profile.data?.stage_name, profile.data?.legal_name].filter((n): n is string => !!n?.trim()),
+      names: [
+        ob.stageName,
+        ob.legalName,
+        profile.data?.stage_name,
+        profile.data?.legal_name,
+      ].filter((n): n is string => !!n?.trim()),
       healthCountry: ob.healthCountry,
       accountCreatedAt: account.data.user?.created_at ?? new Date().toISOString(),
       timeZone: data.timeZone,
@@ -98,20 +249,45 @@ export const checkBadges = createServerFn({ method: "POST" })
       .map((s): HeldRow & { user_id: string } => {
         const had = mine.get(s.badge.id);
         // One log entry per new earning; badges with art choices wait for the user's pick.
-        const fresh = Array.from({ length: s.times - (had?.times ?? 0) }, (): BadgeEarning => (s.badge.choices ? { at: now, pick: null } : { at: now }));
+        const fresh = Array.from({ length: s.times - (had?.times ?? 0) }, (): BadgeEarning =>
+          s.badge.choices ? { at: now, pick: null } : { at: now },
+        );
         // A badge earned again comes back unseen so it celebrates again.
-        return { user_id: uid, badge_id: s.badge.id, times: s.times, earned_at: had?.earned_at ?? now, seen_at: s.badge.preSeen ? now : null, log: [...(had?.log ?? []), ...fresh] };
+        return {
+          user_id: uid,
+          badge_id: s.badge.id,
+          times: s.times,
+          earned_at: had?.earned_at ?? now,
+          seen_at: s.badge.preSeen ? now : null,
+          log: [...(had?.log ?? []), ...fresh],
+        };
       });
     if (changes.length) {
-      let { error } = await supabaseAdmin.from("user_badges" as never).upsert(changes as never, { onConflict: "user_id,badge_id" });
-      if (error) ({ error } = await supabaseAdmin.from("user_badges" as never).upsert(changes.map(({ log: _, ...c }) => c) as never, { onConflict: "user_id,badge_id" }));
+      let { error } = await supabaseAdmin
+        .from("user_badges" as never)
+        .upsert(changes as never, { onConflict: "user_id,badge_id" });
+      if (error)
+        ({ error } = await supabaseAdmin
+          .from("user_badges" as never)
+          .upsert(changes.map(({ log: _, ...c }) => c) as never, {
+            onConflict: "user_id,badge_id",
+          }));
       if (error) fail("saving");
       for (const c of changes) mine.set(c.badge_id, c);
     }
 
-    const earned = [...mine.values()].filter((r) => badgeById(r.badge_id))
-      .map((r) => ({ id: r.badge_id, times: r.times, earnedAt: r.earned_at, seenAt: r.seen_at, log: r.log ?? [] }));
-    const art = Object.fromEntries(((artRows.data ?? []) as { badge_id: string; src: string }[]).map((r) => [r.badge_id, r.src])) as Record<string, string>;
+    const earned = [...mine.values()]
+      .filter((r) => badgeById(r.badge_id))
+      .map((r) => ({
+        id: r.badge_id,
+        times: r.times,
+        earnedAt: r.earned_at,
+        seenAt: r.seen_at,
+        log: r.log ?? [],
+      }));
+    const art = Object.fromEntries(
+      ((artRows.data ?? []) as { badge_id: string; src: string }[]).map((r) => [r.badge_id, r.src]),
+    ) as Record<string, string>;
     return { earned, metrics, disabled, art };
   });
 
@@ -125,8 +301,14 @@ export const resetMyBadges = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [badges, events] = await Promise.all([
-      supabaseAdmin.from("user_badges" as never).delete().eq("user_id", context.userId),
-      supabaseAdmin.from("badge_events" as never).delete().eq("user_id", context.userId),
+      supabaseAdmin
+        .from("user_badges" as never)
+        .delete()
+        .eq("user_id", context.userId),
+      supabaseAdmin
+        .from("badge_events" as never)
+        .delete()
+        .eq("user_id", context.userId),
     ]);
     if (badges.error || events.error) throw new Error("Couldn't reset your badges. Try again.");
     return { ok: true };
@@ -135,27 +317,49 @@ export const resetMyBadges = createServerFn({ method: "POST" })
 /** Saves the art the user picked for one earning of a badge with choices (Self-Produced). A pick can't be changed later. */
 export const pickBadgeArt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ badgeId: z.string().max(80), index: z.number().int().min(0), pick: z.string().max(200) }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        badgeId: z.string().max(80),
+        index: z.number().int().min(0),
+        pick: z.string().max(200),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const badge = badgeById(data.badgeId);
-    if (!badge?.choices?.includes(data.pick)) throw new Error("That art isn't one of this badge's choices.");
+    if (!badge?.choices?.includes(data.pick))
+      throw new Error("That art isn't one of this badge's choices.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row, error } = await supabaseAdmin.from("user_badges" as never).select("log")
-      .eq("user_id", context.userId).eq("badge_id", data.badgeId).maybeSingle();
+    const { data: row, error } = await supabaseAdmin
+      .from("user_badges" as never)
+      .select("log")
+      .eq("user_id", context.userId)
+      .eq("badge_id", data.badgeId)
+      .maybeSingle();
     const log = ((row as { log: BadgeEarning[] } | null)?.log ?? []).slice();
     const entry = log[data.index];
     if (error || !entry) throw new Error("Couldn't find that badge.");
     if (entry.pick) return { ok: true };
     log[data.index] = { ...entry, pick: data.pick };
-    const { error: saveError } = await supabaseAdmin.from("user_badges" as never).update({ log } as never)
-      .eq("user_id", context.userId).eq("badge_id", data.badgeId);
+    const { error: saveError } = await supabaseAdmin
+      .from("user_badges" as never)
+      .update({ log } as never)
+      .eq("user_id", context.userId)
+      .eq("badge_id", data.badgeId);
     if (saveError) throw new Error("Couldn't save your pick.");
     return { ok: true };
   });
 
 /** Super admins and the Branding, Marketing & Sales and Support departments (public.can_manage_badges). */
-async function assertBadgeStaff(context: { supabase: { rpc: (fn: never, args: never) => PromiseLike<{ data: unknown }> }; userId: string }) {
-  const { data } = await context.supabase.rpc("can_manage_badges" as never, { _user_id: context.userId } as never);
+async function assertBadgeStaff(context: {
+  supabase: { rpc: (fn: never, args: never) => PromiseLike<{ data: unknown }> };
+  userId: string;
+}) {
+  const { data } = await context.supabase.rpc(
+    "can_manage_badges" as never,
+    { _user_id: context.userId } as never,
+  );
   if (!data) throw new Error("Forbidden");
 }
 
@@ -167,18 +371,38 @@ export const listBadgeSettings = createServerFn({ method: "GET" })
     const [settings, counts, drops, artRows] = await Promise.all([
       context.supabase.from("badge_settings" as never).select("badge_id, enabled, updated_at"),
       context.supabase.rpc("badge_earned_counts" as never),
-      context.supabase.from("badge_drops" as never).select("note, created_at").order("created_at", { ascending: false }).limit(1),
+      context.supabase
+        .from("badge_drops" as never)
+        .select("note, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1),
       // Missing until the badge-art migration runs; the list then shows the art in badges.ts.
-      context.supabase.from("badge_art" as never).select("badge_id, src")
+      context.supabase
+        .from("badge_art" as never)
+        .select("badge_id, src")
         .then((r) => (r.error ? { data: [] as { badge_id: string; src: string }[] } : r)),
     ]);
     if (settings.error || counts.error) throw new Error("Couldn't load badge settings.");
     return {
       // Missing until the badge-drops migration runs; the reminder then counts from today.
       lastDrop: ((drops.data ?? []) as { note: string; created_at: string }[])[0] ?? null,
-      settings: (settings.data ?? []) as unknown as { badge_id: string; enabled: boolean; updated_at: string }[],
-      earned: Object.fromEntries(((counts.data ?? []) as { badge_id: string; users: number }[]).map((r) => [r.badge_id, Number(r.users)])) as Record<string, number>,
-      art: Object.fromEntries(((artRows.data ?? []) as { badge_id: string; src: string }[]).map((r) => [r.badge_id, r.src])) as Record<string, string>,
+      settings: (settings.data ?? []) as unknown as {
+        badge_id: string;
+        enabled: boolean;
+        updated_at: string;
+      }[],
+      earned: Object.fromEntries(
+        ((counts.data ?? []) as { badge_id: string; users: number }[]).map((r) => [
+          r.badge_id,
+          Number(r.users),
+        ]),
+      ) as Record<string, number>,
+      art: Object.fromEntries(
+        ((artRows.data ?? []) as { badge_id: string; src: string }[]).map((r) => [
+          r.badge_id,
+          r.src,
+        ]),
+      ) as Record<string, string>,
     };
   });
 
@@ -188,15 +412,37 @@ export const listBadgeSettings = createServerFn({ method: "GET" })
  */
 export const setBadgeArt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({
-    badgeId: z.string().max(80).refine((id) => !!badgeById(id), "Pick a badge."),
-    src: z.string().trim().max(200).regex(/^\/(icons|art)\/[A-Za-z0-9/_.-]+$/, "Use a path like /icons/serious/name.webp"),
-  }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        badgeId: z
+          .string()
+          .max(80)
+          .refine((id) => !!badgeById(id), "Pick a badge."),
+        src: z
+          .string()
+          .trim()
+          .max(200)
+          .regex(/^\/(icons|art)\/[A-Za-z0-9/_.-]+$/, "Use a path like /icons/serious/name.webp"),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
-    const { data: founder } = await context.supabase.rpc("is_founder" as never, { _user_id: context.userId } as never);
+    const { data: founder } = await context.supabase.rpc(
+      "is_founder" as never,
+      { _user_id: context.userId } as never,
+    );
     if (!founder) throw new Error("Only the founder can change badge art.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("badge_art" as never).upsert({ badge_id: data.badgeId, src: data.src, updated_by: context.userId, updated_at: new Date().toISOString() } as never, { onConflict: "badge_id" });
+    const { error } = await supabaseAdmin.from("badge_art" as never).upsert(
+      {
+        badge_id: data.badgeId,
+        src: data.src,
+        updated_by: context.userId,
+        updated_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "badge_id" },
+    );
     if (error) throw new Error("Couldn't save the badge art. Has the badge-art migration run?");
     return { ok: true };
   });
@@ -204,11 +450,28 @@ export const setBadgeArt = createServerFn({ method: "POST" })
 /** Turns badges on or off for new unlocks site-wide. Anyone who already earned one keeps it. */
 export const setBadgesEnabled = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ ids: z.array(z.string().refine((id) => ALL_BADGES.some((b) => b.id === id))).min(1).max(ALL_BADGES.length), enabled: z.boolean() }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        ids: z
+          .array(z.string().refine((id) => ALL_BADGES.some((b) => b.id === id)))
+          .min(1)
+          .max(ALL_BADGES.length),
+        enabled: z.boolean(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     await assertBadgeStaff(context as never);
-    const rows = data.ids.map((badge_id) => ({ badge_id, enabled: data.enabled, updated_by: context.userId, updated_at: new Date().toISOString() }));
-    const { error } = await context.supabase.from("badge_settings" as never).upsert(rows as never, { onConflict: "badge_id" });
+    const rows = data.ids.map((badge_id) => ({
+      badge_id,
+      enabled: data.enabled,
+      updated_by: context.userId,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await context.supabase
+      .from("badge_settings" as never)
+      .upsert(rows as never, { onConflict: "badge_id" });
     if (error) throw new Error("Couldn't save the badge setting.");
     return { ok: true };
   });
@@ -219,7 +482,9 @@ export const logBadgeDrop = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ note: z.string().trim().min(1).max(500) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertBadgeStaff(context as never);
-    const { error } = await context.supabase.from("badge_drops" as never).insert({ note: data.note, created_by: context.userId } as never);
+    const { error } = await context.supabase
+      .from("badge_drops" as never)
+      .insert({ note: data.note, created_by: context.userId } as never);
     if (error) throw new Error("Couldn't save the badge drop.");
     return { ok: true };
   });
@@ -231,37 +496,69 @@ export const logBadgeDrop = createServerFn({ method: "POST" })
  */
 export const grantBadgeForTicket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({
-    ticketId: z.string().uuid(),
-    badgeId: z.string().refine((id) => BADGES.some((b) => b.id === id), "Pick a badge."),
-    reason: z.string().trim().min(3, "Add the reason.").max(500),
-  }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        ticketId: z.string().uuid(),
+        badgeId: z.string().refine((id) => BADGES.some((b) => b.id === id), "Pick a badge."),
+        reason: z.string().trim().min(3, "Add the reason.").max(500),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
-    const { data: allowed } = await context.supabase.rpc("in_department" as never, { _user_id: context.userId, _dept: "support" } as never);
+    const { data: allowed } = await context.supabase.rpc(
+      "in_department" as never,
+      { _user_id: context.userId, _dept: "support" } as never,
+    );
     if (!allowed) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: ticket } = await supabaseAdmin.from("support_tickets").select("email").eq("id", data.ticketId).maybeSingle();
+    const { data: ticket } = await supabaseAdmin
+      .from("support_tickets")
+      .select("email")
+      .eq("id", data.ticketId)
+      .maybeSingle();
     if (!ticket) throw new Error("Couldn't find that ticket.");
-    const { data: userId } = await supabaseAdmin.rpc("user_id_by_email" as never, { _email: ticket.email } as never);
-    if (!userId) throw new Error(`No account uses ${ticket.email}. Ask the user which email they signed up with.`);
+    const { data: userId } = await supabaseAdmin.rpc(
+      "user_id_by_email" as never,
+      { _email: ticket.email } as never,
+    );
+    if (!userId)
+      throw new Error(
+        `No account uses ${ticket.email}. Ask the user which email they signed up with.`,
+      );
     if (userId === context.userId) throw new Error("You can't unlock badges for your own account.");
 
     const badge = badgeById(data.badgeId)!;
-    const { data: row } = await supabaseAdmin.from("user_badges" as never).select("times, earned_at, log")
-      .eq("user_id", userId).eq("badge_id", badge.id).maybeSingle();
+    const { data: row } = await supabaseAdmin
+      .from("user_badges" as never)
+      .select("times, earned_at, log")
+      .eq("user_id", userId)
+      .eq("badge_id", badge.id)
+      .maybeSingle();
     const had = row as { times: number; earned_at: string; log: BadgeEarning[] | null } | null;
     if (had && !badge.every) throw new Error(`They already have ${badge.title}.`);
     const now = new Date().toISOString();
     const entry: BadgeEarning = badge.choices ? { at: now, pick: null } : { at: now };
     // Logged first, so no unlock ever happens without its record.
     const logged = await supabaseAdmin.from("badge_grants" as never).insert({
-      user_id: userId, badge_id: badge.id, ticket_id: data.ticketId, reason: data.reason, granted_by: context.userId,
+      user_id: userId,
+      badge_id: badge.id,
+      ticket_id: data.ticketId,
+      reason: data.reason,
+      granted_by: context.userId,
     } as never);
     if (logged.error) throw new Error("Couldn't record the unlock, so the badge wasn't unlocked.");
-    const { error } = await supabaseAdmin.from("user_badges" as never).upsert({
-      user_id: userId, badge_id: badge.id, times: (had?.times ?? 0) + 1, earned_at: had?.earned_at ?? now, seen_at: null,
-      log: [...(had?.log ?? []), entry],
-    } as never, { onConflict: "user_id,badge_id" });
+    const { error } = await supabaseAdmin.from("user_badges" as never).upsert(
+      {
+        user_id: userId,
+        badge_id: badge.id,
+        times: (had?.times ?? 0) + 1,
+        earned_at: had?.earned_at ?? now,
+        seen_at: null,
+        log: [...(had?.log ?? []), entry],
+      } as never,
+      { onConflict: "user_id,badge_id" },
+    );
     if (error) throw new Error("Couldn't unlock the badge.");
     return { ok: true, title: badge.title };
   });

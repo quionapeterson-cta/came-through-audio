@@ -91,9 +91,9 @@ export function CompanyMail({ access }: { access: StaffAccess }) {
     return (
       <section className="space-y-3">
         <p className="max-w-[70ch] text-sm text-muted-foreground">
-          A letter from a company address is sent by a super admin or the lead of the mailbox's department. Take anything
-          that needs a company reply to your department lead — and answer a member about their own account inside their
-          ticket, in Admin → Support Tickets.
+          A letter from a company address is sent by a super admin or the lead of the mailbox's
+          department. Take anything that needs a company reply to your department lead — and answer
+          a member about their own account inside their ticket, in Admin → Support Tickets.
         </p>
       </section>
     );

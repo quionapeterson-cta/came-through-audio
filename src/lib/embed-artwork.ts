@@ -31,7 +31,9 @@ export function coverFile(dataUrl: string, name = "cover.jpg"): File | undefined
     if (!bytes.length) return undefined;
     // A jpeg keeps its .jpg name so a saved copy never claims to be a png.
     const type = m[1]!.toLowerCase();
-    return new File([bytes], type === "image/png" ? name.replace(/\.jpe?g$/i, ".png") : name, { type });
+    return new File([bytes], type === "image/png" ? name.replace(/\.jpe?g$/i, ".png") : name, {
+      type,
+    });
   } catch {
     return undefined;
   }

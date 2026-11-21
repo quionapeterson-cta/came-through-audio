@@ -10,7 +10,8 @@ describe("the copy-paste lookup key list", () => {
   });
 
   it("only lists keys the checkout guard has a published amount for", () => {
-    for (const row of soldPrices()) expect(PUBLISHED_AMOUNTS[row.lookupKey], row.lookupKey).toBeDefined();
+    for (const row of soldPrices())
+      expect(PUBLISHED_AMOUNTS[row.lookupKey], row.lookupKey).toBeDefined();
   });
 
   it("states the type each price must be created with", () => {
@@ -26,7 +27,10 @@ describe("the copy-paste lookup key list", () => {
   it("puts each key on exactly one line", () => {
     const lines = stripeLookupKeyText().split("\n");
     for (const row of soldPrices()) {
-      expect(lines.filter((line) => line.startsWith(row.lookupKey)), row.lookupKey).toHaveLength(1);
+      expect(
+        lines.filter((line) => line.startsWith(row.lookupKey)),
+        row.lookupKey,
+      ).toHaveLength(1);
     }
   });
 });

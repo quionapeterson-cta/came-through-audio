@@ -13,13 +13,20 @@ import { money } from "./purchase-receipt";
 
 const FROM = `Came Through Audio Billing <${BILLING_EMAIL}>`;
 const KIT_LINK = `${SITE_URL}/profile#brand-kit`;
-const REASON = "You're receiving this because you subscribe to a Personal Branding kit from Came Through Audio.";
+const REASON =
+  "You're receiving this because you subscribe to a Personal Branding kit from Came Through Audio.";
 
 export type MailResult = { sent: boolean; reason?: string };
 
-const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+const longDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
-async function sendMail(i: { to: string; subject: string; html: string; idempotencyKey: string }): Promise<MailResult> {
+async function sendMail(i: {
+  to: string;
+  subject: string;
+  html: string;
+  idempotencyKey: string;
+}): Promise<MailResult> {
   const key = resendKey();
   if (!key) return { sent: false, reason: "no-key" };
   try {
@@ -31,7 +38,13 @@ async function sendMail(i: { to: string; subject: string; html: string; idempote
         // One per invoice: a retried webhook can't send the same notice twice.
         "Idempotency-Key": i.idempotencyKey,
       },
-      body: JSON.stringify({ from: FROM, to: [i.to], reply_to: BILLING_EMAIL, subject: i.subject, html: i.html }),
+      body: JSON.stringify({
+        from: FROM,
+        to: [i.to],
+        reply_to: BILLING_EMAIL,
+        subject: i.subject,
+        html: i.html,
+      }),
     });
     if (!res.ok) {
       console.error(`Branding kit email failed [${res.status}]: ${await res.text()}`);
@@ -69,7 +82,12 @@ ${i.renewsOn ? `<p style="font-size:15px;line-height:1.6">Your next renewal is o
 <p style="font-size:13px;line-height:1.6;color:#666">Questions about the charge? Reply to this email and Billing answers it.</p>`,
     { reason: REASON },
   );
-  return sendMail({ to: i.email, subject: "Your branding kit renewed", html, idempotencyKey: `kit-renewal-${i.invoiceId}` });
+  return sendMail({
+    to: i.email,
+    subject: "Your branding kit renewed",
+    html,
+    idempotencyKey: `kit-renewal-${i.invoiceId}`,
+  });
 }
 
 export type KitFailedInput = {

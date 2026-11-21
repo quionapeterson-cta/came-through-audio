@@ -11,7 +11,9 @@ const PUBLISHED_SITE_URL = "https://pixel-perfect-studio-382.lovable.app";
  * Lovable site, and the cutover becomes a variable change rather than a code change (founder, 2026-11-05). Unset keeps
  * the published address, which is what the Lovable build, the browser bundle and the tests expect.
  */
-export function resolveSiteUrl(raw: string | undefined = typeof process === "undefined" ? undefined : process.env["SITE_URL"]): string {
+export function resolveSiteUrl(
+  raw: string | undefined = typeof process === "undefined" ? undefined : process.env["SITE_URL"],
+): string {
   const value = raw?.trim();
   return (value || PUBLISHED_SITE_URL).replace(/\/+$/, "");
 }
@@ -53,7 +55,10 @@ export const WORDMARK_MARK_PX = 14;
 export const WORDMARK_FONT_PX = 18;
 
 export const escapeHtml = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  s.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 
 export type EmailKind = "transactional" | "marketing";
 
@@ -75,13 +80,16 @@ export interface EmailLayoutOptions {
 
 export function emailLayout(bodyHtml: string, opts: EmailLayoutOptions): string {
   const kind = opts.kind ?? "transactional";
-  if (kind === "marketing" && !opts.unsubscribeUrl) throw new Error("Marketing emails require an unsubscribe link.");
+  if (kind === "marketing" && !opts.unsubscribeUrl)
+    throw new Error("Marketing emails require an unsubscribe link.");
   const year = new Date().getFullYear();
   const optOut =
     kind === "marketing"
       ? `<p style="margin:8px 0 0"><a href="${opts.unsubscribeUrl}" style="color:#004AAD">Unsubscribe</a> from these emails at any time.</p>`
       : `<p style="margin:8px 0 0">If you weren't expecting this, you can safely ignore it or contact <a href="mailto:${SUPPORT_EMAIL}" style="color:#004AAD">${SUPPORT_EMAIL}</a>.</p>`;
-  const invites = opts.optOutUrl ? `<p style="margin:8px 0 0">Don't want these? <a href="${opts.optOutUrl}" style="color:#004AAD">Don't send me invites</a>.</p>` : "";
+  const invites = opts.optOutUrl
+    ? `<p style="margin:8px 0 0">Don't want these? <a href="${opts.optOutUrl}" style="color:#004AAD">Don't send me invites</a>.</p>`
+    : "";
   // Light mode everywhere (founder, 2026-11-04). These tags and bgcolor attributes are what stop Gmail, Apple Mail and
   // Outlook from inverting the white shell in a dark inbox, so every email looks the way it was designed.
   return `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="color-scheme" content="light only" /><meta name="supported-color-schemes" content="light only" /><title>Came Through Audio</title><style>:root{color-scheme:light only;supported-color-schemes:light only}body{background:#ffffff !important;color:#0b0b0b !important}</style></head>

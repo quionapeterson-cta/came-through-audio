@@ -15,16 +15,32 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid(), origin: z.string().url() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: canSend, error: tierErr } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "plus" } as never);
+    const { data: canSend, error: tierErr } = await context.supabase.rpc(
+      "has_tier" as never,
+      { _uid: context.userId, _needed: "plus" } as never,
+    );
     if (tierErr) {
       console.error("has_tier failed:", tierErr);
-      throw new Error(`Couldn't check your plan (${tierErr.message}). Contact support and we'll help right away.`);
+      throw new Error(
+        `Couldn't check your plan (${tierErr.message}). Contact support and we'll help right away.`,
+      );
     }
     if (!canSend) throw new Error("Co-writer requests are included with Catalog Plus and up.");
 
-    const { data: req, error } = await context.supabase.from("ipi_requests" as never)
-      .select("id, writer_name, role, email, songs, artist_name, status").eq("id", data.id).maybeSingle();
-    const row = req as { id: string; writer_name: string; role: string; email: string; songs: { title: string }[]; artist_name: string; status: string } | null;
+    const { data: req, error } = await context.supabase
+      .from("ipi_requests" as never)
+      .select("id, writer_name, role, email, songs, artist_name, status")
+      .eq("id", data.id)
+      .maybeSingle();
+    const row = req as {
+      id: string;
+      writer_name: string;
+      role: string;
+      email: string;
+      songs: { title: string }[];
+      artist_name: string;
+      status: string;
+    } | null;
     if (error || !row) throw new Error("Request not found.");
     if (row.status !== "pending") throw new Error("They already answered this request.");
     const recipient = row.email.trim().toLowerCase();
@@ -35,10 +51,22 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
     const since = new Date(Date.now() - 86400000).toISOString();
     const sends = () => supabaseAdmin.from("invite_sends" as never);
     const [senderToday, rowSends, recipientToday, blocked] = await Promise.all([
-      sends().select("id", { count: "exact", head: true }).eq("sender_id" as never, context.userId as never).gte("sent_at" as never, since as never),
-      sends().select("sent_at").eq("ipi_request_id" as never, row.id as never),
-      sends().select("id", { count: "exact", head: true }).eq("recipient_email" as never, recipient as never).gte("sent_at" as never, since as never),
-      supabaseAdmin.from("invite_blocklist" as never).select("email").eq("email" as never, recipient as never).maybeSingle(),
+      sends()
+        .select("id", { count: "exact", head: true })
+        .eq("sender_id" as never, context.userId as never)
+        .gte("sent_at" as never, since as never),
+      sends()
+        .select("sent_at")
+        .eq("ipi_request_id" as never, row.id as never),
+      sends()
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_email" as never, recipient as never)
+        .gte("sent_at" as never, since as never),
+      supabaseAdmin
+        .from("invite_blocklist" as never)
+        .select("email")
+        .eq("email" as never, recipient as never)
+        .maybeSingle(),
     ]);
     const reason = inviteBlockReason({
       senderToday: senderToday.count ?? 0,
@@ -49,7 +77,10 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
     if (reason)
       throw new Error(
         reason
-          .replace("split-sheet invite emails. Contact them directly to sign.", "invite emails. Copy the link and send it to them yourself.")
+          .replace(
+            "split-sheet invite emails. Contact them directly to sign.",
+            "invite emails. Copy the link and send it to them yourself.",
+          )
           .replace("Start a new split sheet", "Start a new co-writer request"),
       );
 
@@ -63,7 +94,8 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
     const link = `${origin}/ipi/${row.id}`;
     const optOutUrl = `${origin}/invites/stop?e=${encodeURIComponent(recipient)}&t=${optOutToken(recipient)}`;
 
-    const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Co-writer details request</p>
+    const html = emailLayout(
+      `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Co-writer details request</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Hi ${esc(name)}, add your PRO and IPI so your writer share gets paid</h1>
 <p style="font-size:15px;line-height:1.6">${esc(artist)} is getting ${titles.length === 1 ? "this song" : "these songs"} ready to register with the agencies that pay songwriters. Your share can only reach you if each registration has your PRO and your IPI number.</p>
 <div style="border:2px solid #004AAD;border-radius:12px;padding:16px;margin:20px 0">
@@ -74,7 +106,11 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
 <p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px"><b>Adding your details is always 100% free.</b> Create your free account with this email (<b>${esc(recipient)}</b>) and you'll also get a complimentary <b>30-day Catalog Plus Trial</b>: your own master catalog, metadata embedding and free Royalty Health Checks, no credit card required.</p>
 <p style="font-size:13px;line-height:1.6;color:#555">It takes about a minute. Your IPI number is in your PRO account (ASCAP, BMI, SESAC or your country's society). Not in a PRO yet? Just say so; you can join one and add it later.</p>
 <p style="font-size:13px;line-height:1.6;color:#555">Only ${esc(artist)} sees what you enter. It's used to register these songs and is never published or added to the music files.</p>`,
-      { reason: `You're receiving this because ${artist} listed you as a co-writer and asked for your PRO and IPI details.`, optOutUrl });
+      {
+        reason: `You're receiving this because ${artist} listed you as a co-writer and asked for your PRO and IPI details.`,
+        optOutUrl,
+      },
+    );
 
     const res = await sendMail({
       from: "collaborate",
@@ -86,10 +122,22 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
     if (!res.ok) {
       console.error(`Resend failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
       if (res.detail === "no-key") throw new Error("Email sending is not configured yet.");
-      if (res.status === 403 && /domain/i.test(res.detail ?? "")) throw new Error("Email delivery error: the sending domain isn't verified for sending yet. Copy the link and send it yourself for now.");
-      throw new Error(`Email could not be sent (${res.status ?? "network"}). Copy the link and send it yourself for now.`);
+      if (res.status === 403 && /domain/i.test(res.detail ?? ""))
+        throw new Error(
+          "Email delivery error: the sending domain isn't verified for sending yet. Copy the link and send it yourself for now.",
+        );
+      throw new Error(
+        `Email could not be sent (${res.status ?? "network"}). Copy the link and send it yourself for now.`,
+      );
     }
-    await sends().insert({ sender_id: context.userId, ipi_request_id: row.id, recipient_email: recipient } as never);
-    await supabaseAdmin.from("ipi_requests" as never).update({ sent_at: new Date().toISOString() } as never).eq("id", row.id);
+    await sends().insert({
+      sender_id: context.userId,
+      ipi_request_id: row.id,
+      recipient_email: recipient,
+    } as never);
+    await supabaseAdmin
+      .from("ipi_requests" as never)
+      .update({ sent_at: new Date().toISOString() } as never)
+      .eq("id", row.id);
     return { ok: true };
   });

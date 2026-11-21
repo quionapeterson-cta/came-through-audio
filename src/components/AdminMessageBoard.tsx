@@ -41,7 +41,12 @@ import {
  */
 
 const when = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
 const priorityTone = (priority: BoardPriority) =>
   priority === "urgent" ? "destructive" : priority === "high" ? "default" : "secondary";
@@ -69,7 +74,9 @@ export function AdminMessageBoard({
       qc.invalidateQueries({ queryKey: ["board-unread"] }),
     ]);
 
-  const rows = (threads.data ?? []).filter((thread) => category === "all" || thread.category === category);
+  const rows = (threads.data ?? []).filter(
+    (thread) => category === "all" || thread.category === category,
+  );
   const counts = (threads.data ?? []).reduce<Record<string, number>>((totals, thread) => {
     totals[thread.category] = (totals[thread.category] ?? 0) + 1;
     return totals;
@@ -96,8 +103,8 @@ export function AdminMessageBoard({
         <div className="min-w-0">
           <h2 className="text-lg font-bold">Super Admin Message Board</h2>
           <p className="text-sm text-muted-foreground">
-            Reported issues, agency escalations, client follow-ups, billing audits and announcements — threaded, with
-            priorities and unread counts.
+            Reported issues, agency escalations, client follow-ups, billing audits and announcements
+            — threaded, with priorities and unread counts.
           </p>
         </div>
         {unread > 0 && <Badge variant="default">{unread} unread</Badge>}
@@ -108,7 +115,9 @@ export function AdminMessageBoard({
           type="button"
           onClick={() => setCategory("all")}
           className={`min-h-11 rounded-full border px-3 text-xs font-semibold ${
-            category === "all" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"
+            category === "all"
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-card"
           }`}
         >
           All threads {(threads.data ?? []).length}
@@ -119,7 +128,9 @@ export function AdminMessageBoard({
             type="button"
             onClick={() => setCategory(entry.value)}
             className={`min-h-11 rounded-full border px-3 text-xs font-semibold ${
-              category === entry.value ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"
+              category === entry.value
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card"
             }`}
           >
             {entry.label} {counts[entry.value] ?? 0}
@@ -137,7 +148,8 @@ export function AdminMessageBoard({
         <p className="text-muted-foreground">Loading the board…</p>
       ) : threads.isError ? (
         <p className="text-destructive">
-          Couldn't load the board ({(threads.error as Error).message}). Run migration 20261118160000 first.
+          Couldn't load the board ({(threads.error as Error).message}). Run migration 20261118160000
+          first.
         </p>
       ) : rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
@@ -156,9 +168,13 @@ export function AdminMessageBoard({
                   <Badge variant={priorityTone(thread.priority)} className="text-[10px]">
                     {BOARD_PRIORITY_LABEL[thread.priority]}
                   </Badge>
-                  <Badge variant="outline" className="text-[10px]">{BOARD_STATUS_LABEL[thread.status]}</Badge>
+                  <Badge variant="outline" className="text-[10px]">
+                    {BOARD_STATUS_LABEL[thread.status]}
+                  </Badge>
                   {thread.unread > 0 && (
-                    <Badge variant="default" className="text-[10px]">{thread.unread} new</Badge>
+                    <Badge variant="default" className="text-[10px]">
+                      {thread.unread} new
+                    </Badge>
                   )}
                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                     {BOARD_CATEGORY_LABEL[thread.category]}
@@ -168,7 +184,9 @@ export function AdminMessageBoard({
                 <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">{thread.createdName}</span>
                   <span>{when(thread.lastReplyAt)}</span>
-                  <span>{thread.replies} {thread.replies === 1 ? "reply" : "replies"}</span>
+                  <span>
+                    {thread.replies} {thread.replies === 1 ? "reply" : "replies"}
+                  </span>
                   {thread.userName ? <span>· {thread.userName}</span> : null}
                 </p>
               </button>
@@ -184,7 +202,9 @@ export function AdminMessageBoard({
 function NewThread() {
   const qc = useQueryClient();
   const create = useServerFn(createBoardThread);
-  const [category, setCategory] = useState<BoardCategory>(BOARD_POSTABLE_CATEGORIES[0] ?? "announcements");
+  const [category, setCategory] = useState<BoardCategory>(
+    BOARD_POSTABLE_CATEGORIES[0] ?? "announcements",
+  );
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [priority, setPriority] = useState<BoardPriority>("normal");
@@ -225,7 +245,9 @@ function NewThread() {
               onChange={(event) => setCategory(event.target.value as BoardCategory)}
             >
               {BOARD_POSTABLE_CATEGORIES.map((value) => (
-                <option key={value} value={value}>{BOARD_CATEGORY_LABEL[value]}</option>
+                <option key={value} value={value}>
+                  {BOARD_CATEGORY_LABEL[value]}
+                </option>
               ))}
             </select>
           </label>
@@ -237,7 +259,9 @@ function NewThread() {
               onChange={(event) => setPriority(event.target.value as BoardPriority)}
             >
               {BOARD_PRIORITIES.map((value) => (
-                <option key={value} value={value}>{BOARD_PRIORITY_LABEL[value]}</option>
+                <option key={value} value={value}>
+                  {BOARD_PRIORITY_LABEL[value]}
+                </option>
               ))}
             </select>
           </label>
@@ -263,7 +287,11 @@ function NewThread() {
           />
         </label>
         <div className="flex justify-end">
-          <Button className="min-h-11" disabled={busy || title.trim().length < 3 || body.trim().length < 3} onClick={() => void submit()}>
+          <Button
+            className="min-h-11"
+            disabled={busy || title.trim().length < 3 || body.trim().length < 3}
+            onClick={() => void submit()}
+          >
             {busy ? "Posting…" : "Post thread"}
           </Button>
         </div>
@@ -294,7 +322,10 @@ function ThreadView({
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const thread = useQuery({ queryKey: ["board-thread", id], queryFn: () => open({ data: { threadId: id } }) });
+  const thread = useQuery({
+    queryKey: ["board-thread", id],
+    queryFn: () => open({ data: { threadId: id } }),
+  });
   const detail = thread.data ?? null;
 
   const send = useMutation({
@@ -326,15 +357,19 @@ function ThreadView({
   };
 
   if (thread.isLoading) return <p className="mt-6 text-muted-foreground">Loading…</p>;
-  if (thread.isError || !detail) return <p className="mt-6 text-destructive">Couldn't load this thread.</p>;
+  if (thread.isError || !detail)
+    return <p className="mt-6 text-destructive">Couldn't load this thread.</p>;
 
   return (
     <div className="mt-4 space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" className="min-h-11" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" />Board
+          <ArrowLeft className="h-4 w-4" />
+          Board
         </Button>
-        <Badge variant={priorityTone(detail.priority)}>{BOARD_PRIORITY_LABEL[detail.priority]}</Badge>
+        <Badge variant={priorityTone(detail.priority)}>
+          {BOARD_PRIORITY_LABEL[detail.priority]}
+        </Badge>
         <Badge variant="outline">{BOARD_STATUS_LABEL[detail.status]}</Badge>
         <span className="text-xs uppercase tracking-wide text-muted-foreground">
           {BOARD_CATEGORY_LABEL[detail.category]}
@@ -349,14 +384,21 @@ function ThreadView({
         {(detail.userName || detail.userEmail) && (
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <UserRound className="h-3.5 w-3.5" />
-            {detail.userName ?? "Customer"}{detail.userEmail ? ` · ${detail.userEmail}` : ""}
+            {detail.userName ?? "Customer"}
+            {detail.userEmail ? ` · ${detail.userEmail}` : ""}
           </p>
         )}
       </div>
 
       {detail.purchaseId && onOpenCase && (
-        <Button size="sm" variant="outline" className="min-h-11" onClick={() => onOpenCase(detail.purchaseId!)}>
-          <Flag className="h-4 w-4" />Open this customer in Registrations
+        <Button
+          size="sm"
+          variant="outline"
+          className="min-h-11"
+          onClick={() => onOpenCase(detail.purchaseId!)}
+        >
+          <Flag className="h-4 w-4" />
+          Open this customer in Registrations
         </Button>
       )}
 
@@ -371,13 +413,16 @@ function ThreadView({
               onChange={(event) => void move(event.target.value as BoardStatus)}
             >
               {BOARD_STATUSES.map((value) => (
-                <option key={value} value={value}>{BOARD_STATUS_LABEL[value]}</option>
+                <option key={value} value={value}>
+                  {BOARD_STATUS_LABEL[value]}
+                </option>
               ))}
             </select>
           </label>
           {detail.issueId && detail.status !== "resolved" && (
             <Button className="min-h-11" disabled={busy} onClick={() => void move("resolved")}>
-              <CheckCircle2 className="h-4 w-4" />Mark Resolved
+              <CheckCircle2 className="h-4 w-4" />
+              Mark Resolved
             </Button>
           )}
           {detail.issueId && (
@@ -397,7 +442,9 @@ function ThreadView({
               {message.mentions.length > 0 && (
                 <span className="flex flex-wrap gap-1">
                   {message.mentions.map((mention) => (
-                    <Badge key={mention} variant="secondary" className="text-[10px]">@{mention}</Badge>
+                    <Badge key={mention} variant="secondary" className="text-[10px]">
+                      @{mention}
+                    </Badge>
                   ))}
                 </span>
               )}
@@ -423,12 +470,15 @@ function ThreadView({
             disabled={send.isPending || !body.trim()}
             onClick={() => send.mutate(body.trim())}
           >
-            <Send className="h-4 w-4" />{send.isPending ? "Sending…" : "Reply"}
+            <Send className="h-4 w-4" />
+            {send.isPending ? "Sending…" : "Reply"}
           </Button>
         </div>
       </div>
       {summary?.replies ? (
-        <p className="text-xs text-muted-foreground">This thread has {summary.replies} replies recorded.</p>
+        <p className="text-xs text-muted-foreground">
+          This thread has {summary.replies} replies recorded.
+        </p>
       ) : null}
     </div>
   );

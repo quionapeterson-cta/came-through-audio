@@ -14,18 +14,23 @@ export function HolidayPlan() {
   const load = useServerFn(getHolidayPlan);
   const q = useQuery({ queryKey: ["holiday-plan"], queryFn: () => load(), staleTime: Infinity });
   if (q.isLoading) return <p className="mt-6 text-muted-foreground">Loading…</p>;
-  if (q.isError || !q.data) return <p className="mt-6 text-destructive">Couldn't load the holiday plan.</p>;
+  if (q.isError || !q.data)
+    return <p className="mt-6 text-destructive">Couldn't load the holiday plan.</p>;
   const { breaks, payStatus, sections } = q.data;
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl font-bold">Holiday coverage</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          What happens to the queue when the team is off, and how anyone who wants to work the break is approved.
-          Members are told we are away and given a typical wait, never a promise.
+          What happens to the queue when the team is off, and how anyone who wants to work the break
+          is approved. Members are told we are away and given a typical wait, never a promise.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          {breaks.map((b) => <Badge key={b} variant="secondary">{b}</Badge>)}
+          {breaks.map((b) => (
+            <Badge key={b} variant="secondary">
+              {b}
+            </Badge>
+          ))}
           <Badge variant="outline">Super admins and department leads</Badge>
           {payStatus === "undecided" && <Badge variant="outline">Holiday pay: undecided</Badge>}
         </div>
@@ -51,8 +56,8 @@ export function HolidayPlan() {
       ))}
 
       <p className="text-xs text-muted-foreground">
-        Nothing on this page is an offer or a rate. Agree the terms with the person in writing before they work a break,
-        and record the approval with their lead.
+        Nothing on this page is an offer or a rate. Agree the terms with the person in writing
+        before they work a break, and record the approval with their lead.
       </p>
     </div>
   );

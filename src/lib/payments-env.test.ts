@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { CHECKOUT_CLOSED, CHECKOUT_UNAVAILABLE, checkoutEnvironmentError } from "@/lib/payments-env";
+import {
+  CHECKOUT_CLOSED,
+  CHECKOUT_UNAVAILABLE,
+  checkoutEnvironmentError,
+} from "@/lib/payments-env";
 
 describe("checkout environment guard", () => {
   it("lets a matching pair through", () => {

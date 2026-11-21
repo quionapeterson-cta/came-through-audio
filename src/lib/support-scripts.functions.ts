@@ -11,7 +11,10 @@ import { SUPPORT_SCRIPTS } from "@/lib/support-scripts.server";
 export const listSupportScripts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SupportScript[]> => {
-    const { data } = await context.supabase.rpc("is_staff" as never, { _user_id: context.userId } as never);
+    const { data } = await context.supabase.rpc(
+      "is_staff" as never,
+      { _user_id: context.userId } as never,
+    );
     if (!data) throw new Error("Support Scripts are for team members.");
     return [...SUPPORT_SCRIPTS];
   });

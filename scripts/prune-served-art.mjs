@@ -13,11 +13,17 @@ import { join } from "node:path";
 const base = process.env.VITE_ART_BASE;
 
 if (!base) {
-  console.log("[art] VITE_ART_BASE is unset: keeping public/icons in the build as the local fallback.");
+  console.log(
+    "[art] VITE_ART_BASE is unset: keeping public/icons in the build as the local fallback.",
+  );
   process.exit(0);
 }
 
-const publicDirs = [join(".output", "public"), join(".vercel", "output", "static"), join(".vercel", "output", "public")];
+const publicDirs = [
+  join(".output", "public"),
+  join(".vercel", "output", "static"),
+  join(".vercel", "output", "public"),
+];
 const dropped = [];
 
 for (const publicDir of publicDirs) {

@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveAccess } from "@/lib/departments";
 import { canSeeHolidayPlan, type CoverageSection } from "@/lib/holiday-coverage";
-import { COVERAGE_SECTIONS, HOLIDAY_BREAKS, HOLIDAY_PAY_STATUS } from "@/lib/holiday-coverage.server";
+import {
+  COVERAGE_SECTIONS,
+  HOLIDAY_BREAKS,
+  HOLIDAY_PAY_STATUS,
+} from "@/lib/holiday-coverage.server";
 
 export type HolidayPlanData = {
   breaks: string[];
@@ -22,6 +26,11 @@ export const getHolidayPlan = createServerFn({ method: "GET" })
       .select("role, departments")
       .eq("user_id", context.userId);
     const access = resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]);
-    if (!canSeeHolidayPlan(access)) throw new Error("Holiday Cover is for super admins and department leads.");
-    return { breaks: [...HOLIDAY_BREAKS], payStatus: HOLIDAY_PAY_STATUS, sections: COVERAGE_SECTIONS };
+    if (!canSeeHolidayPlan(access))
+      throw new Error("Holiday Cover is for super admins and department leads.");
+    return {
+      breaks: [...HOLIDAY_BREAKS],
+      payStatus: HOLIDAY_PAY_STATUS,
+      sections: COVERAGE_SECTIONS,
+    };
   });

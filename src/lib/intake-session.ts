@@ -39,7 +39,10 @@ export function readIntake<T>(userId: string | undefined, name: string): T | und
 export function writeIntake<T>(userId: string | undefined, name: string, value: T) {
   if (!userId) return;
   try {
-    localStorage.setItem(key(userId, name), JSON.stringify({ at: Date.now(), value } satisfies Box<T>));
+    localStorage.setItem(
+      key(userId, name),
+      JSON.stringify({ at: Date.now(), value } satisfies Box<T>),
+    );
   } catch {
     /* storage full or blocked: the sitting still works, it just won't be restored */
   }

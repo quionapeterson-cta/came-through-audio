@@ -27,7 +27,9 @@ export const getGateStatus = createServerFn({ method: "GET" }).handler(async () 
 });
 
 export const unlockSite = createServerFn({ method: "POST" })
-  .inputValidator((data: { password: string }) => ({ password: String(data?.password ?? "").slice(0, 200) }))
+  .inputValidator((data: { password: string }) => ({
+    password: String(data?.password ?? "").slice(0, 200),
+  }))
   .handler(async ({ data }) => {
     const expected = process.env["SITE_PASSWORD"];
     if (!expected) return { ok: true as const };
@@ -38,4 +40,6 @@ export const unlockSite = createServerFn({ method: "POST" })
   });
 
 /** Pre-launch until the site passcode is removed at launch: company agreements drop their confidentiality section then. */
-export const getLaunchStatus = createServerFn({ method: "GET" }).handler(async () => ({ prelaunch: !!process.env["SITE_PASSWORD"] }));
+export const getLaunchStatus = createServerFn({ method: "GET" }).handler(async () => ({
+  prelaunch: !!process.env["SITE_PASSWORD"],
+}));

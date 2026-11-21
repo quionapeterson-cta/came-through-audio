@@ -8,12 +8,18 @@ import { registeredName } from "@/lib/writer-names";
  */
 describe("the full registered writer name", () => {
   it("keeps the catalog's order and adds the name the registration carries, without the honourifics", () => {
-    expect(registeredName("Qui-Ona Peterson", "PETERSON QUI ONA LASHAY")).toBe("Qui-Ona Lashay Peterson");
-    expect(registeredName("Calvin Stephens", "STEPHENS CALVIN ANDRE JR (MR)")).toBe("Calvin Andre Stephens");
+    expect(registeredName("Qui-Ona Peterson", "PETERSON QUI ONA LASHAY")).toBe(
+      "Qui-Ona Lashay Peterson",
+    );
+    expect(registeredName("Calvin Stephens", "STEPHENS CALVIN ANDRE JR (MR)")).toBe(
+      "Calvin Andre Stephens",
+    );
   });
 
   it("leaves a name that already matches exactly as the member wrote it", () => {
-    expect(registeredName("Qui-Ona Lashay Peterson", "PETERSON QUI ONA LASHAY")).toBe("Qui-Ona Lashay Peterson");
+    expect(registeredName("Qui-Ona Lashay Peterson", "PETERSON QUI ONA LASHAY")).toBe(
+      "Qui-Ona Lashay Peterson",
+    );
     expect(registeredName("Ann Lee", "LEE ANN")).toBe("Ann Lee");
   });
 

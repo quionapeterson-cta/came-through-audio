@@ -7,13 +7,46 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ProSelect } from "@/components/ProSelect";
-import { CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, emptyContributor, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, percentInput, type Contributor, type Metadata } from "@/lib/metadata";
+import {
+  CREDIT_CHOICES,
+  OTHER_INSTRUMENT,
+  creditChoice,
+  fromCreditChoice,
+  emptyContributor,
+  GENRES,
+  GENRE_GROUPS,
+  MASTER_BASES,
+  PRODUCTION_TYPES,
+  RELEASE_TYPES,
+  WRITER_ROLES,
+  writerRole,
+  percentInput,
+  type Contributor,
+  type Metadata,
+} from "@/lib/metadata";
 import { isBadgeImage } from "@/lib/badges";
 import { isBmi } from "@/lib/audit";
 import { PUBLISHING_LABEL } from "@/lib/readiness";
-import { loadOnboarding, loadProfile, profileChecks, profileFilled, saveOnboarding, saveProfile, saveSeatArtistDefaults, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import {
+  loadOnboarding,
+  loadProfile,
+  profileChecks,
+  profileFilled,
+  saveOnboarding,
+  saveProfile,
+  saveSeatArtistDefaults,
+  withOwnWriter,
+  type ArtistProfile,
+  type Onboarding,
+} from "@/lib/artist-profile";
 import { ACCOUNT_ROLES, SITUATION_LABEL, SITUATIONS } from "@/lib/roles";
 import { StarSky } from "@/components/StarSky";
 import { listTracks, saveTrack } from "@/lib/catalog";
@@ -42,46 +75,93 @@ function resizeImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      const s = 256, c = document.createElement("canvas"); c.width = s; c.height = s;
-      const ctx = c.getContext("2d")!; const m = Math.min(img.width, img.height);
+      const s = 256,
+        c = document.createElement("canvas");
+      c.width = s;
+      c.height = s;
+      const ctx = c.getContext("2d")!;
+      const m = Math.min(img.width, img.height);
       ctx.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, s, s);
-      resolve(c.toDataURL("image/jpeg", 0.85)); URL.revokeObjectURL(img.src);
+      resolve(c.toDataURL("image/jpeg", 0.85));
+      URL.revokeObjectURL(img.src);
     };
-    img.onerror = reject; img.src = URL.createObjectURL(file);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
   });
 }
 
-export function ArtistAvatar({ src, className = "h-10 w-10" }: { src?: string | undefined; className?: string }) {
+export function ArtistAvatar({
+  src,
+  className = "h-10 w-10",
+}: {
+  src?: string | undefined;
+  className?: string;
+}) {
   // Badges are shown whole so wide artwork is never cropped; photos stay round.
-  if (isBadgeImage(src)) return <img src={src} alt="Profile badge" className={`${className} object-contain`} />;
-  return src
-    ? <img src={src} alt="Profile" className={`${className} rounded-full border-2 border-primary bg-card object-cover`} />
-    : <span className={`${className} flex items-center justify-center rounded-full border-2 border-primary bg-card text-primary`}><UserRound className="h-1/2 w-1/2" /></span>;
+  if (isBadgeImage(src))
+    return <img src={src} alt="Profile badge" className={`${className} object-contain`} />;
+  return src ? (
+    <img
+      src={src}
+      alt="Profile"
+      className={`${className} rounded-full border-2 border-primary bg-card object-cover`}
+    />
+  ) : (
+    <span
+      className={`${className} flex items-center justify-center rounded-full border-2 border-primary bg-card text-primary`}
+    >
+      <UserRound className="h-1/2 w-1/2" />
+    </span>
+  );
 }
 
-type NameStatus = { in_grace: boolean; grace_until: string | null; changes_left: number; next_change_at: string | null; frees_up_at?: string | null };
+type NameStatus = {
+  in_grace: boolean;
+  grace_until: string | null;
+  changes_left: number;
+  next_change_at: string | null;
+  frees_up_at?: string | null;
+};
 const normName = (v?: string | null) => (v ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 async function loadNameStatus(): Promise<NameStatus> {
   const { data, error } = await supabase.rpc("artist_name_status" as never);
   if (error) throw error;
   return data as NameStatus;
 }
-const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
-const shortDay = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-const daysUntil = (iso: string) => Math.max(1, Math.ceil((Date.parse(iso) - Date.now()) / 86_400_000));
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+const shortDay = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const daysUntil = (iso: string) =>
+  Math.max(1, Math.ceil((Date.parse(iso) - Date.now()) / 86_400_000));
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 /** "in 5 days (Oct 24)" */
 const whenNext = (iso: string) => `in ${plural(daysUntil(iso), "day")} (${shortDay(iso)})`;
 /** Plain-language artist-name rule: free fixes for 72 hours after signup, then once a week and 3 times a year. */
 function nameRuleText(s?: NameStatus) {
-  if (!s) return "Your artist name is tied to your catalog. You can change it once a week, up to 3 times a year.";
-  if (s.in_grace && s.grace_until) return `Fix any typos freely until ${day(s.grace_until)}. After that, you can change it once a week, up to 3 times a year.`;
-  if (s.next_change_at) return `You can change your artist name again ${whenNext(s.next_change_at)}. ${plural(s.changes_left, "change")} left this year.`;
+  if (!s)
+    return "Your artist name is tied to your catalog. You can change it once a week, up to 3 times a year.";
+  if (s.in_grace && s.grace_until)
+    return `Fix any typos freely until ${day(s.grace_until)}. After that, you can change it once a week, up to 3 times a year.`;
+  if (s.next_change_at)
+    return `You can change your artist name again ${whenNext(s.next_change_at)}. ${plural(s.changes_left, "change")} left this year.`;
   return `You can change your artist name once a week, up to 3 times a year (${s.changes_left} left). Releasing as another artist? Add an artist to your account.`;
 }
 
-export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun, seatArtist, canAddArtist = false }: {
-  userId: string; open: boolean; onOpenChange: (o: boolean) => void; onSaved: (o: Onboarding) => void; firstRun: boolean;
+export function ArtistOnboarding({
+  userId,
+  open,
+  onOpenChange,
+  onSaved,
+  firstRun,
+  seatArtist,
+  canAddArtist = false,
+}: {
+  userId: string;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSaved: (o: Onboarding) => void;
+  firstRun: boolean;
   /** Set when an owner is editing an artist on their seats instead of their own profile. */
   seatArtist?: { name: string } | null;
   /** Add-on artist seats are a paid feature: a free account has no one to add, so the option is never shown to it. */
@@ -90,7 +170,13 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   // Another account's defaults: no name-change limit (that rule is the artist's own) and no write to their name columns.
   const other = seatArtist?.name ?? "";
   const [step, setStep] = useState(firstRun ? 0 : 1);
-  const [ob, setOb] = useState<Onboarding>({ done: false, welcomed: false, avatar: "", stageName: "", legalName: "" });
+  const [ob, setOb] = useState<Onboarding>({
+    done: false,
+    welcomed: false,
+    avatar: "",
+    stageName: "",
+    legalName: "",
+  });
   const [p, setP] = useState<ArtistProfile>({});
   const [nameRule, setNameRule] = useState<NameStatus>();
   const [savedName, setSavedName] = useState("");
@@ -102,7 +188,12 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   /** Saved at 100% filled: the defaults sky, the same celebration the two defaults blueprints lift (founder, 2026-11-06). */
   const [sky, setSky] = useState(false);
   /** Songs this save would reach, shown before anything is written (founder, 2026-11-08). */
-  const [propagate, setPropagate] = useState<{ plan: Propagation; songs: { id: string; metadata: Metadata }[]; profile: ArtistProfile; final: Onboarding } | null>(null);
+  const [propagate, setPropagate] = useState<{
+    plan: Propagation;
+    songs: { id: string; metadata: Metadata }[];
+    profile: ArtistProfile;
+    final: Onboarding;
+  } | null>(null);
   const [filling, setFilling] = useState(false);
 
   useEffect(() => {
@@ -112,14 +203,27 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     const prof = loadProfile(userId) ?? {};
     setP({ copyright: `© ${year} `, phonographic: `℗ ${year} `, language: "English", ...prof });
     if (saved) setOb(saved);
-    supabase.from("profiles").select("stage_name, legal_name").eq("id", userId).maybeSingle().then(({ data }) => {
-      setSavedName(data?.stage_name ?? "");
-      if (!saved) setOb((o) => ({ ...o, stageName: data?.stage_name ?? "", legalName: data?.legal_name ?? "" }));
-    });
-    loadNameStatus().then(setNameRule).catch(() => setNameRule(undefined));
+    supabase
+      .from("profiles")
+      .select("stage_name, legal_name")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setSavedName(data?.stage_name ?? "");
+        if (!saved)
+          setOb((o) => ({
+            ...o,
+            stageName: data?.stage_name ?? "",
+            legalName: data?.legal_name ?? "",
+          }));
+      });
+    loadNameStatus()
+      .then(setNameRule)
+      .catch(() => setNameRule(undefined));
   }, [open, userId, firstRun]);
 
-  const set = <K extends keyof ArtistProfile>(k: K, v: ArtistProfile[K]) => setP((x) => ({ ...x, [k]: v }));
+  const set = <K extends keyof ArtistProfile>(k: K, v: ArtistProfile[K]) =>
+    setP((x) => ({ ...x, [k]: v }));
 
   const hasPublisher = (p.publishers ?? []).some((r) => r.name.trim());
   const newName = () => ob.stageName.trim() || p.artist?.trim() || "";
@@ -127,10 +231,13 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
 
   /** Changing a saved artist name counts toward the limit, so it asks first (free typo fixes in the first 72 hours don't). */
   async function finish() {
-    if (!other && nameChanges() && !nameRule?.in_grace) { setSeats(false); setConfirmName(true); return; }
+    if (!other && nameChanges() && !nameRule?.in_grace) {
+      setSeats(false);
+      setConfirmName(true);
+      return;
+    }
     await save();
   }
-
 
   async function save() {
     setConfirmName(false);
@@ -138,8 +245,14 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     const final: Onboarding = { ...ob, stageName: stage, done: true, welcomed: true };
     // Artist name changes are limited (see artist_name_status); the database has the final say.
     if (!other && nameChanges()) {
-      const { error } = await supabase.from("profiles").update({ stage_name: stage }).eq("id", userId);
-      if (error) { toast.error(error.message.replace("ARTIST_NAME_LOCKED: ", "")); return; }
+      const { error } = await supabase
+        .from("profiles")
+        .update({ stage_name: stage })
+        .eq("id", userId);
+      if (error) {
+        toast.error(error.message.replace("ARTIST_NAME_LOCKED: ", ""));
+        return;
+      }
       setSavedName(stage);
     }
     const writers = withOwnWriter(p.writers, ob.legalName);
@@ -147,11 +260,17 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     if (other) {
       // Seat artist: only their saved defaults are written, through the owner's own seat permission.
       const problem = await saveSeatArtistDefaults(userId, saved, final);
-      if (problem) { toast.error(`Couldn't save ${other}'s defaults: ${problem}`); return; }
+      if (problem) {
+        toast.error(`Couldn't save ${other}'s defaults: ${problem}`);
+        return;
+      }
     } else {
       saveProfile(userId, saved);
       saveOnboarding(userId, final);
-      await supabase.from("profiles").update({ stage_name: stage || null, legal_name: ob.legalName.trim() || null }).eq("id", userId);
+      await supabase
+        .from("profiles")
+        .update({ stage_name: stage || null, legal_name: ob.legalName.trim() || null })
+        .eq("id", userId);
     }
     await offerFill(final, saved);
   }
@@ -163,7 +282,13 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     // A profile filled 100% is the defaults moment too, not just the two blueprints' checklists (founder, 2026-11-06).
     // The sky names itself since 2026-11-08, so it no longer waits for a catalogued song to write in the stars.
     if (!other && profileFilled(final, saved) && claimDefaultsSky()) setSky(true);
-    toast.success(other ? `${other}'s embed defaults and catalog defaults are saved.` : firstRun ? "You're all set! Your saved details will prefill every new embed and catalog entry." : "Profile saved.");
+    toast.success(
+      other
+        ? `${other}'s embed defaults and catalog defaults are saved.`
+        : firstRun
+          ? "You're all set! Your saved details will prefill every new embed and catalog entry."
+          : "Profile saved.",
+    );
   }
 
   /**
@@ -173,8 +298,16 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   async function offerFill(final: Onboarding, saved: ArtistProfile) {
     const songs = await listTracks(userId).catch(() => []);
     const plan = propagationPlan(saved, songs);
-    if (!plan.total) { finishSave(final, saved); return; }
-    setPropagate({ plan, songs: songs.map((s) => ({ id: s.id, metadata: s.metadata })), profile: saved, final });
+    if (!plan.total) {
+      finishSave(final, saved);
+      return;
+    }
+    setPropagate({
+      plan,
+      songs: songs.map((s) => ({ id: s.id, metadata: s.metadata })),
+      profile: saved,
+      final,
+    });
   }
 
   /** Fills and corrects the songs the member agreed to, through the same save path the catalog itself uses. */
@@ -193,92 +326,247 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
       finishSave(propagate.final, propagate.profile);
       setPropagate(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "The catalog fill stopped part-way. Run it again from the profile.");
-    } finally { setFilling(false); }
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "The catalog fill stopped part-way. Run it again from the profile.",
+      );
+    } finally {
+      setFilling(false);
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!firstRun) onOpenChange(o); }}>
-      {sky && <StarSky rocket message="Embed defaults & Catalog Defaults 100% Filled!" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!firstRun) onOpenChange(o);
+      }}
+    >
+      {sky && (
+        <StarSky
+          rocket
+          message="Embed defaults & Catalog Defaults 100% Filled!"
+          sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished."
+          onDone={() => setSky(false)}
+        />
+      )}
       {/* The corrected details reach the songs already saved only with this yes (founder, 2026-11-08). */}
-      <Dialog open={!!propagate} onOpenChange={(o) => { if (!o && propagate) { finishSave(propagate.final, propagate.profile); setPropagate(null); } }}>
+      <Dialog
+        open={!!propagate}
+        onOpenChange={(o) => {
+          if (!o && propagate) {
+            finishSave(propagate.final, propagate.profile);
+            setPropagate(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Carry this into {other || "your"} catalog?</DialogTitle>
             <DialogDescription>
-              {propagate ? [
-                propagate.plan.fill.length ? `${propagate.plan.fill.length} song${propagate.plan.fill.length === 1 ? " is" : "s are"} missing a value this profile now has` : "",
-                propagate.plan.change.length ? `${propagate.plan.change.length} song${propagate.plan.change.length === 1 ? " holds" : "s hold"} a different IPI or PRO` : "",
-              ].filter(Boolean).join(", and ") + ". Nothing changes unless you choose it." : ""}
+              {propagate
+                ? [
+                    propagate.plan.fill.length
+                      ? `${propagate.plan.fill.length} song${propagate.plan.fill.length === 1 ? " is" : "s are"} missing a value this profile now has`
+                      : "",
+                    propagate.plan.change.length
+                      ? `${propagate.plan.change.length} song${propagate.plan.change.length === 1 ? " holds" : "s hold"} a different IPI or PRO`
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(", and ") + ". Nothing changes unless you choose it."
+                : ""}
             </DialogDescription>
           </DialogHeader>
           {propagate && propagate.plan.change.length > 0 && (
             <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-              {propagate.plan.change.map((c) => <li key={c.id}><b className="text-foreground">{c.title}</b> · {c.what}</li>)}
+              {propagate.plan.change.map((c) => (
+                <li key={c.id}>
+                  <b className="text-foreground">{c.title}</b> · {c.what}
+                </li>
+              ))}
             </ul>
           )}
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" onClick={() => { if (propagate) { finishSave(propagate.final, propagate.profile); setPropagate(null); } }}>Not now</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (propagate) {
+                  finishSave(propagate.final, propagate.profile);
+                  setPropagate(null);
+                }
+              }}
+            >
+              Not now
+            </Button>
             <Button disabled={filling} onClick={() => void applyFill()}>
-              {filling ? "Updating…" : `Fill ${propagate?.plan.total ?? 0} song${propagate?.plan.total === 1 ? "" : "s"}`}
+              {filling
+                ? "Updating…"
+                : `Fill ${propagate?.plan.total ?? 0} song${propagate?.plan.total === 1 ? "" : "s"}`}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto" onInteractOutside={(e) => firstRun && e.preventDefault()} onEscapeKeyDown={(e) => firstRun && e.preventDefault()}>
+      <DialogContent
+        className="max-h-[90vh] max-w-5xl overflow-y-auto"
+        onInteractOutside={(e) => firstRun && e.preventDefault()}
+        onEscapeKeyDown={(e) => firstRun && e.preventDefault()}
+      >
         <ol className="flex flex-wrap gap-2 text-xs" aria-label="Setup steps">
           {STEPS.map((s, i) => {
             if (i === 0 && !firstRun) return null;
             const look = `inline-block rounded-full px-3 py-1 font-semibold ${i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`;
             // When editing an existing profile, every section opens on its own.
-            return <li key={s}>{firstRun
-              ? <span className={look}>{i + 1}. {s}</span>
-              : <button type="button" aria-current={i === step ? "step" : undefined} onClick={() => setStep(i)} className={`${look} transition hover:ring-2 hover:ring-primary/40`}>{i + 1}. {s}</button>}</li>;
+            return (
+              <li key={s}>
+                {firstRun ? (
+                  <span className={look}>
+                    {i + 1}. {s}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    aria-current={i === step ? "step" : undefined}
+                    onClick={() => setStep(i)}
+                    className={`${look} transition hover:ring-2 hover:ring-primary/40`}
+                  >
+                    {i + 1}. {s}
+                  </button>
+                )}
+              </li>
+            );
           })}
         </ol>
 
-        {other && <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">Editing <b className="text-foreground">{other}</b>&rsquo;s saved defaults. Their login, catalog, splits and badges stay theirs: you're filling in what their songs and embeds start from.</p>}
+        {other && (
+          <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+            Editing <b className="text-foreground">{other}</b>&rsquo;s saved defaults. Their login,
+            catalog, splits and badges stay theirs: you're filling in what their songs and embeds
+            start from.
+          </p>
+        )}
 
         {step === 0 && (
           <div className="space-y-4 text-center">
             <img src={FIRST_BADGE} alt="Your first badge" className="mx-auto h-28 w-28" />
-            <DialogHeader><DialogTitle className="text-center text-2xl">Hi {ob.stageName || "there"}!</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle className="text-center text-2xl">
+                Hi {ob.stageName || "there"}!
+              </DialogTitle>
+            </DialogHeader>
             {/* The founder's welcome message (2026-10-25: punctuation fixed, "relentlessly", Blockchain Anchored Proof,
                 new sign-off, all approved). Don't edit without the founder's permission. */}
             <div className="max-h-[45vh] space-y-4 overflow-y-auto text-left">
-              <p className="text-muted-foreground">At CTA we celebrate your wins! Handling your music business isn’t an easy feat, so enjoy unlocking badges as you complete embeds, log catalog entries, protect your creations and properly register your music!</p>
-              <p className="text-muted-foreground">I built this platform from the ground up and worked relentlessly to solve the mass problem we face as independent artists: organizing the pre distribution/after the studio process and demystifying music business into clear, tangible steps. Not to mention protecting our original creations that come from the heart and mind from AI accusations. From Metadata embedding and Blockchain Anchored Proof of creation as AI protection to song registrations, here’s what “They” don’t tell you, but matters the most, all in one place!</p>
-              <p className="font-semibold">Here’s your first badge! A celebration of believing in yourself &amp; your artistry!</p>
-              <p className="text-muted-foreground">This one is for the independent artist community, and it’s well overdue! Quit Playing With Us!</p>
-              <p className="text-sm text-muted-foreground">We’re on your team,<br /><span className="font-semibold text-foreground">Karma Came</span>, Founder, Came Through Audio<br /><span className="italic">“Don’t you evah let ’em knock you out cho’ crown.”</span></p>
-              <p className="text-xs font-bold uppercase tracking-[2px] text-foreground">YOUR FIRST STOP BEFORE DISTRIBUTION</p>
+              <p className="text-muted-foreground">
+                At CTA we celebrate your wins! Handling your music business isn’t an easy feat, so
+                enjoy unlocking badges as you complete embeds, log catalog entries, protect your
+                creations and properly register your music!
+              </p>
+              <p className="text-muted-foreground">
+                I built this platform from the ground up and worked relentlessly to solve the mass
+                problem we face as independent artists: organizing the pre distribution/after the
+                studio process and demystifying music business into clear, tangible steps. Not to
+                mention protecting our original creations that come from the heart and mind from AI
+                accusations. From Metadata embedding and Blockchain Anchored Proof of creation as AI
+                protection to song registrations, here’s what “They” don’t tell you, but matters the
+                most, all in one place!
+              </p>
+              <p className="font-semibold">
+                Here’s your first badge! A celebration of believing in yourself &amp; your artistry!
+              </p>
+              <p className="text-muted-foreground">
+                This one is for the independent artist community, and it’s well overdue! Quit
+                Playing With Us!
+              </p>
+              <p className="text-sm text-muted-foreground">
+                We’re on your team,
+                <br />
+                <span className="font-semibold text-foreground">Karma Came</span>, Founder, Came
+                Through Audio
+                <br />
+                <span className="italic">“Don’t you evah let ’em knock you out cho’ crown.”</span>
+              </p>
+              <p className="text-xs font-bold uppercase tracking-[2px] text-foreground">
+                YOUR FIRST STOP BEFORE DISTRIBUTION
+              </p>
             </div>
             <p className="text-lg font-bold text-primary">Let’s goooo!</p>
-            <Button className="w-full" onClick={() => { setOb((o) => ({ ...o, welcomed: true })); setStep(1); }}>Claim my badge &amp; set up my profile<ArrowRight /></Button>
+            <Button
+              className="w-full"
+              onClick={() => {
+                setOb((o) => ({ ...o, welcomed: true }));
+                setStep(1);
+              }}
+            >
+              Claim my badge &amp; set up my profile
+              <ArrowRight />
+            </Button>
           </div>
         )}
 
         {step === 1 && (
           <div className="space-y-5">
-            <DialogHeader><DialogTitle className="text-2xl">What do you do?</DialogTitle>
-              <DialogDescription>Pick all that apply. This only sets what a new song starts from — nothing you've already saved changes, and you can edit it anytime in Profile → Edit profile.</DialogDescription></DialogHeader>
+            <DialogHeader>
+              <DialogTitle className="text-2xl">What do you do?</DialogTitle>
+              <DialogDescription>
+                Pick all that apply. This only sets what a new song starts from — nothing you've
+                already saved changes, and you can edit it anytime in Profile → Edit profile.
+              </DialogDescription>
+            </DialogHeader>
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">Where you are</p>
+              <p className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">
+                Where you are
+              </p>
               <div className="flex flex-wrap gap-2">
                 {SITUATIONS.map((s) => {
                   const on = ob.situations?.includes(s) ?? false;
-                  return <button key={s} type="button" aria-pressed={on} onClick={() => setOb((o) => ({ ...o, situations: on ? (o.situations ?? []).filter((x) => x !== s) : [...(o.situations ?? []), s] }))}
-                    className={`rounded-full border px-3 py-1.5 text-left text-xs font-semibold transition ${on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"}`}>{SITUATION_LABEL[s]}</button>;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        setOb((o) => ({
+                          ...o,
+                          situations: on
+                            ? (o.situations ?? []).filter((x) => x !== s)
+                            : [...(o.situations ?? []), s],
+                        }))
+                      }
+                      className={`rounded-full border px-3 py-1.5 text-left text-xs font-semibold transition ${on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"}`}
+                    >
+                      {SITUATION_LABEL[s]}
+                    </button>
+                  );
                 })}
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">What you do</p>
+              <p className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">
+                What you do
+              </p>
               <div className="flex flex-wrap gap-2">
                 {ACCOUNT_ROLES.map((r) => {
                   const on = ob.roles?.includes(r) ?? false;
-                  return <button key={r} type="button" aria-pressed={on} onClick={() => setOb((o) => ({ ...o, roles: on ? (o.roles ?? []).filter((x) => x !== r) : [...(o.roles ?? []), r] }))}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"}`}>{r}</button>;
+                  return (
+                    <button
+                      key={r}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        setOb((o) => ({
+                          ...o,
+                          roles: on
+                            ? (o.roles ?? []).filter((x) => x !== r)
+                            : [...(o.roles ?? []), r],
+                        }))
+                      }
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"}`}
+                    >
+                      {r}
+                    </button>
+                  );
                 })}
               </div>
             </div>
@@ -286,118 +574,423 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <div className="space-y-2 rounded-xl border border-border p-3">
                 <p className="text-sm font-semibold">Do you sell beats?</p>
                 <div className="flex flex-wrap gap-2">
-                  {[true, false].map((v) => <button key={String(v)} type="button" aria-pressed={ob.sellBeats === v} onClick={() => setOb((o) => ({ ...o, sellBeats: v }))}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${ob.sellBeats === v ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"}`}>{v ? "I sell beats, or plan to" : "I don't sell beats"}</button>)}
+                  {[true, false].map((v) => (
+                    <button
+                      key={String(v)}
+                      type="button"
+                      aria-pressed={ob.sellBeats === v}
+                      onClick={() => setOb((o) => ({ ...o, sellBeats: v }))}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${ob.sellBeats === v ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"}`}
+                    >
+                      {v ? "I sell beats, or plan to" : "I don't sell beats"}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
-            <Nav onBack={firstRun ? () => setStep(0) : undefined} onNext={() => setStep(2)} nextLabel="Continue" onSkip={() => setStep(2)} />
+            <Nav
+              onBack={firstRun ? () => setStep(0) : undefined}
+              onNext={() => setStep(2)}
+              nextLabel="Continue"
+              onSkip={() => setStep(2)}
+            />
           </div>
         )}
 
         {step === 2 && (
           <div className="space-y-5">
-            <DialogHeader><DialogTitle className="text-2xl">Choose your profile image</DialogTitle>
-              <DialogDescription>Upload a photo, pick a badge, or skip — you can change it anytime from Profile.</DialogDescription></DialogHeader>
-            <div className="flex justify-center"><ArtistAvatar src={ob.avatar} className="h-24 w-24" /></div>
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Choose your profile image</DialogTitle>
+              <DialogDescription>
+                Upload a photo, pick a badge, or skip — you can change it anytime from Profile.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center">
+              <ArtistAvatar src={ob.avatar} className="h-24 w-24" />
+            </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border p-3 text-center text-xs hover:border-primary">
-                <Camera className="h-10 w-10 text-primary" />Upload photo
-                <input type="file" accept="image/*" className="sr-only" onChange={async (e) => {
-                  const f = e.target.files?.[0]; if (!f) return;
-                  try { const avatar = await resizeImage(f); setOb((o) => ({ ...o, avatar })); } catch { toast.error("That image couldn't be read. Try a JPG or PNG."); }
-                }} />
+                <Camera className="h-10 w-10 text-primary" />
+                Upload photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    try {
+                      const avatar = await resizeImage(f);
+                      setOb((o) => ({ ...o, avatar }));
+                    } catch {
+                      toast.error("That image couldn't be read. Try a JPG or PNG.");
+                    }
+                  }}
+                />
               </label>
               {AVATAR_BADGES.map((b) => (
-                <button key={b.src} type="button" onClick={() => setOb((o) => ({ ...o, avatar: b.src }))}
-                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-3 text-xs ${ob.avatar === b.src ? "border-primary bg-accent/40" : "border-border hover:border-primary"}`}>
-                  <img src={b.src} alt="" className="h-10 w-10 object-contain" />{b.label}
+                <button
+                  key={b.src}
+                  type="button"
+                  onClick={() => setOb((o) => ({ ...o, avatar: b.src }))}
+                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-3 text-xs ${ob.avatar === b.src ? "border-primary bg-accent/40" : "border-border hover:border-primary"}`}
+                >
+                  <img src={b.src} alt="" className="h-10 w-10 object-contain" />
+                  {b.label}
                 </button>
               ))}
             </div>
-            <Nav onBack={() => setStep(1)} onNext={() => setStep(3)} nextLabel={!firstRun ? "Change and Continue" : ob.avatar ? "Continue" : "Skip for now"} onSave={firstRun ? undefined : finish} />
+            <Nav
+              onBack={() => setStep(1)}
+              onNext={() => setStep(3)}
+              nextLabel={
+                !firstRun ? "Change and Continue" : ob.avatar ? "Continue" : "Skip for now"
+              }
+              onSave={firstRun ? undefined : finish}
+            />
           </div>
         )}
 
         {step === 3 && (
           <div className="space-y-5">
-            <DialogHeader><DialogTitle className="text-2xl">Set Your Embed Defaults</DialogTitle>
-              <DialogDescription><span className="font-semibold text-foreground">Fill in as much as you can here. It's the biggest time-saver in Came Through Audio.</span> Everything you enter carries over to every embed, every catalog entry and your health checks, so each new song starts closer to 100%. Don't have something yet? Skip it and add it anytime in Profile → Edit profile.</DialogDescription></DialogHeader>
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Set Your Embed Defaults</DialogTitle>
+              <DialogDescription>
+                <span className="font-semibold text-foreground">
+                  Fill in as much as you can here. It's the biggest time-saver in Came Through
+                  Audio.
+                </span>{" "}
+                Everything you enter carries over to every embed, every catalog entry and your
+                health checks, so each new song starts closer to 100%. Don't have something yet?
+                Skip it and add it anytime in Profile → Edit profile.
+              </DialogDescription>
+            </DialogHeader>
             <ProfileProgress ob={ob} p={p} />
             <Group title="Artist & Label">
-              <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} />
-                {savedName && !other && <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>}
+              <Field label="Primary Artist / Stage Name">
+                <Input
+                  value={ob.stageName}
+                  onChange={(e) => {
+                    setOb((o) => ({ ...o, stageName: e.target.value }));
+                    set("artist", e.target.value);
+                  }}
+                />
+                {savedName && !other && (
+                  <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>
+                )}
                 {/* Releasing as someone else? Buy them a seat from right here (founder, 2026-11-04). Paid accounts only:
                     a free account can email itself, and editing another artist's defaults never buys seats. */}
-                {canAddArtist && <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setSeatBox(true)}><Plus />Add another artist</Button>}</Field>
-              <Field label="Default Label Name (optional)" term="label"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label name" /></Field>
-              <Field label="Contact email to embed (optional)" term="contactEmail"><Input type="email" value={p.contactEmail ?? ""} onChange={(e) => set("contactEmail", e.target.value)} placeholder="bookings@yourname.com" /></Field>
-              <Field label="Produced by (optional)" term="producedBy"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name"
-                onChange={(e) => { const rest = p.producers?.slice(1) ?? []; set("producers", [{ ...(p.producers?.[0] ?? emptyContributor()), name: e.target.value }, ...rest]); }} /></Field>
+                {canAddArtist && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => setSeatBox(true)}
+                  >
+                    <Plus />
+                    Add another artist
+                  </Button>
+                )}
+              </Field>
+              <Field label="Default Label Name (optional)" term="label">
+                <Input
+                  value={p.label ?? ""}
+                  onChange={(e) => set("label", e.target.value)}
+                  placeholder="Your label name"
+                />
+              </Field>
+              <Field label="Contact email to embed (optional)" term="contactEmail">
+                <Input
+                  type="email"
+                  value={p.contactEmail ?? ""}
+                  onChange={(e) => set("contactEmail", e.target.value)}
+                  placeholder="bookings@yourname.com"
+                />
+              </Field>
+              <Field label="Produced by (optional)" term="producedBy">
+                <Input
+                  value={p.producers?.[0]?.name ?? ""}
+                  placeholder="Name"
+                  onChange={(e) => {
+                    const rest = p.producers?.slice(1) ?? [];
+                    set("producers", [
+                      { ...(p.producers?.[0] ?? emptyContributor()), name: e.target.value },
+                      ...rest,
+                    ]);
+                  }}
+                />
+              </Field>
             </Group>
             <Group title="Release Metadata">
-              <Field label="Primary Genre"><Pick value={p.primaryGenre ?? ""} options={GENRES} groups={GENRE_GROUPS} onChange={(v) => set("primaryGenre", v)} /></Field>
-              <Field label="Secondary Genre (optional)"><Pick value={p.secondaryGenre ?? ""} options={GENRES} groups={GENRE_GROUPS} onChange={(v) => set("secondaryGenre", v)} /></Field>
-              <Field label="Default Language"><Input value={p.language ?? ""} onChange={(e) => set("language", e.target.value)} /></Field>
-              <Field label="Usually recorded in" term="neighbouringRights"><Input value={p.recordedIn ?? ""} placeholder="United States" onChange={(e) => set("recordedIn", e.target.value)} /></Field>
-              <Field label="Default Release Type" term="releaseType"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
-              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.explicit} onChange={(e) => set("explicit", e.target.checked)} />My songs are usually Explicit (you can change this per song)<InfoTip term="explicit" /></label>
+              <Field label="Primary Genre">
+                <Pick
+                  value={p.primaryGenre ?? ""}
+                  options={GENRES}
+                  groups={GENRE_GROUPS}
+                  onChange={(v) => set("primaryGenre", v)}
+                />
+              </Field>
+              <Field label="Secondary Genre (optional)">
+                <Pick
+                  value={p.secondaryGenre ?? ""}
+                  options={GENRES}
+                  groups={GENRE_GROUPS}
+                  onChange={(v) => set("secondaryGenre", v)}
+                />
+              </Field>
+              <Field label="Default Language">
+                <Input value={p.language ?? ""} onChange={(e) => set("language", e.target.value)} />
+              </Field>
+              <Field label="Usually recorded in" term="neighbouringRights">
+                <Input
+                  value={p.recordedIn ?? ""}
+                  placeholder="United States"
+                  onChange={(e) => set("recordedIn", e.target.value)}
+                />
+              </Field>
+              <Field label="Default Release Type" term="releaseType">
+                <Pick
+                  value={p.releaseType ?? ""}
+                  options={RELEASE_TYPES}
+                  empty="Ask each time"
+                  onChange={(v) => set("releaseType", v)}
+                />
+              </Field>
+              <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-[var(--primary)]"
+                  checked={!!p.explicit}
+                  onChange={(e) => set("explicit", e.target.checked)}
+                />
+                My songs are usually Explicit (you can change this per song)
+                <InfoTip term="explicit" />
+              </label>
             </Group>
             {/* Usual answers that aren't song-specific, so songs start closer to 100% health; each song can change them. */}
             <Group title="Registration Defaults">
-              <Field label="Do your songs usually use a sample?" term="samples"><Pick value={p.samples ?? ""} options={["No", "Yes"]} empty="Ask each time" onChange={(v) => set("samples", v as Metadata["samples"])} /></Field>
-              <Field label="Usually written for film, TV, stage or an ad?" term="writtenFor"><Pick value={p.writtenFor ?? ""} options={["No", ...PRODUCTION_TYPES]} empty="Ask each time" onChange={(v) => set("writtenFor", v as Metadata["writtenFor"])} /></Field>
-              <Field label="Share of the master you usually own (%)" term="masterShare"><Input inputMode="decimal" value={p.masterShare ?? ""} placeholder="100" onChange={(e) => set("masterShare", percentInput(e.target.value))} /></Field>
-              <Field label="How you usually hold the master" term="masterBasis"><Pick value={p.masterBasis || "Copyright Owner"} options={MASTER_BASES} empty={null} onChange={(v) => set("masterBasis", (v || "Copyright Owner") as Metadata["masterBasis"])} /></Field>
-              <div className="sm:col-span-2"><Crew rows={p.credits ?? []} onChange={(r) => set("credits", r)} /></div>
+              <Field label="Do your songs usually use a sample?" term="samples">
+                <Pick
+                  value={p.samples ?? ""}
+                  options={["No", "Yes"]}
+                  empty="Ask each time"
+                  onChange={(v) => set("samples", v as Metadata["samples"])}
+                />
+              </Field>
+              <Field label="Usually written for film, TV, stage or an ad?" term="writtenFor">
+                <Pick
+                  value={p.writtenFor ?? ""}
+                  options={["No", ...PRODUCTION_TYPES]}
+                  empty="Ask each time"
+                  onChange={(v) => set("writtenFor", v as Metadata["writtenFor"])}
+                />
+              </Field>
+              <Field label="Share of the master you usually own (%)" term="masterShare">
+                <Input
+                  inputMode="decimal"
+                  value={p.masterShare ?? ""}
+                  placeholder="100"
+                  onChange={(e) => set("masterShare", percentInput(e.target.value))}
+                />
+              </Field>
+              <Field label="How you usually hold the master" term="masterBasis">
+                <Pick
+                  value={p.masterBasis || "Copyright Owner"}
+                  options={MASTER_BASES}
+                  empty={null}
+                  onChange={(v) =>
+                    set("masterBasis", (v || "Copyright Owner") as Metadata["masterBasis"])
+                  }
+                />
+              </Field>
+              <div className="sm:col-span-2">
+                <Crew rows={p.credits ?? []} onChange={(r) => set("credits", r)} />
+              </div>
             </Group>
             <Group title="Copyright Lines">
-              <Field label="Composition Copyright (©)" term="cLine"><CopyrightInput symbol="©" value={p.copyright ?? ""} onChange={(v) => set("copyright", v)} /></Field>
-              <Field label="Sound Recording Copyright (℗)" term="pLine"><CopyrightInput symbol="℗" value={p.phonographic ?? ""} onChange={(v) => set("phonographic", v)} /></Field>
-              <p className="text-xs text-muted-foreground sm:col-span-2">Type the year, then the owner's name (you, your publishing company or your label), e.g. "{year} Came Through Audio".</p>
+              <Field label="Composition Copyright (©)" term="cLine">
+                <CopyrightInput
+                  symbol="©"
+                  value={p.copyright ?? ""}
+                  onChange={(v) => set("copyright", v)}
+                />
+              </Field>
+              <Field label="Sound Recording Copyright (℗)" term="pLine">
+                <CopyrightInput
+                  symbol="℗"
+                  value={p.phonographic ?? ""}
+                  onChange={(v) => set("phonographic", v)}
+                />
+              </Field>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                Type the year, then the owner's name (you, your publishing company or your label),
+                e.g. "{year} Came Through Audio".
+              </p>
             </Group>
             <PrivacyNote />
-            <Nav onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel={firstRun ? "Continue" : "Change and Continue"} onSave={firstRun ? undefined : finish} />
+            <Nav
+              onBack={() => setStep(2)}
+              onNext={() => setStep(4)}
+              nextLabel={firstRun ? "Continue" : "Change and Continue"}
+              onSave={firstRun ? undefined : finish}
+            />
           </div>
         )}
 
         {step === 4 && (
           <div className="space-y-5">
-            <DialogHeader><DialogTitle className="text-2xl">Build Your Catalog Defaults</DialogTitle>
-              <DialogDescription><span className="font-semibold text-foreground">The more you fill in now, the less you type later.</span> Your writer, publisher and registration details carry over to every catalog entry, split sheet, agency export and Royalty Health Check. Missing a PRO, IPI or publisher? Leave it blank and add it after you register.</DialogDescription></DialogHeader>
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Build Your Catalog Defaults</DialogTitle>
+              <DialogDescription>
+                <span className="font-semibold text-foreground">
+                  The more you fill in now, the less you type later.
+                </span>{" "}
+                Your writer, publisher and registration details carry over to every catalog entry,
+                split sheet, agency export and Royalty Health Check. Missing a PRO, IPI or
+                publisher? Leave it blank and add it after you register.
+              </DialogDescription>
+            </DialogHeader>
             <ProfileProgress ob={ob} p={p} />
-            <Field label="Legal Name"><Input value={ob.legalName} onChange={(e) => setOb((o) => ({ ...o, legalName: e.target.value }))} placeholder="As registered with your PRO" /></Field>
-            <Rows title="Writer" rows={p.writers} onChange={(r) => set("writers", r)} seed={ob.legalName} writer />
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.selfPublished} onChange={(e) => set("selfPublished", e.target.checked)} />I'm self-published (no publisher)<InfoTip term="selfPublished" /></label>
+            <Field label="Legal Name">
+              <Input
+                value={ob.legalName}
+                onChange={(e) => setOb((o) => ({ ...o, legalName: e.target.value }))}
+                placeholder="As registered with your PRO"
+              />
+            </Field>
+            <Rows
+              title="Writer"
+              rows={p.writers}
+              onChange={(r) => set("writers", r)}
+              seed={ob.legalName}
+              writer
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--primary)]"
+                checked={!!p.selfPublished}
+                onChange={(e) => set("selfPublished", e.target.checked)}
+              />
+              I'm self-published (no publisher)
+              <InfoTip term="selfPublished" />
+            </label>
             {/* BMI writers with no publishing company (founder, 2026-10-25): new songs fill this in from the profile. */}
-            {((p.writers ?? []).some((w) => isBmi(w)) || p.bmiWriterPublishing) && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" checked={!!p.bmiWriterPublishing} onChange={(e) => set("bmiWriterPublishing", e.target.checked)} />
-              <span><span className="font-semibold">I'm a BMI writer with no publishing company</span><InfoTip term="bmiWriterPublishing" /><span className="block text-muted-foreground">BMI pays you both halves of your royalties, the writer share and the publisher share, so you don't need a publisher.</span></span></label>}
-            {(!p.selfPublished || hasPublisher) && (!p.bmiWriterPublishing || hasPublisher) && <Rows title="Publisher" rows={p.publishers} onChange={(r) => set("publishers", r)} />}
-            {p.bmiWriterPublishing && hasPublisher && <p className="text-sm">⚠️ You said there's no publishing company but also listed a publisher. Uncheck the BMI box, or remove the publisher.</p>}
-            {p.selfPublished && hasPublisher && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
+            {((p.writers ?? []).some((w) => isBmi(w)) || p.bmiWriterPublishing) && (
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
+                  checked={!!p.bmiWriterPublishing}
+                  onChange={(e) => set("bmiWriterPublishing", e.target.checked)}
+                />
+                <span>
+                  <span className="font-semibold">I'm a BMI writer with no publishing company</span>
+                  <InfoTip term="bmiWriterPublishing" />
+                  <span className="block text-muted-foreground">
+                    BMI pays you both halves of your royalties, the writer share and the publisher
+                    share, so you don't need a publisher.
+                  </span>
+                </span>
+              </label>
+            )}
+            {(!p.selfPublished || hasPublisher) && (!p.bmiWriterPublishing || hasPublisher) && (
+              <Rows title="Publisher" rows={p.publishers} onChange={(r) => set("publishers", r)} />
+            )}
+            {p.bmiWriterPublishing && hasPublisher && (
+              <p className="text-sm">
+                ⚠️ You said there's no publishing company but also listed a publisher. Uncheck the
+                BMI box, or remove the publisher.
+              </p>
+            )}
+            {p.selfPublished && hasPublisher && (
+              <p className="text-sm">
+                ⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published,
+                or remove the publisher.
+              </p>
+            )}
             {/* The answers SoundExchange asks for that the song doesn't carry (founder, 2026-11-12): catalog details rather
                 than embed defaults, so they sit with the registration answers and fill each new song's blanks. */}
             <Group title="SoundExchange answers">
-              <Field label="Mastered in (country)"><Pick value={p.masteredIn ?? ""} options={countryOptions(p.masteredIn ?? "")} empty="Not set" onChange={(v) => set("masteredIn", v)} /></Field>
-              <Field label="Copyright owner's country"><Pick value={p.ownerNationality ?? ""} options={countryOptions(p.ownerNationality ?? "")} empty="Not set" onChange={(v) => set("ownerNationality", v)} /></Field>
-              <Field label="Country of first release"><Pick value={p.firstReleaseCountry ?? ""} options={countryOptions(p.firstReleaseCountry ?? "")} empty="Not set" onChange={(v) => set("firstReleaseCountry", v)} /></Field>
-              <Field label="Country of release"><Pick value={p.releaseCountry ?? ""} options={countryOptions(p.releaseCountry ?? "")} empty="Not set" onChange={(v) => set("releaseCountry", v)} /></Field>
+              <Field label="Mastered in (country)">
+                <Pick
+                  value={p.masteredIn ?? ""}
+                  options={countryOptions(p.masteredIn ?? "")}
+                  empty="Not set"
+                  onChange={(v) => set("masteredIn", v)}
+                />
+              </Field>
+              <Field label="Copyright owner's country">
+                <Pick
+                  value={p.ownerNationality ?? ""}
+                  options={countryOptions(p.ownerNationality ?? "")}
+                  empty="Not set"
+                  onChange={(v) => set("ownerNationality", v)}
+                />
+              </Field>
+              <Field label="Country of first release">
+                <Pick
+                  value={p.firstReleaseCountry ?? ""}
+                  options={countryOptions(p.firstReleaseCountry ?? "")}
+                  empty="Not set"
+                  onChange={(v) => set("firstReleaseCountry", v)}
+                />
+              </Field>
+              <Field label="Country of release">
+                <Pick
+                  value={p.releaseCountry ?? ""}
+                  options={countryOptions(p.releaseCountry ?? "")}
+                  empty="Not set"
+                  onChange={(v) => set("releaseCountry", v)}
+                />
+              </Field>
               {/* The collection rights dates rarely change, so they are saved here and arrive ticked on every new song
                   (founder, 2026-11-14). Ticked means no date is stored: the export says "Inception" / "Perpetuity". */}
               <Field label="Collection rights start">
-                <RightsDefault id="rightsStart" check="From inception (no date)" value={p.rightsStart ?? ""} checked={!!p.rightsStartInception} onChange={(v) => set("rightsStart", v)} onCheck={(v) => set("rightsStartInception", v)} />
+                <RightsDefault
+                  id="rightsStart"
+                  check="From inception (no date)"
+                  value={p.rightsStart ?? ""}
+                  checked={!!p.rightsStartInception}
+                  onChange={(v) => set("rightsStart", v)}
+                  onCheck={(v) => set("rightsStartInception", v)}
+                />
               </Field>
               <Field label="Collection rights end">
-                <RightsDefault id="rightsEnd" check="In perpetuity (no end date)" value={p.rightsEnd ?? ""} checked={!!p.rightsEndPerpetuity} onChange={(v) => set("rightsEnd", v)} onCheck={(v) => set("rightsEndPerpetuity", v)} />
+                <RightsDefault
+                  id="rightsEnd"
+                  check="In perpetuity (no end date)"
+                  value={p.rightsEnd ?? ""}
+                  checked={!!p.rightsEndPerpetuity}
+                  onChange={(v) => set("rightsEnd", v)}
+                  onCheck={(v) => set("rightsEndPerpetuity", v)}
+                />
               </Field>
               <Field label="Territories of collection rights">
-                <TerritoriesField id="collectionTerritories" value={p.collectionTerritories ?? ""} onChange={(v) => set("collectionTerritories", v)} />
+                <TerritoriesField
+                  id="collectionTerritories"
+                  value={p.collectionTerritories ?? ""}
+                  onChange={(v) => set("collectionTerritories", v)}
+                />
               </Field>
-              <p className="text-xs text-muted-foreground sm:col-span-2">The United States is always included, so this only adds where else your songs earn. If they go out worldwide on streaming, choose Worldwide — it fills into every new song. None of these is ever written into a master's tags.</p>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                The United States is always included, so this only adds where else your songs earn.
+                If they go out worldwide on streaming, choose Worldwide — it fills into every new
+                song. None of these is ever written into a master's tags.
+              </p>
             </Group>
-            <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Private: PRO affiliations, IPI name numbers and shares stay in your catalog and are never embedded in your music files.</p>
+            <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              Private: PRO affiliations, IPI name numbers and shares stay in your catalog and are
+              never embedded in your music files.
+            </p>
             <IpiNote />
-            <Nav onBack={() => setStep(3)} onNext={finish} nextLabel={firstRun ? "Save & start embedding" : "Save & exit"} />
+            <Nav
+              onBack={() => setStep(3)}
+              onNext={finish}
+              nextLabel={firstRun ? "Save & start embedding" : "Save & exit"}
+            />
           </div>
         )}
       </DialogContent>
@@ -406,15 +999,41 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
           <ArtistSeats onClose={() => setSeatBox(false)} />
         </DialogContent>
       </Dialog>
-      <NameChangeDialog open={confirmName} onOpenChange={setConfirmName} from={savedName} to={newName()} status={nameRule}
-        canAddSeats={canAddArtist} seats={seats} onSeats={() => setSeats(true)} onConfirm={() => void save()} />
+      <NameChangeDialog
+        open={confirmName}
+        onOpenChange={setConfirmName}
+        from={savedName}
+        to={newName()}
+        status={nameRule}
+        canAddSeats={canAddArtist}
+        seats={seats}
+        onSeats={() => setSeats(true)}
+        onConfirm={() => void save()}
+      />
     </Dialog>
   );
 }
 
-function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats, onConfirm, canAddSeats }: {
-  open: boolean; onOpenChange: (o: boolean) => void; from: string; to: string; status?: NameStatus | undefined;
-  seats: boolean; onSeats: () => void; onConfirm: () => void; canAddSeats: boolean;
+function NameChangeDialog({
+  open,
+  onOpenChange,
+  from,
+  to,
+  status,
+  seats,
+  onSeats,
+  onConfirm,
+  canAddSeats,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  from: string;
+  to: string;
+  status?: NameStatus | undefined;
+  seats: boolean;
+  onSeats: () => void;
+  onConfirm: () => void;
+  canAddSeats: boolean;
 }) {
   const left = status?.changes_left ?? 3;
   const blocked = !!status?.next_change_at || left <= 0;
@@ -424,39 +1043,103 @@ function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-        {seats ? <ArtistSeats onClose={() => onOpenChange(false)} /> : <>
-          <DialogHeader><DialogTitle>Change your artist name?</DialogTitle>
-            <DialogDescription className="font-semibold text-foreground">"{from}" → "{to}"</DialogDescription></DialogHeader>
-          {blocked ? (
-            <p className="text-sm">You can change your artist name again <b>{status?.next_change_at ? whenNext(status.next_change_at) : `when a change frees up on ${shortDay(freesUp)}`}</b>. <b>{plural(left, "change")}</b> left this year.</p>
-          ) : (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-              <dt className="text-muted-foreground">Changes left this year</dt><dd className="font-semibold">{left} of 3</dd>
-              <dt className="text-muted-foreground">Next change after this</dt><dd className="font-semibold">{whenNext(weekOut)}</dd>
-              <dt className="text-muted-foreground">Resets</dt><dd className="font-semibold">1 change frees up on {day(freesUp)}</dd>
-            </dl>
-          )}
-          <p className="text-sm text-muted-foreground">Songs you already saved keep the name they were released under.</p>
-          <p className="text-sm"><span className="font-semibold">Releasing music as a different artist?</span> <span className="text-muted-foreground">Add them as another artist instead, so both names stay on your account.</span></p>
-          <div className="flex flex-wrap justify-end gap-2">
-            {canAddSeats && <Button variant="ghost" onClick={onSeats}><Plus />Add another artist</Button>}
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            {!blocked && <Button onClick={onConfirm}>Change name</Button>}
-          </div>
-        </>}
+        {seats ? (
+          <ArtistSeats onClose={() => onOpenChange(false)} />
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Change your artist name?</DialogTitle>
+              <DialogDescription className="font-semibold text-foreground">
+                "{from}" → "{to}"
+              </DialogDescription>
+            </DialogHeader>
+            {blocked ? (
+              <p className="text-sm">
+                You can change your artist name again{" "}
+                <b>
+                  {status?.next_change_at
+                    ? whenNext(status.next_change_at)
+                    : `when a change frees up on ${shortDay(freesUp)}`}
+                </b>
+                . <b>{plural(left, "change")}</b> left this year.
+              </p>
+            ) : (
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <dt className="text-muted-foreground">Changes left this year</dt>
+                <dd className="font-semibold">{left} of 3</dd>
+                <dt className="text-muted-foreground">Next change after this</dt>
+                <dd className="font-semibold">{whenNext(weekOut)}</dd>
+                <dt className="text-muted-foreground">Resets</dt>
+                <dd className="font-semibold">1 change frees up on {day(freesUp)}</dd>
+              </dl>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Songs you already saved keep the name they were released under.
+            </p>
+            <p className="text-sm">
+              <span className="font-semibold">Releasing music as a different artist?</span>{" "}
+              <span className="text-muted-foreground">
+                Add them as another artist instead, so both names stay on your account.
+              </span>
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              {canAddSeats && (
+                <Button variant="ghost" onClick={onSeats}>
+                  <Plus />
+                  Add another artist
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              {!blocked && <Button onClick={onConfirm}>Change name</Button>}
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function Nav({ onBack, onNext, onSave, onSkip, nextLabel = "Continue" }: { onBack?: (() => void) | undefined; onNext: () => void; onSave?: (() => void) | undefined; onSkip?: (() => void) | undefined; nextLabel?: string }) {
+function Nav({
+  onBack,
+  onNext,
+  onSave,
+  onSkip,
+  nextLabel = "Continue",
+}: {
+  onBack?: (() => void) | undefined;
+  onNext: () => void;
+  onSave?: (() => void) | undefined;
+  onSkip?: (() => void) | undefined;
+  nextLabel?: string;
+}) {
   return (
     <div className="flex flex-wrap justify-between gap-3 border-t border-border pt-4">
-      {onBack ? <Button variant="ghost" onClick={onBack}><ArrowLeft />Back</Button> : <span />}
+      {onBack ? (
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowLeft />
+          Back
+        </Button>
+      ) : (
+        <span />
+      )}
       <div className="flex flex-wrap gap-3">
-        {onSkip && <Button variant="ghost" onClick={onSkip}>Skip for now</Button>}
-        {onSave && <Button variant="outline" onClick={onSave}><Save />Save &amp; exit</Button>}
-        <Button onClick={onNext}>{nextLabel}{nextLabel !== "Save & exit" && <ArrowRight />}</Button>
+        {onSkip && (
+          <Button variant="ghost" onClick={onSkip}>
+            Skip for now
+          </Button>
+        )}
+        {onSave && (
+          <Button variant="outline" onClick={onSave}>
+            <Save />
+            Save &amp; exit
+          </Button>
+        )}
+        <Button onClick={onNext}>
+          {nextLabel}
+          {nextLabel !== "Save & exit" && <ArrowRight />}
+        </Button>
       </div>
     </div>
   );
@@ -468,115 +1151,379 @@ function ProfileProgress({ ob, p }: { ob: Onboarding; p: ArtistProfile }) {
   const done = checks.filter(Boolean).length;
   return (
     <div className="space-y-1.5">
-      <div className="h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary transition-all" style={{ width: `${(done / checks.length) * 100}%` }} /></div>
-      <p className="text-xs text-muted-foreground">Profile {done} of {checks.length} filled · every field you add saves time on every song</p>
+      <div className="h-1.5 rounded-full bg-muted">
+        <div
+          className="h-1.5 rounded-full bg-primary transition-all"
+          style={{ width: `${(done / checks.length) * 100}%` }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Profile {done} of {checks.length} filled · every field you add saves time on every song
+      </p>
     </div>
   );
 }
 
 /** Regular performers and crew (session players, backup vocals, engineers) who are on most songs. */
-function Crew({ rows, onChange }: { rows: Metadata["credits"]; onChange: (r: Metadata["credits"]) => void }) {
-  const upd = (i: number, k: "role" | "name" | "instrument", v: string) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
-  const pick = (i: number, choice: string) => onChange(rows.map((r, j) => (j === i ? { ...r, ...fromCreditChoice(choice, r) } : r)));
+function Crew({
+  rows,
+  onChange,
+}: {
+  rows: Metadata["credits"];
+  onChange: (r: Metadata["credits"]) => void;
+}) {
+  const upd = (i: number, k: "role" | "name" | "instrument", v: string) =>
+    onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+  const pick = (i: number, choice: string) =>
+    onChange(rows.map((r, j) => (j === i ? { ...r, ...fromCreditChoice(choice, r) } : r)));
   return (
     <div className="space-y-2">
-      <Label className="text-xs">Regular performers and crew (optional)<InfoTip term="neighbouringRights" /></Label>
+      <Label className="text-xs">
+        Regular performers and crew (optional)
+        <InfoTip term="neighbouringRights" />
+      </Label>
       {rows.map((r, i) => (
         <div key={i} className="grid items-center gap-2 sm:grid-cols-[1fr_1.2fr_1fr_auto]">
-          <select aria-label="Instrument or role" value={creditChoice(r)} onChange={(e) => pick(i, e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">{CREDIT_CHOICES.map((o) => <option key={o}>{o}</option>)}</select>
-          <Input aria-label="Name" placeholder="Name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />
-          {creditChoice(r) === OTHER_INSTRUMENT ? <Input aria-label="Which instrument?" placeholder="Which instrument?" value={r.instrument} onChange={(e) => upd(i, "instrument", e.target.value)} /> : <span aria-hidden />}
-          <Button type="button" variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Trash2 /></Button>
+          <select
+            aria-label="Instrument or role"
+            value={creditChoice(r)}
+            onChange={(e) => pick(i, e.target.value)}
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            {CREDIT_CHOICES.map((o) => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
+          <Input
+            aria-label="Name"
+            placeholder="Name"
+            value={r.name}
+            onChange={(e) => upd(i, "name", e.target.value)}
+          />
+          {creditChoice(r) === OTHER_INSTRUMENT ? (
+            <Input
+              aria-label="Which instrument?"
+              placeholder="Which instrument?"
+              value={r.instrument}
+              onChange={(e) => upd(i, "instrument", e.target.value)}
+            />
+          ) : (
+            <span aria-hidden />
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Remove"
+            onClick={() => onChange(rows.filter((_, j) => j !== i))}
+          >
+            <Trash2 />
+          </Button>
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, { role: "Session musician", name: "", instrument: "Guitar" }])}><Plus />Add a regular</Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          onChange([...rows, { role: "Session musician", name: "", instrument: "Guitar" }])
+        }
+      >
+        <Plus />
+        Add a regular
+      </Button>
     </div>
   );
 }
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
-  return <fieldset className="space-y-3 rounded-xl border border-border p-4"><legend className="px-1 text-sm font-bold text-primary">{title}</legend><div className="grid gap-3 sm:grid-cols-2">{children}</div></fieldset>;
+  return (
+    <fieldset className="space-y-3 rounded-xl border border-border p-4">
+      <legend className="px-1 text-sm font-bold text-primary">{title}</legend>
+      <div className="grid gap-3 sm:grid-cols-2">{children}</div>
+    </fieldset>
+  );
 }
 
-function Field({ label, term, children }: { label: string; term?: GlossaryKey; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label className="text-xs">{label}{term && <InfoTip term={term} />}</Label>{children}</div>;
+function Field({
+  label,
+  term,
+  children,
+}: {
+  label: string;
+  term?: GlossaryKey;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">
+        {label}
+        {term && <InfoTip term={term} />}
+      </Label>
+      {children}
+    </div>
+  );
 }
 
 /**
  * A default collection rights date: ticking the box means from inception / in perpetuity, which SoundExchange takes as no
  * date at all; untick it to save a real date instead.
  */
-function RightsDefault({ id, check, value, checked, onChange, onCheck }: { id: string; check: string; value: string; checked: boolean; onChange: (v: string) => void; onCheck: (v: boolean) => void }) {
+function RightsDefault({
+  id,
+  check,
+  value,
+  checked,
+  onChange,
+  onCheck,
+}: {
+  id: string;
+  check: string;
+  value: string;
+  checked: boolean;
+  onChange: (v: string) => void;
+  onCheck: (v: boolean) => void;
+}) {
   return (
     <div className="space-y-1.5">
-      <label className="flex items-center gap-2 text-sm"><input id={`${id}-open`} type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={checked}
-        onChange={(e) => { onCheck(e.target.checked); if (e.target.checked) onChange(""); }} />{check}</label>
-      {!checked && <Input type="date" aria-label={`${id} date`} value={value} onChange={(e) => onChange(e.target.value)} />}
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          id={`${id}-open`}
+          type="checkbox"
+          className="h-4 w-4 accent-[var(--primary)]"
+          checked={checked}
+          onChange={(e) => {
+            onCheck(e.target.checked);
+            if (e.target.checked) onChange("");
+          }}
+        />
+        {check}
+      </label>
+      {!checked && (
+        <Input
+          type="date"
+          aria-label={`${id} date`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
     </div>
   );
 }
 
 /** `empty={null}` leaves out the blank choice, for a field that always has an answer (each option is listed once). */
-function Pick({ value, options, onChange, empty = "Select…", groups }: { value: string; options: readonly string[]; onChange: (v: string) => void; empty?: string | null; groups?: { genre: string; subs: string[] }[] }) {
+function Pick({
+  value,
+  options,
+  onChange,
+  empty = "Select…",
+  groups,
+}: {
+  value: string;
+  options: readonly string[];
+  onChange: (v: string) => void;
+  empty?: string | null;
+  groups?: { genre: string; subs: string[] }[];
+}) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+    >
       {empty !== null && <option value="">{empty}</option>}
       {groups
-        ? groups.map((g) => <optgroup key={g.genre} label={g.genre}>{[g.genre, ...g.subs].map((o) => <option key={o}>{o}</option>)}</optgroup>)
+        ? groups.map((g) => (
+            <optgroup key={g.genre} label={g.genre}>
+              {[g.genre, ...g.subs].map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </optgroup>
+          ))
         : options.map((o) => <option key={o}>{o}</option>)}
     </select>
   );
 }
 
 function PrivacyNote() {
-  return <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Your private PRO affiliations, IPI name numbers, splits and registration details are never embedded in your music files. They stay private in your catalog.</p>;
+  return (
+    <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+      <Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+      Your private PRO affiliations, IPI name numbers, splits and registration details are never
+      embedded in your music files. They stay private in your catalog.
+    </p>
+  );
 }
 
 export function IpiNote() {
-  return <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-xs text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>;
+  return (
+    <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-xs text-muted-foreground">
+      <span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them
+      blank. Add them anytime after you register with a PRO and receive your IPI name number.
+    </p>
+  );
 }
 
-function Rows({ title, rows, onChange, seed, writer }: { title: string; rows?: Contributor[] | undefined; onChange: (r: Contributor[]) => void; seed?: string; writer?: boolean }) {
-  const list = rows?.length ? rows : [writer ? { ...emptyContributor(), legalName: seed ?? "" } : emptyContributor()];
-  const upd = (i: number, k: keyof Contributor, v: string) => onChange(list.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+function Rows({
+  title,
+  rows,
+  onChange,
+  seed,
+  writer,
+}: {
+  title: string;
+  rows?: Contributor[] | undefined;
+  onChange: (r: Contributor[]) => void;
+  seed?: string;
+  writer?: boolean;
+}) {
+  const list = rows?.length
+    ? rows
+    : [writer ? { ...emptyContributor(), legalName: seed ?? "" } : emptyContributor()];
+  const upd = (i: number, k: keyof Contributor, v: string) =>
+    onChange(list.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   const total = splitTotal(list);
   return (
     <fieldset className="space-y-2 rounded-xl border border-border p-4">
-      <legend className="px-1 text-sm font-bold text-primary">{title}<InfoTip term={writer ? "roles" : "publisher"} /></legend>
-      {writer && <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Legal name</span> is only needed to register songs, so you can add it later.</p>}
+      <legend className="px-1 text-sm font-bold text-primary">
+        {title}
+        <InfoTip term={writer ? "roles" : "publisher"} />
+      </legend>
+      {writer && (
+        <p className="text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground">Legal name</span> is only needed to
+          register songs, so you can add it later.
+        </p>
+      )}
       {/* The row inputs have no room for labels, so their tips sit in one line above them. */}
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span className="inline-flex items-center">Legal name<InfoTip term="legalName" /></span>
-        <span className="inline-flex items-center">PRO<InfoTip term="pro" /></span>
-        <span className="inline-flex items-center">IPI<InfoTip term="ipi" /></span>
-        <span className="inline-flex items-center">Share<InfoTip term={writer ? "split" : "publisher"} /></span>
-        {!writer && <span className="inline-flex items-center">HFA P#<InfoTip term="hfa" /></span>}
+        <span className="inline-flex items-center">
+          Legal name
+          <InfoTip term="legalName" />
+        </span>
+        <span className="inline-flex items-center">
+          PRO
+          <InfoTip term="pro" />
+        </span>
+        <span className="inline-flex items-center">
+          IPI
+          <InfoTip term="ipi" />
+        </span>
+        <span className="inline-flex items-center">
+          Share
+          <InfoTip term={writer ? "split" : "publisher"} />
+        </span>
+        {!writer && (
+          <span className="inline-flex items-center">
+            HFA P#
+            <InfoTip term="hfa" />
+          </span>
+        )}
       </p>
       {list.map((r, i) => (
-        <div key={i} className={`grid items-start gap-x-4 gap-y-2 ${writer ? "sm:grid-cols-[1.6fr_1.1fr_1.1fr_1fr_0.7fr_auto]" : "sm:grid-cols-[1.6fr_1.1fr_1fr_0.7fr_0.8fr_auto]"}`}>
-          {writer
-            ? <Input aria-label="Legal name" placeholder="Legal name" value={r.legalName ?? ""} onChange={(e) => upd(i, "legalName", e.target.value)} />
-            : <Input aria-label={`${title} legal name`} placeholder="Legal name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />}
+        <div
+          key={i}
+          className={`grid items-start gap-x-4 gap-y-2 ${writer ? "sm:grid-cols-[1.6fr_1.1fr_1.1fr_1fr_0.7fr_auto]" : "sm:grid-cols-[1.6fr_1.1fr_1fr_0.7fr_0.8fr_auto]"}`}
+        >
+          {writer ? (
+            <Input
+              aria-label="Legal name"
+              placeholder="Legal name"
+              value={r.legalName ?? ""}
+              onChange={(e) => upd(i, "legalName", e.target.value)}
+            />
+          ) : (
+            <Input
+              aria-label={`${title} legal name`}
+              placeholder="Legal name"
+              value={r.name}
+              onChange={(e) => upd(i, "name", e.target.value)}
+            />
+          )}
           {writer && (
-            <select aria-label="Writer role" value={writerRole(r.role)} onChange={(e) => upd(i, "role", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-              {WRITER_ROLES.map((o) => <option key={o}>{o}</option>)}
-            </select>)}
-          <ProSelect value={r.pro} onChange={(v) => upd(i, "pro", v)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" />
-          <Input aria-label="IPI name number" placeholder="IPI name number" inputMode="numeric" value={r.ipi} onChange={(e) => upd(i, "ipi", e.target.value.replace(/\D/g, "").slice(0, 11))} />
-          <Input aria-label="Default share %" placeholder="Share %" inputMode="decimal" value={r.percentage} onChange={(e) => upd(i, "percentage", capShare(list, i, e.target.value).value)} />
-          {!writer && <Input aria-label="HFA P#" placeholder="HFA P#" value={r.hfa ?? ""} onChange={(e) => upd(i, "hfa", e.target.value.toUpperCase())} />}
-          <Button type="button" variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange(list.filter((_, j) => j !== i))}><Trash2 /></Button>
+            <select
+              aria-label="Writer role"
+              value={writerRole(r.role)}
+              onChange={(e) => upd(i, "role", e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              {WRITER_ROLES.map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </select>
+          )}
+          <ProSelect
+            value={r.pro}
+            onChange={(v) => upd(i, "pro", v)}
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+          />
+          <Input
+            aria-label="IPI name number"
+            placeholder="IPI name number"
+            inputMode="numeric"
+            value={r.ipi}
+            onChange={(e) => upd(i, "ipi", e.target.value.replace(/\D/g, "").slice(0, 11))}
+          />
+          <Input
+            aria-label="Default share %"
+            placeholder="Share %"
+            inputMode="decimal"
+            value={r.percentage}
+            onChange={(e) => upd(i, "percentage", capShare(list, i, e.target.value).value)}
+          />
+          {!writer && (
+            <Input
+              aria-label="HFA P#"
+              placeholder="HFA P#"
+              value={r.hfa ?? ""}
+              onChange={(e) => upd(i, "hfa", e.target.value.toUpperCase())}
+            />
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Remove"
+            onClick={() => onChange(list.filter((_, j) => j !== i))}
+          >
+            <Trash2 />
+          </Button>
           {/* Usual answer for who collects this writer's publisher share; each song can change it. */}
-          {writer && <label className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:col-span-full">
-            <span className="inline-flex items-center">Usual publishing<InfoTip term="publishing" /></span>
-            <select aria-label="Usual publishing" value={r.publishing ?? ""} onChange={(e) => upd(i, "publishing", e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground">
-              <option value="">Decide per song</option>
-              {(Object.keys(PUBLISHING_LABEL) as (keyof typeof PUBLISHING_LABEL)[]).filter((k) => k !== "bmi" || isBmi(r) || r.publishing === "bmi").map((k) => <option key={k} value={k}>{PUBLISHING_LABEL[k]}</option>)}
-            </select></label>}
+          {writer && (
+            <label className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:col-span-full">
+              <span className="inline-flex items-center">
+                Usual publishing
+                <InfoTip term="publishing" />
+              </span>
+              <select
+                aria-label="Usual publishing"
+                value={r.publishing ?? ""}
+                onChange={(e) => upd(i, "publishing", e.target.value)}
+                className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+              >
+                <option value="">Decide per song</option>
+                {(Object.keys(PUBLISHING_LABEL) as (keyof typeof PUBLISHING_LABEL)[])
+                  .filter((k) => k !== "bmi" || isBmi(r) || r.publishing === "bmi")
+                  .map((k) => (
+                    <option key={k} value={k}>
+                      {PUBLISHING_LABEL[k]}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
         </div>
       ))}
       <div className="flex items-center justify-between">
-        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...list, emptyContributor()])}><Plus />Add {title}</Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onChange([...list, emptyContributor()])}
+        >
+          <Plus />
+          Add {title}
+        </Button>
         <span className="text-xs text-muted-foreground">Default share total: {total}% of 100%</span>
       </div>
     </fieldset>

@@ -36,12 +36,16 @@ export function calendarDetails(reminder: WorkspaceReminder, origin: string): st
 
 export function calendarWindow(reminder: WorkspaceReminder): { start: Date; end: Date } {
   const start = new Date(reminderDueAt(reminder));
-  if (Number.isNaN(start.getTime())) return { start: new Date(), end: new Date(Date.now() + EVENT_MINUTES * 60_000) };
+  if (Number.isNaN(start.getTime()))
+    return { start: new Date(), end: new Date(Date.now() + EVENT_MINUTES * 60_000) };
   return { start, end: new Date(start.getTime() + EVENT_MINUTES * 60_000) };
 }
 
 export function icsDate(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  return date
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
 }
 
 /** RFC 5545 text escapes: backslash first, then the separators, and a newline becomes a literal \n. */
@@ -72,7 +76,11 @@ export function foldLine(line: string): string {
   return chunks.join("\r\n");
 }
 
-export function buildReminderIcs(reminder: WorkspaceReminder, origin: string, now = new Date()): string {
+export function buildReminderIcs(
+  reminder: WorkspaceReminder,
+  origin: string,
+  now = new Date(),
+): string {
   const { start, end } = calendarWindow(reminder);
   const title = escapeIcs(calendarTitle(reminder));
   const description = escapeIcs(calendarDetails(reminder, origin));
@@ -119,11 +127,18 @@ export function googleCalendarUrl(reminder: WorkspaceReminder, origin: string): 
 }
 
 function safeFileName(title: string): string {
-  return (title.trim() || "CTA reminder").replace(/[^\w\s-]/g, "").replace(/\s+/g, " ").slice(0, 60) || "CTA reminder";
+  return (
+    (title.trim() || "CTA reminder")
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, " ")
+      .slice(0, 60) || "CTA reminder"
+  );
 }
 
 export function downloadReminderIcs(reminder: WorkspaceReminder, origin: string): void {
-  const blob = new Blob([buildReminderIcs(reminder, origin)], { type: "text/calendar;charset=utf-8" });
+  const blob = new Blob([buildReminderIcs(reminder, origin)], {
+    type: "text/calendar;charset=utf-8",
+  });
   const url = URL.createObjectURL(blob);
   const link = Object.assign(document.createElement("a"), {
     href: url,

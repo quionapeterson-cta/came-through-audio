@@ -20,9 +20,14 @@ type Organ = PamphletOrgan;
  * the two money leaflets (founder, 2026-11-11).
  */
 const LEAFLET: Record<Organ, string> = {
-  heart: ORGAN_NAME.heart, lungs: ORGAN_NAME.lungs, kidneys: ORGAN_NAME.kidneys,
-  brain: ORGAN_NAME.brain, spine: ORGAN_NAME.spine, isrc: "ISRC",
-  distributor: "Distributor", unclaimed: "Unclaimed",
+  heart: ORGAN_NAME.heart,
+  lungs: ORGAN_NAME.lungs,
+  kidneys: ORGAN_NAME.kidneys,
+  brain: ORGAN_NAME.brain,
+  spine: ORGAN_NAME.spine,
+  isrc: "ISRC",
+  distributor: "Distributor",
+  unclaimed: "Unclaimed",
 };
 
 /** One line icon per leaflet: an organ's own glyph, or the mark the leaflet is about. */
@@ -42,20 +47,30 @@ export function WaitingArea() {
   // Escape closes the drawer, the way every other panel in the app does.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(undefined); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(undefined);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
   return (
-    <section aria-labelledby="waiting-area" className="overflow-hidden rounded-xl border border-border bg-card">
+    <section
+      aria-labelledby="waiting-area"
+      className="overflow-hidden rounded-xl border border-border bg-card"
+    >
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Waiting Area</p>
-          <h3 id="waiting-area" className="mt-0.5 text-base font-bold">What the Music Royalty Doctor examines</h3>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+            Waiting Area
+          </p>
+          <h3 id="waiting-area" className="mt-0.5 text-base font-bold">
+            What the Music Royalty Doctor examines
+          </h3>
         </div>
         <p className="max-w-[54ch] text-xs text-muted-foreground">
-          Take a pamphlet while you're here: one per organ, plus the codes behind them, and what each one means for your money.
+          Take a pamphlet while you're here: one per organ, plus the codes behind them, and what
+          each one means for your money.
         </p>
       </div>
 
@@ -85,13 +100,33 @@ export function WaitingArea() {
 
       {leaf && (
         /* The pamphlet itself in a side drawer: picture first, then the reading, with the Hub still in view behind it. */
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="pamphlet-title">
-          <button type="button" aria-label="Close the pamphlet" onClick={close} className="absolute inset-0 h-full w-full cursor-default bg-ink/40" />
-          <article id="pamphlet" className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col overflow-y-auto border-l border-border bg-card shadow-2xl">
+        <div
+          className="fixed inset-0 z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pamphlet-title"
+        >
+          <button
+            type="button"
+            aria-label="Close the pamphlet"
+            onClick={close}
+            className="absolute inset-0 h-full w-full cursor-default bg-ink/40"
+          />
+          <article
+            id="pamphlet"
+            className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col overflow-y-auto border-l border-border bg-card shadow-2xl"
+          >
             <div className="relative shrink-0">
-              <ClinicArt name={leaf.organ} className="h-32 w-full rounded-none border-0 object-cover" />
-              <button type="button" aria-label="Close the pamphlet" onClick={close}
-                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <ClinicArt
+                name={leaf.organ}
+                className="h-32 w-full rounded-none border-0 object-cover"
+              />
+              <button
+                type="button"
+                aria-label="Close the pamphlet"
+                onClick={close}
+                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <X className="h-3.5 w-3.5" aria-hidden />
               </button>
             </div>
@@ -99,14 +134,23 @@ export function WaitingArea() {
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
                 Pamphlet No. {number(leaf.organ)} &middot; {LEAFLET[leaf.organ]}
               </p>
-              <h4 id="pamphlet-title" className="mt-1 text-lg font-extrabold leading-snug tracking-tight">{leaf.subject}</h4>
+              <h4
+                id="pamphlet-title"
+                className="mt-1 text-lg font-extrabold leading-snug tracking-tight"
+              >
+                {leaf.subject}
+              </h4>
               <p className="mt-1 text-sm font-semibold">{leaf.lede}</p>
               <div className="mt-3 space-y-2 text-xs text-muted-foreground">
-                {leaf.body.map((para) => <p key={para.slice(0, 32)}>{para}</p>)}
+                {leaf.body.map((para) => (
+                  <p key={para.slice(0, 32)}>{para}</p>
+                ))}
               </div>
               <dl className="mt-4 grid gap-2 border-t border-dashed border-border pt-3 text-xs sm:grid-cols-3">
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">Healthy reading</dt>
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+                    Healthy reading
+                  </dt>
                   <dd className="mt-0.5 text-muted-foreground">{leaf.healthy}.</dd>
                 </div>
                 <div>
@@ -114,15 +158,29 @@ export function WaitingArea() {
                   <dd className="mt-0.5 text-muted-foreground">{leaf.unhealthy}.</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-[0.12em]">In your report</dt>
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.12em]">
+                    In your report
+                  </dt>
                   <dd className="mt-0.5 text-muted-foreground">{leaf.meaning}.</dd>
                 </div>
               </dl>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={close} autoFocus><ChevronLeft />Back to the rack</Button>
+                <Button size="sm" variant="outline" onClick={close} autoFocus>
+                  <ChevronLeft />
+                  Back to the rack
+                </Button>
                 {/* Take the pamphlet home (founder, 2026-11-11): the same words, as a PDF with our header and footer. */}
-                <Button size="sm" variant="outline" onClick={() => void downloadPamphletPdf(leaf, LEAFLET[leaf.organ]).catch(() => toast.error("Couldn't create the pamphlet PDF. Try again."))}>
-                  <FileDown />Download PDF
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void downloadPamphletPdf(leaf, LEAFLET[leaf.organ]).catch(() =>
+                      toast.error("Couldn't create the pamphlet PDF. Try again."),
+                    )
+                  }
+                >
+                  <FileDown />
+                  Download PDF
                 </Button>
               </div>
             </div>

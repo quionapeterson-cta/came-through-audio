@@ -9,8 +9,10 @@ export type AccountScope = { editProfile: boolean; editPayment: boolean; label: 
 
 export function accountScope(access: StaffAccess | null | undefined): AccountScope | null {
   if (!access) return null;
-  if (access.role === "super_admin") return { editProfile: true, editPayment: true, label: "Super admin" };
-  if (access.departments.includes("support")) return { editProfile: true, editPayment: false, label: "Support" };
+  if (access.role === "super_admin")
+    return { editProfile: true, editPayment: true, label: "Super admin" };
+  if (access.departments.includes("support"))
+    return { editProfile: true, editPayment: false, label: "Support" };
   if (access.departments.includes("billing") || access.departments.includes("finance")) {
     return { editProfile: false, editPayment: true, label: "Billing" };
   }

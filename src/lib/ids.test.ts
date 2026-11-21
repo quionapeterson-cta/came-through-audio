@@ -10,7 +10,9 @@ describe("catalog ids", () => {
 
   it("updates a song My Catalog already holds", () => {
     expect(isCatalogId("09bef0e2-1f7a-4a55-9a5e-64f8a0d1b2c3")).toBe(true);
-    expect(updateTarget("09bef0e2-1f7a-4a55-9a5e-64f8a0d1b2c3")).toBe("09bef0e2-1f7a-4a55-9a5e-64f8a0d1b2c3");
+    expect(updateTarget("09bef0e2-1f7a-4a55-9a5e-64f8a0d1b2c3")).toBe(
+      "09bef0e2-1f7a-4a55-9a5e-64f8a0d1b2c3",
+    );
   });
 
   it("inserts a song with no id at all", () => {

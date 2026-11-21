@@ -14,24 +14,37 @@ export const PANEL: [number, number, number] = [246, 248, 252];
 export const MARGIN = 20;
 
 export type Weight = "regular" | "medium" | "semibold" | "bold";
-const WEIGHT_FILES: Record<Weight, string> = { regular: "Poppins-Regular", medium: "Poppins-Medium", semibold: "Poppins-SemiBold", bold: "Poppins-Bold" };
+const WEIGHT_FILES: Record<Weight, string> = {
+  regular: "Poppins-Regular",
+  medium: "Poppins-Medium",
+  semibold: "Poppins-SemiBold",
+  bold: "Poppins-Bold",
+};
 let fontCache: Promise<Record<Weight, string> | null> | undefined;
 const withPoppins = new WeakSet<JsPDF>();
 
 function toBase64(buf: ArrayBuffer) {
   const bytes = new Uint8Array(buf);
   let out = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    out += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(out);
 }
 
 /** Poppins (the brand font) is fetched once per session; PDFs fall back to Helvetica if it can't load. */
 function loadPoppins() {
-  fontCache ??= Promise.all((Object.entries(WEIGHT_FILES) as [Weight, string][]).map(async ([w, file]) => {
-    const res = await fetch(`/fonts/${file}.ttf`);
-    if (!res.ok) throw new Error(`font ${file}`);
-    return [w, toBase64(await res.arrayBuffer())] as const;
-  })).then((pairs) => Object.fromEntries(pairs) as Record<Weight, string>).catch(() => { fontCache = undefined; return null; });
+  fontCache ??= Promise.all(
+    (Object.entries(WEIGHT_FILES) as [Weight, string][]).map(async ([w, file]) => {
+      const res = await fetch(`/fonts/${file}.ttf`);
+      if (!res.ok) throw new Error(`font ${file}`);
+      return [w, toBase64(await res.arrayBuffer())] as const;
+    }),
+  )
+    .then((pairs) => Object.fromEntries(pairs) as Record<Weight, string>)
+    .catch(() => {
+      fontCache = undefined;
+      return null;
+    });
   return fontCache;
 }
 
@@ -40,11 +53,18 @@ const brandFontCache = new Map<BrandFont, Promise<Record<"medium" | "bold", stri
 function loadBrandFont(f: BrandFont) {
   let p = brandFontCache.get(f);
   if (!p) {
-    p = Promise.all((["medium", "bold"] as const).map(async (w) => {
-      const res = await fetch(`/fonts/${fontFile(f, w)}.ttf`);
-      if (!res.ok) throw new Error(`font ${f} ${w}`);
-      return [w, toBase64(await res.arrayBuffer())] as const;
-    })).then((pairs) => Object.fromEntries(pairs) as Record<"medium" | "bold", string>).catch(() => { brandFontCache.delete(f); return null; });
+    p = Promise.all(
+      (["medium", "bold"] as const).map(async (w) => {
+        const res = await fetch(`/fonts/${fontFile(f, w)}.ttf`);
+        if (!res.ok) throw new Error(`font ${f} ${w}`);
+        return [w, toBase64(await res.arrayBuffer())] as const;
+      }),
+    )
+      .then((pairs) => Object.fromEntries(pairs) as Record<"medium" | "bold", string>)
+      .catch(() => {
+        brandFontCache.delete(f);
+        return null;
+      });
     brandFontCache.set(f, p);
   }
   return p;
@@ -57,7 +77,9 @@ export async function newBrandedPdf(brand?: PdfBrand | null) {
   const pdf = new jsPDF({ unit: "mm", format: "letter" });
   const [fonts, extra] = await Promise.all([
     loadPoppins(),
-    brand && brand.font !== "Poppins" && !SYSTEM_FONTS.has(brand.font) ? loadBrandFont(brand.font) : null,
+    brand && brand.font !== "Poppins" && !SYSTEM_FONTS.has(brand.font)
+      ? loadBrandFont(brand.font)
+      : null,
     brand?.logo?.dataUrl ? printSizedLogo(pdf, brand.logo.dataUrl) : null,
   ]);
   if (fonts) {
@@ -92,8 +114,10 @@ export async function addSignatureFont(pdf: JsPDF, family: string) {
 /** Sets the brand kit's header font (falls back to Poppins). */
 function kitFont(pdf: JsPDF, brand: PdfBrand, weight: "medium" | "bold", size: number) {
   // Arial: the PDF's built-in Helvetica has the same letter shapes and needs no file.
-  if (brand.font === "Arial") return pdf.setFont("helvetica", weight === "bold" ? "bold" : "normal").setFontSize(size);
-  if (brand.font !== "Poppins" && withBrandFont.has(pdf)) return pdf.setFont(brand.font, weight).setFontSize(size);
+  if (brand.font === "Arial")
+    return pdf.setFont("helvetica", weight === "bold" ? "bold" : "normal").setFontSize(size);
+  if (brand.font !== "Poppins" && withBrandFont.has(pdf))
+    return pdf.setFont(brand.font, weight).setFontSize(size);
   return font(pdf, weight === "bold" ? "semibold" : "medium", size);
 }
 
@@ -105,8 +129,17 @@ export function font(pdf: JsPDF, weight: Weight, size: number) {
 }
 
 /** Small uppercase, letter-spaced label. */
-export function label(pdf: JsPDF, text: string, x: number, y: number, color: [number, number, number] = MUTED, size = 7.5) {
-  font(pdf, "semibold", size).setTextColor(...color).text(text.toUpperCase(), x, y, { charSpace: 0.35 });
+export function label(
+  pdf: JsPDF,
+  text: string,
+  x: number,
+  y: number,
+  color: [number, number, number] = MUTED,
+  size = 7.5,
+) {
+  font(pdf, "semibold", size)
+    .setTextColor(...color)
+    .text(text.toUpperCase(), x, y, { charSpace: 0.35 });
 }
 
 /** The logo outline as filled vector paths, `w` mm wide with its top-left corner at (x, y). */
@@ -114,13 +147,21 @@ export function drawLogo(pdf: JsPDF, x: number, y: number, w: number) {
   const s = w / LOGO_VIEWBOX[0];
   const t = LOGO_PATH.split(" ");
   const n = (i: number) => Number(t[i]);
-  const px = (i: number) => x + n(i) * s, py = (i: number) => y + n(i) * s;
+  const px = (i: number) => x + n(i) * s,
+    py = (i: number) => y + n(i) * s;
   for (let i = 0; i < t.length;) {
     const op = t[i++];
-    if (op === "M") { if (i > 1) pdf.close(); pdf.moveTo(px(i), py(i + 1)); i += 2; }
-    else if (op === "L") { pdf.lineTo(px(i), py(i + 1)); i += 2; }
-    else if (op === "C") { pdf.curveTo(px(i), py(i + 1), px(i + 2), py(i + 3), px(i + 4), py(i + 5)); i += 6; }
-    else i++;
+    if (op === "M") {
+      if (i > 1) pdf.close();
+      pdf.moveTo(px(i), py(i + 1));
+      i += 2;
+    } else if (op === "L") {
+      pdf.lineTo(px(i), py(i + 1));
+      i += 2;
+    } else if (op === "C") {
+      pdf.curveTo(px(i), py(i + 1), px(i + 2), py(i + 3), px(i + 4), py(i + 5));
+      i += 6;
+    } else i++;
   }
   pdf.close();
   pdf.setFillColor(...INK).fillEvenOdd();
@@ -130,20 +171,31 @@ export function drawLogo(pdf: JsPDF, x: number, y: number, w: number) {
  * Branded header: vector logo, wordmark, tagline, cobalt rule, then the document title. `meta` sits right-aligned on
  * the subtitle line. With a Personal Branding kit, their logo, name, tagline and colors replace ours. Returns next y.
  */
-export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?: string, brand?: PdfBrand | null) {
+export function brandHeader(
+  pdf: JsPDF,
+  title: string,
+  subtitle?: string,
+  meta?: string,
+  brand?: PdfBrand | null,
+) {
   const w = pdf.internal.pageSize.getWidth();
   // Minimal kits have no header band: the logo sits small in the footer instead (brandFooter).
-  if (brand) { if (brand.style !== "minimal") kitHeader(pdf, brand); }
-  else {
+  if (brand) {
+    if (brand.style !== "minimal") kitHeader(pdf, brand);
+  } else {
     const logoW = 23;
     // Logo centered on the two text lines (wordmark cap top ≈ 15.6, tagline baseline 23.2).
     drawLogo(pdf, MARGIN, 19.4 - (logoW * LOGO_RATIO) / 2, logoW);
     const x = MARGIN + logoW + 5;
-    font(pdf, "semibold", 12).setTextColor(...INK).text("CAME THROUGH", x, 18.6, { charSpace: 0.2 });
+    font(pdf, "semibold", 12)
+      .setTextColor(...INK)
+      .text("CAME THROUGH", x, 18.6, { charSpace: 0.2 });
     const cameW = pdf.getTextWidth("CAME THROUGH ") + 0.2 * 12;
     pdf.setTextColor(...COBALT).text("AUDIO", x + cameW, 18.6, { charSpace: 0.2 });
     // Tagline: always uppercase with 2px (≈0.53 mm) letter spacing.
-    font(pdf, "medium", 7).setTextColor(...MUTED).text("YOUR FIRST STOP BEFORE DISTRIBUTION", x, 23.2, { charSpace: 0.53 });
+    font(pdf, "medium", 7)
+      .setTextColor(...MUTED)
+      .text("YOUR FIRST STOP BEFORE DISTRIBUTION", x, 23.2, { charSpace: 0.53 });
     pdf.setFillColor(...COBALT).rect(MARGIN, 28.5, w - MARGIN * 2, 0.8, "F");
   }
 
@@ -154,14 +206,21 @@ export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?:
   y += (titleLines.length - 1) * 9.5;
   if (subtitle || meta) {
     y += 7.5;
-    if (subtitle) font(pdf, "regular", 11.5).setTextColor(...MUTED).text(subtitle, MARGIN, y);
-    if (meta) font(pdf, "regular", 10).setTextColor(...MUTED).text(meta, w - MARGIN, y, { align: "right" });
+    if (subtitle)
+      font(pdf, "regular", 11.5)
+        .setTextColor(...MUTED)
+        .text(subtitle, MARGIN, y);
+    if (meta)
+      font(pdf, "regular", 10)
+        .setTextColor(...MUTED)
+        .text(meta, w - MARGIN, y, { align: "right" });
   }
   return y + 12;
 }
 
 /** Light text on a dark band, dark text on a light one. */
-const onColor = ([r, g, b]: [number, number, number]): [number, number, number] => (0.299 * r + 0.587 * g + 0.114 * b > 150 ? INK : [255, 255, 255]);
+const onColor = ([r, g, b]: [number, number, number]): [number, number, number] =>
+  0.299 * r + 0.587 * g + 0.114 * b > 150 ? INK : [255, 255, 255];
 
 /**
  * Their logo (fit in a 34 × 16 mm box), name in the first color, tagline in the second. Classic: one solid line in the
@@ -182,7 +241,8 @@ function kitHeader(pdf: JsPDF, brand: PdfBrand) {
   if (banner) pdf.setFillColor(...band).rect(0, 0, w, 31, "F");
   // The logo's side is the member's own (founder, 2026-11-07): left is how every kit printed before, right mirrors the
   // block. Without a logo the heading keeps its left edge, whatever side is chosen.
-  let lw = 0, right = false;
+  let lw = 0,
+    right = false;
   if (brand.logo) {
     try {
       const src = logoFor(pdf, brand);
@@ -192,33 +252,56 @@ function kitHeader(pdf: JsPDF, brand: PdfBrand) {
       const lh = p.height * s;
       right = brand.options.logoAlign === "right";
       // Its own line and fine movement, so a picture with empty space above its ink can be lined up by eye.
-      const y = logoTop({ snap: brand.options.logoSnap, nudge: brand.options.logoNudge, height: lh, hasTagline: !!brand.tagline });
+      const y = logoTop({
+        snap: brand.options.logoSnap,
+        nudge: brand.options.logoNudge,
+        height: lh,
+        hasTagline: !!brand.tagline,
+      });
       pdf.addImage(src, p.fileType, right ? w - MARGIN - lw : MARGIN, y, lw, lh);
-    } catch { /* an unreadable logo leaves the name on its own */ lw = 0; right = false; }
+    } catch {
+      /* an unreadable logo leaves the name on its own */ lw = 0;
+      right = false;
+    }
   }
   const x = right ? w - MARGIN - lw - 5 : MARGIN + (lw ? lw + 5 : 0);
   const align = right ? "right" : "left";
   const nameY = brand.tagline ? 18.6 : 21;
   const text = onColor(band);
-  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(banner ? text : colors[0] ?? INK)).text(brand.name, x, nameY, { align });
-  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(banner ? text : colors[1] ?? MUTED)).text(brand.tagline, x, 24, { align });
+  if (brand.name)
+    kitFont(pdf, brand, "bold", 14)
+      .setTextColor(...(banner ? text : (colors[0] ?? INK)))
+      .text(brand.name, x, nameY, { align });
+  if (brand.tagline)
+    kitFont(pdf, brand, "medium", 7.5)
+      .setTextColor(...(banner ? text : (colors[1] ?? MUTED)))
+      .text(brand.tagline, x, 24, { align });
   if (brand.style !== "classic" && brand.style !== "frame") return;
   // One solid line in the kit's accent (founder, 2026-11-06: the multi-colour stripe read as two-tone).
   pdf.setFillColor(...kitAccent(brand)).rect(MARGIN, 28.5, w - MARGIN * 2, 0.8, "F");
 }
 
 /** The kit's logo inside a box, lined up to its left edge, right edge or centre. Returns the width drawn, 0 without one. */
-function fitLogo(pdf: JsPDF, brand: PdfBrand, box: { x: number; y: number; w: number; h: number }, align: "left" | "right" | "centre" = "left") {
+function fitLogo(
+  pdf: JsPDF,
+  brand: PdfBrand,
+  box: { x: number; y: number; w: number; h: number },
+  align: "left" | "right" | "centre" = "left",
+) {
   if (!brand.logo) return 0;
   try {
     const src = logoFor(pdf, brand);
     const p = pdf.getImageProperties(src);
     const s = Math.min(box.w / p.width, box.h / p.height);
-    const lw = p.width * s, lh = p.height * s;
-    const x = align === "right" ? box.x - lw : align === "centre" ? box.x + (box.w - lw) / 2 : box.x;
+    const lw = p.width * s,
+      lh = p.height * s;
+    const x =
+      align === "right" ? box.x - lw : align === "centre" ? box.x + (box.w - lw) / 2 : box.x;
     pdf.addImage(src, p.fileType, x, box.y, lw, lh);
     return lw;
-  } catch { return 0; }
+  } catch {
+    return 0;
+  }
 }
 
 /** A kit's fine movement, kept inside the band a style leaves for the picture. */
@@ -230,11 +313,22 @@ const nudgeIn = (nudge: number, min: number, max: number) => Math.max(min, Math.
  */
 function labelHeader(pdf: JsPDF, brand: PdfBrand, colors: [number, number, number][], w: number) {
   const accent = kitAccent(brand);
-  const lw = fitLogo(pdf, brand, { x: MARGIN, y: 7 + nudgeIn(brand.options.logoNudge, -1, 5), w: w - MARGIN * 2, h: 8 }, "centre");
+  const lw = fitLogo(
+    pdf,
+    brand,
+    { x: MARGIN, y: 7 + nudgeIn(brand.options.logoNudge, -1, 5), w: w - MARGIN * 2, h: 8 },
+    "centre",
+  );
   pdf.setFillColor(...accent).rect(w / 2 - 7, lw ? 18 : 13.5, 14, 1, "F");
   const nameY = lw ? 24.5 : 21;
-  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(colors[0] ?? INK)).text(brand.name, w / 2, nameY, { align: "center", charSpace: 0.3 });
-  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, w / 2, nameY + 5.8, { align: "center", charSpace: 0.4 });
+  if (brand.name)
+    kitFont(pdf, brand, "bold", 14)
+      .setTextColor(...(colors[0] ?? INK))
+      .text(brand.name, w / 2, nameY, { align: "center", charSpace: 0.3 });
+  if (brand.tagline)
+    kitFont(pdf, brand, "medium", 7.5)
+      .setTextColor(...(colors[1] ?? MUTED))
+      .text(brand.tagline, w / 2, nameY + 5.8, { align: "center", charSpace: 0.4 });
 }
 
 /**
@@ -243,45 +337,94 @@ function labelHeader(pdf: JsPDF, brand: PdfBrand, colors: [number, number, numbe
  */
 function ticketHeader(pdf: JsPDF, brand: PdfBrand, colors: [number, number, number][], w: number) {
   const accent = kitAccent(brand);
-  const top = 9, bottom = 30, left = MARGIN, right = w - MARGIN;
-  pdf.setDrawColor(...accent).setLineWidth(0.4).rect(left, top, right - left, bottom - top, "S");
+  const top = 9,
+    bottom = 30,
+    left = MARGIN,
+    right = w - MARGIN;
+  pdf
+    .setDrawColor(...accent)
+    .setLineWidth(0.4)
+    .rect(left, top, right - left, bottom - top, "S");
   // White discs with no rim eat the foot of the box, so the line reads as a perforation. With a rim they looked like a
   // chain of beads sitting on the border instead.
-  for (let x = left + 7; x < right - 5; x += 5.5) pdf.setFillColor(255, 255, 255).circle(x, bottom, 1.2, "F");
+  for (let x = left + 7; x < right - 5; x += 5.5)
+    pdf.setFillColor(255, 255, 255).circle(x, bottom, 1.2, "F");
   const onRight = brand.options.logoAlign === "right";
-  const lw = fitLogo(pdf, brand, { x: onRight ? right - 5 : left + 5, y: 11.5 + nudgeIn(brand.options.logoNudge, -3, 5), w: 34, h: 10 }, onRight ? "right" : "left");
+  const lw = fitLogo(
+    pdf,
+    brand,
+    {
+      x: onRight ? right - 5 : left + 5,
+      y: 11.5 + nudgeIn(brand.options.logoNudge, -3, 5),
+      w: 34,
+      h: 10,
+    },
+    onRight ? "right" : "left",
+  );
   const rightSide = onRight && lw > 0;
   const x = rightSide ? right - 5 - lw - 5 : left + 5 + (lw ? lw + 5 : 0);
-  const align = rightSide ? "right" as const : "left" as const;
-  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(colors[0] ?? INK)).text(brand.name, x, 18.5, { align });
-  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, x, 24, { align });
+  const align = rightSide ? ("right" as const) : ("left" as const);
+  if (brand.name)
+    kitFont(pdf, brand, "bold", 14)
+      .setTextColor(...(colors[0] ?? INK))
+      .text(brand.name, x, 18.5, { align });
+  if (brand.tagline)
+    kitFont(pdf, brand, "medium", 7.5)
+      .setTextColor(...(colors[1] ?? MUTED))
+      .text(brand.tagline, x, 24, { align });
 }
 
 /** Frame: a fine accent keyline around the first page, stopped above the footer rule so it never cuts the page line. */
 function frameBorder(pdf: JsPDF, brand: PdfBrand, w: number) {
   const h = pdf.internal.pageSize.getHeight();
   const inset = 8;
-  pdf.setDrawColor(...kitAccent(brand)).setLineWidth(0.7).rect(inset, inset, w - inset * 2, h - inset - 24, "S");
+  pdf
+    .setDrawColor(...kitAccent(brand))
+    .setLineWidth(0.7)
+    .rect(inset, inset, w - inset * 2, h - inset - 24, "S");
 }
 
 /**
  * Editorial (founder, 2026-11-07): a heavy accent bar, the name set large on the left, the logo in the far column and the
  * tagline under it, closed by a hairline. A long name shrinks rather than running into that column.
  */
-function editorialHeader(pdf: JsPDF, brand: PdfBrand, colors: [number, number, number][], w: number) {
+function editorialHeader(
+  pdf: JsPDF,
+  brand: PdfBrand,
+  colors: [number, number, number][],
+  w: number,
+) {
   const accent = kitAccent(brand);
   pdf.setFillColor(...accent).rect(MARGIN, 9, 18, 1.6, "F");
   const onRight = brand.options.logoAlign !== "left";
-  const lw = fitLogo(pdf, brand, { x: onRight ? w - MARGIN : MARGIN, y: 10 + nudgeIn(brand.options.logoNudge, -3, 2), w: 34, h: 8 }, onRight ? "right" : "left");
+  const lw = fitLogo(
+    pdf,
+    brand,
+    {
+      x: onRight ? w - MARGIN : MARGIN,
+      y: 10 + nudgeIn(brand.options.logoNudge, -3, 2),
+      w: 34,
+      h: 8,
+    },
+    onRight ? "right" : "left",
+  );
   // The right column is the tagline's, so a long name shrinks rather than running into it.
   const avail = w - MARGIN * 2 - 68;
   let size = 20;
   if (brand.name) {
     kitFont(pdf, brand, "bold", size);
-    while (size > 11 && pdf.getTextWidth(brand.name) > avail) { size -= 1; kitFont(pdf, brand, "bold", size); }
-    kitFont(pdf, brand, "bold", size).setTextColor(...(colors[0] ?? INK)).text(brand.name, onRight ? MARGIN : MARGIN + (lw ? lw + 5 : 0), 22);
+    while (size > 11 && pdf.getTextWidth(brand.name) > avail) {
+      size -= 1;
+      kitFont(pdf, brand, "bold", size);
+    }
+    kitFont(pdf, brand, "bold", size)
+      .setTextColor(...(colors[0] ?? INK))
+      .text(brand.name, onRight ? MARGIN : MARGIN + (lw ? lw + 5 : 0), 22);
   }
-  if (brand.tagline) kitFont(pdf, brand, "medium", 7).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, w - MARGIN, 22, { align: "right", charSpace: 0.4 });
+  if (brand.tagline)
+    kitFont(pdf, brand, "medium", 7)
+      .setTextColor(...(colors[1] ?? MUTED))
+      .text(brand.tagline, w - MARGIN, 22, { align: "right", charSpace: 0.4 });
   pdf.setFillColor(...accent).rect(MARGIN, 28, w - MARGIN * 2, 0.4, "F");
 }
 
@@ -290,10 +433,12 @@ function editorialHeader(pdf: JsPDF, brand: PdfBrand, colors: [number, number, n
  * framed in their accent color (rounded or square corners). The document starts on the next page.
  */
 export function kitCover(pdf: JsPDF, brand: PdfBrand, title: string, subtitle?: string) {
-  const w = pdf.internal.pageSize.getWidth(), h = pdf.internal.pageSize.getHeight();
+  const w = pdf.internal.pageSize.getWidth(),
+    h = pdf.internal.pageSize.getHeight();
   const accent = kitAccent(brand);
   pdf.setDrawColor(...accent).setLineWidth(1.2);
-  if (brand.options.corners === "rounded") pdf.roundedRect(MARGIN - 6, MARGIN - 6, w - (MARGIN - 6) * 2, h - (MARGIN - 6) * 2, 6, 6, "S");
+  if (brand.options.corners === "rounded")
+    pdf.roundedRect(MARGIN - 6, MARGIN - 6, w - (MARGIN - 6) * 2, h - (MARGIN - 6) * 2, 6, 6, "S");
   else pdf.rect(MARGIN - 6, MARGIN - 6, w - (MARGIN - 6) * 2, h - (MARGIN - 6) * 2, "S");
   let y = h * 0.3;
   if (brand.logo) {
@@ -301,13 +446,32 @@ export function kitCover(pdf: JsPDF, brand: PdfBrand, title: string, subtitle?: 
       const src = logoFor(pdf, brand);
       const p = pdf.getImageProperties(src);
       const sc = Math.min(80 / p.width, 50 / p.height);
-      pdf.addImage(src, p.fileType, (w - p.width * sc) / 2, y - p.height * sc, p.width * sc, p.height * sc);
+      pdf.addImage(
+        src,
+        p.fileType,
+        (w - p.width * sc) / 2,
+        y - p.height * sc,
+        p.width * sc,
+        p.height * sc,
+      );
       y += 14;
-    } catch { /* an unreadable logo leaves the name on its own */ }
+    } catch {
+      /* an unreadable logo leaves the name on its own */
+    }
   }
   const colors = brand.colors.map(hexRgb);
-  if (brand.name) { kitFont(pdf, brand, "bold", 22).setTextColor(...(colors[0] ?? INK)).text(brand.name, w / 2, y, { align: "center" }); y += 9; }
-  if (brand.tagline) { kitFont(pdf, brand, "medium", 10).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, w / 2, y, { align: "center" }); y += 8; }
+  if (brand.name) {
+    kitFont(pdf, brand, "bold", 22)
+      .setTextColor(...(colors[0] ?? INK))
+      .text(brand.name, w / 2, y, { align: "center" });
+    y += 9;
+  }
+  if (brand.tagline) {
+    kitFont(pdf, brand, "medium", 10)
+      .setTextColor(...(colors[1] ?? MUTED))
+      .text(brand.tagline, w / 2, y, { align: "center" });
+    y += 8;
+  }
   pdf.setFillColor(...accent).rect(w / 2 - 20, y + 4, 40, 0.8, "F");
   // The cover carries the same title colour the body header uses (founder, 2026-11-07).
   font(pdf, "bold", 24).setTextColor(...titleInk(brand));
@@ -315,14 +479,18 @@ export function kitCover(pdf: JsPDF, brand: PdfBrand, title: string, subtitle?: 
   lines.forEach((l, i) => pdf.text(l, w / 2, y + 22 + i * 10, { align: "center" }));
   // The subtitle is optional: a cover that carries a status (a contract's "Out for signature") leaves it out, since a
   // printed agreement describes the agreement and nothing about where it sits in our process (founder, 2026-11-17).
-  if (subtitle) font(pdf, "regular", 11).setTextColor(...MUTED).text(subtitle, w / 2, y + 30 + lines.length * 10, { align: "center" });
+  if (subtitle)
+    font(pdf, "regular", 11)
+      .setTextColor(...MUTED)
+      .text(subtitle, w / 2, y + 30 + lines.length * 10, { align: "center" });
   pdf.addPage();
 }
 
 /** A faint copy of the kit's logo in the middle of the current page (options.watermark), under the text drawn after it. */
 export function kitWatermark(pdf: JsPDF, brand: PdfBrand) {
   if (!brand.logo) return;
-  const w = pdf.internal.pageSize.getWidth(), h = pdf.internal.pageSize.getHeight();
+  const w = pdf.internal.pageSize.getWidth(),
+    h = pdf.internal.pageSize.getHeight();
   try {
     const src = logoFor(pdf, brand);
     const p = pdf.getImageProperties(src);
@@ -330,9 +498,18 @@ export function kitWatermark(pdf: JsPDF, brand: PdfBrand) {
     const G = (pdf as unknown as { GState: new (o: { opacity: number }) => unknown }).GState;
     pdf.saveGraphicsState();
     (pdf as unknown as { setGState: (g: unknown) => void }).setGState(new G({ opacity: 0.07 }));
-    pdf.addImage(src, p.fileType, (w - p.width * sc) / 2, (h - p.height * sc) / 2, p.width * sc, p.height * sc);
+    pdf.addImage(
+      src,
+      p.fileType,
+      (w - p.width * sc) / 2,
+      (h - p.height * sc) / 2,
+      p.width * sc,
+      p.height * sc,
+    );
     pdf.restoreGraphicsState();
-  } catch { /* no watermark if the logo can't be drawn */ }
+  } catch {
+    /* no watermark if the logo can't be drawn */
+  }
 }
 
 /**
@@ -347,7 +524,11 @@ export const onAccent = (pdf: JsPDF) => onColor(accentOf(pdf));
 
 /** The kit's second accent color, else its section title color, else Primary Black. */
 export const kitAccent = (brand: PdfBrand): [number, number, number] =>
-  brand.options.accent ? hexRgb(brand.options.accent) : brand.headerColor ? hexRgb(brand.headerColor) : INK;
+  brand.options.accent
+    ? hexRgb(brand.options.accent)
+    : brand.headerColor
+      ? hexRgb(brand.headerColor)
+      : INK;
 
 /**
  * The document title's colour (founder, 2026-11-07): the kit's own when the member picks one, else Primary Black, which is
@@ -357,13 +538,19 @@ export const titleInk = (brand?: PdfBrand | null): [number, number, number] =>
   brand?.options.titleColor ? hexRgb(brand.options.titleColor) : INK;
 
 /** Today's date for the top of a document, e.g. "Nov 6, 2026". The header only: the footer never carries a date. */
-export const headerDate = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+export const headerDate = () =>
+  new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 /** "2026-03-03" → "Mar 3, 2026"; anything else is shown as typed. */
 export function prettyDate(v: string | undefined) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v ?? "");
   if (!m) return v ?? "";
-  return new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!)).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 /**
@@ -386,17 +573,30 @@ export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
   for (let i = 1; i <= pages; i++) {
     pdf.setPage(i);
     // Sidebar kits: a slim bar of their first color down the left edge of every page.
-    if (brand?.style === "sidebar") pdf.setFillColor(...(brand.colors[0] ? hexRgb(brand.colors[0]) : INK)).rect(0, 0, 7, h, "F");
+    if (brand?.style === "sidebar")
+      pdf.setFillColor(...(brand.colors[0] ? hexRgb(brand.colors[0]) : INK)).rect(0, 0, 7, h, "F");
     // Minimal kits: their logo small at the bottom right, above the rule.
     if (brand?.style === "minimal" && brand.logo) {
       try {
         const src = logoFor(pdf, brand);
         const p = pdf.getImageProperties(src);
         const sc = Math.min(18 / p.width, 8 / p.height);
-        pdf.addImage(src, p.fileType, w - MARGIN - p.width * sc, h - 27 - p.height * sc, p.width * sc, p.height * sc);
-      } catch { /* an unreadable logo is left out */ }
+        pdf.addImage(
+          src,
+          p.fileType,
+          w - MARGIN - p.width * sc,
+          h - 27 - p.height * sc,
+          p.width * sc,
+          p.height * sc,
+        );
+      } catch {
+        /* an unreadable logo is left out */
+      }
     }
-    pdf.setDrawColor(...(brand?.options.accent ? hexRgb(brand.options.accent) : RULE)).setLineWidth(0.3).line(MARGIN, h - 17, w - MARGIN, h - 17);
+    pdf
+      .setDrawColor(...(brand?.options.accent ? hexRgb(brand.options.accent) : RULE))
+      .setLineWidth(0.3)
+      .line(MARGIN, h - 17, w - MARGIN, h - 17);
     // The footer is the page counter and the made-on line, and no owner or business name (founder, 2026-11-07): our line
     // never sits beside a kit's. It says who made it, never when.
     font(pdf, "regular", 8.5).setTextColor(...MUTED);
@@ -415,7 +615,10 @@ export function infoGrid(pdf: JsPDF, y: number, items: [string, string][]) {
   const w = pdf.internal.pageSize.getWidth() - MARGIN * 2;
   const colW = (w - 16) / 2;
   font(pdf, "regular", 11.5);
-  const cells = items.map(([l, v]) => ({ label: l, lines: (pdf.splitTextToSize(v || "—", colW - 6) as string[]).slice(0, 3) }));
+  const cells = items.map(([l, v]) => ({
+    label: l,
+    lines: (pdf.splitTextToSize(v || "—", colW - 6) as string[]).slice(0, 3),
+  }));
   const rows: (typeof cells)[] = [];
   for (let i = 0; i < cells.length; i += 2) rows.push(cells.slice(i, i + 2));
   const rowH = rows.map((r) => 6.5 + Math.max(...r.map((c) => c.lines.length)) * 5.6 + 3);
@@ -426,7 +629,9 @@ export function infoGrid(pdf: JsPDF, y: number, items: [string, string][]) {
     r.forEach((c, ci) => {
       const x = MARGIN + 8 + ci * colW;
       // Blue labels match their entries in size.
-      font(pdf, "semibold", 11.5).setTextColor(...accentOf(pdf)).text(c.label, x, yy);
+      font(pdf, "semibold", 11.5)
+        .setTextColor(...accentOf(pdf))
+        .text(c.label, x, yy);
       font(pdf, "regular", 11.5).setTextColor(...(c.lines[0] === "—" ? MUTED : INK));
       c.lines.forEach((line, li) => pdf.text(line, x, yy + 6 + li * 5.6));
     });
@@ -435,12 +640,20 @@ export function infoGrid(pdf: JsPDF, y: number, items: [string, string][]) {
   return y + h + 10;
 }
 
-export function sectionTitle(pdf: JsPDF, y: number, text: string, color?: [number, number, number]) {
+export function sectionTitle(
+  pdf: JsPDF,
+  y: number,
+  text: string,
+  color?: [number, number, number],
+) {
   label(pdf, text, MARGIN, y, color ?? accentOf(pdf), 9);
   return y + 8;
 }
 
 export function ensureSpace(pdf: JsPDF, y: number, needed: number) {
-  if (y + needed > pdf.internal.pageSize.getHeight() - 26) { pdf.addPage(); return 24; }
+  if (y + needed > pdf.internal.pageSize.getHeight() - 26) {
+    pdf.addPage();
+    return 24;
+  }
   return y;
 }

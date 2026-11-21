@@ -16,12 +16,20 @@ export function useBrandKits(userId: string | undefined) {
     if (!userId) return;
     let live = true;
     void (async () => {
-      const { data } = await supabase.from("brand_kits" as never).select("*").eq("user_id", userId).order("created_at" as never, { ascending: true });
+      const { data } = await supabase
+        .from("brand_kits" as never)
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at" as never, { ascending: true });
       if (!live) return;
-      const list = ((data ?? []) as Record<string, unknown>[]).map((r) => kitFromRow(r as never)).filter((k): k is BrandKit => !!k?.id);
+      const list = ((data ?? []) as Record<string, unknown>[])
+        .map((r) => kitFromRow(r as never))
+        .filter((k): k is BrandKit => !!k?.id);
       setKits(list.map((k) => ({ id: k.id!, name: k.name || "Untitled kit" })));
     })();
-    return () => { live = false; };
+    return () => {
+      live = false;
+    };
   }, [userId]);
   return { kits, kitId, setKitId };
 }

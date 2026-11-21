@@ -8,13 +8,19 @@ import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
 import { isBrandingSubscription, kitYearRow } from "@/lib/branding-subscription";
 import { purchaseKind } from "@/lib/purchase-receipt";
 import { earlyRenewalTarget, VAULT_LOOKUP_KEY } from "@/lib/retention";
-import { isVaultSubscription, vaultCollectionGaveUp, vaultMonthKey, vaultMonthRow } from "@/lib/vault-subscription";
+import {
+  isVaultSubscription,
+  vaultCollectionGaveUp,
+  vaultMonthKey,
+  vaultMonthRow,
+} from "@/lib/vault-subscription";
 import { sendPurchaseReceipt } from "@/lib/purchase-emails.server";
 import { sendSeatHandoffEmails } from "@/lib/seat-handoff.server";
 
 let _sb: ReturnType<typeof createClient> | null = null;
 function db() {
-  if (!_sb) _sb = createClient(process.env['SUPABASE_URL']!, process.env['SUPABASE_SERVICE_ROLE_KEY']!);
+  if (!_sb)
+    _sb = createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_SERVICE_ROLE_KEY"]!);
   return _sb;
 }
 
@@ -35,7 +41,8 @@ async function sendReceipt(session: Stripe.Checkout.Session, env: StripeEnv) {
     if (session.mode === "payment" && session.payment_status !== "paid") return;
     const md = session.metadata ?? {};
     const kind = md["kind"] || (session.mode === "subscription" ? "plan" : "");
-    if (!purchaseKind(kind)) return console.warn(`Checkout ${session.id} has no purchase kind to confirm`);
+    if (!purchaseKind(kind))
+      return console.warn(`Checkout ${session.id} has no purchase kind to confirm`);
     const email = session.customer_details?.email || (await userEmail(md["userId"]));
     if (!email) return console.warn(`Checkout ${session.id} has no email to confirm`);
     const res = await sendPurchaseReceipt({
@@ -48,12 +55,14 @@ async function sendReceipt(session: Stripe.Checkout.Session, env: StripeEnv) {
       managed: md["managed_payments"] === "true",
       // Renew now: the session carries the renewal it paid for, so the confirmation names the date the plan now
       // renews on rather than leaving the member to guess (founder, 2026-11-08).
-      renewsOn: kind === "renew" && md["renews"] ? earlyRenewalTarget(md["renews"]).toISOString() : null,
+      renewsOn:
+        kind === "renew" && md["renews"] ? earlyRenewalTarget(md["renews"]).toISOString() : null,
       // A pause's confirmation carries the monthly schedule, so it never claims a lump sum was taken. There is no end
       // date: it runs until the member resumes (founder, 2026-11-21).
       pauseStarts: kind === "vault" ? (md["pauseStarts"] ?? null) : null,
     });
-    if (!res.sent) console.warn(`Purchase confirmation for ${session.id} (${env}) not sent: ${res.reason}`);
+    if (!res.sent)
+      console.warn(`Purchase confirmation for ${session.id} (${env}) not sent: ${res.reason}`);
   } catch (e) {
     console.error(`Purchase confirmation for ${session.id} failed:`, e);
   }
@@ -83,25 +92,42 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
     const count = Math.max(0, Math.min(SEAT_MAX, item.quantity ?? 1));
     for (let i = 0; i < count; i++) bought.push(tier);
   }
-  const { data: found, error: readErr } = await db().from("artist_seats")
+  const { data: found, error: readErr } = await db()
+    .from("artist_seats")
     .select("id, seat_index, member_user_id, invite_email, status")
     .eq("stripe_subscription_id", sub.id)
     .order("seat_index", { ascending: true });
   if (readErr) throw readErr;
-  const rows = (found ?? []) as { id: string; seat_index: number | null; member_user_id: string | null; invite_email: string | null; status: string }[];
-  if (!rows.length && !ownerId) return console.warn(`Seat subscription ${sub.id} has no owner to credit`);
+  const rows = (found ?? []) as {
+    id: string;
+    seat_index: number | null;
+    member_user_id: string | null;
+    invite_email: string | null;
+    status: string;
+  }[];
+  if (!rows.length && !ownerId)
+    return console.warn(`Seat subscription ${sub.id} has no owner to credit`);
 
-  const seatStatus = (seat?: (typeof rows)[number]) => seat?.status === "handed_off"
-    // The artist pays for their own plan now; nothing the old seat subscription does can reopen the owner's access.
-    ? "handed_off"
-    : seat?.status === "ended"
-      // An ended seat is finished. Buying seats again must never revive it, or the owner's access to that artist's
-      // catalog would reopen without the artist ever accepting a new seat (2026-11-08).
-      ? "ended"
-      : deleted
-        // Cancelled keeps the seat until the paid period ends; an unclaimed seat simply ends.
-        ? (seat?.member_user_id || seat?.invite_email ? "canceled" : "ended")
-        : (seat?.status && ["invited", "active", "unclaimed"].includes(seat.status) ? seat.status : seat?.member_user_id ? "active" : seat?.invite_email ? "invited" : "unclaimed");
+  const seatStatus = (seat?: (typeof rows)[number]) =>
+    seat?.status === "handed_off"
+      ? // The artist pays for their own plan now; nothing the old seat subscription does can reopen the owner's access.
+        "handed_off"
+      : seat?.status === "ended"
+        ? // An ended seat is finished. Buying seats again must never revive it, or the owner's access to that artist's
+          // catalog would reopen without the artist ever accepting a new seat (2026-11-08).
+          "ended"
+        : deleted
+          ? // Cancelled keeps the seat until the paid period ends; an unclaimed seat simply ends.
+            seat?.member_user_id || seat?.invite_email
+            ? "canceled"
+            : "ended"
+          : seat?.status && ["invited", "active", "unclaimed"].includes(seat.status)
+            ? seat.status
+            : seat?.member_user_id
+              ? "active"
+              : seat?.invite_email
+                ? "invited"
+                : "unclaimed";
 
   // A handed-off seat is the artist's own plan now, and an ended seat is finished. Neither takes one of this
   // subscription's paid places any more, and neither is ever written to again: the rest stay in order, so a handoff or
@@ -109,20 +135,42 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
   const live = rows.filter((r) => r.status !== "handed_off" && r.status !== "ended");
   for (let i = 0; i < bought.length; i++) {
     const seat = live[i];
-    const patch = { tier: bought[i]!, environment: env, current_period_end: periodEnd, status: seatStatus(seat), seat_index: i, updated_at: new Date().toISOString() };
+    const patch = {
+      tier: bought[i]!,
+      environment: env,
+      current_period_end: periodEnd,
+      status: seatStatus(seat),
+      seat_index: i,
+      updated_at: new Date().toISOString(),
+    };
     if (seat) {
-      const { error } = await db().from("artist_seats").update(patch as never).eq("id", seat.id);
+      const { error } = await db()
+        .from("artist_seats")
+        .update(patch as never)
+        .eq("id", seat.id);
       if (error) throw error;
     } else {
-      const { error } = await db().from("artist_seats").insert({ ...patch, owner_id: ownerId, stripe_subscription_id: sub.id, seat_index: i } as never);
+      const { error } = await db()
+        .from("artist_seats")
+        .insert({
+          ...patch,
+          owner_id: ownerId,
+          stripe_subscription_id: sub.id,
+          seat_index: i,
+        } as never);
       if (error) throw error;
     }
   }
   // Bought fewer than before: the seats past the paid count end. An artist who already accepted keeps theirs until the
   // paid period ends, so they never lose their catalog mid-year.
   for (const seat of live.slice(bought.length)) {
-    const { error } = await db().from("artist_seats")
-      .update({ status: seat.member_user_id ? "canceled" : "ended", updated_at: new Date().toISOString() } as never).eq("id", seat.id);
+    const { error } = await db()
+      .from("artist_seats")
+      .update({
+        status: seat.member_user_id ? "canceled" : "ended",
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("id", seat.id);
     if (error) throw error;
   }
 }
@@ -132,26 +180,51 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
  * artist's catalog ends here, and the owner's seat subscription is set to stop at the period already paid for. Nothing
  * is refunded or credited, and nothing is charged twice.
  */
-async function completeSeatHandoff(env: StripeEnv, sub: StripeSubscriptionLike, seatId: string, userId: string) {
-  const { data, error } = await db().from("artist_seats")
-    .select("id, owner_id, artist_name, tier, status, member_user_id, stripe_subscription_id, current_period_end")
-    .eq("id", seatId).maybeSingle();
+async function completeSeatHandoff(
+  env: StripeEnv,
+  sub: StripeSubscriptionLike,
+  seatId: string,
+  userId: string,
+) {
+  const { data, error } = await db()
+    .from("artist_seats")
+    .select(
+      "id, owner_id, artist_name, tier, status, member_user_id, stripe_subscription_id, current_period_end",
+    )
+    .eq("id", seatId)
+    .maybeSingle();
   if (error) throw error;
   const seat = data as {
-    id: string; owner_id: string; artist_name: string; tier: string; status: string;
-    member_user_id: string | null; stripe_subscription_id: string | null; current_period_end: string | null;
+    id: string;
+    owner_id: string;
+    artist_name: string;
+    tier: string;
+    status: string;
+    member_user_id: string | null;
+    stripe_subscription_id: string | null;
+    current_period_end: string | null;
   } | null;
   if (!seat) return console.warn(`Seat handoff ${sub.id}: seat ${seatId} was not found`);
   if (seat.member_user_id && seat.member_user_id !== userId) {
     return console.warn(`Seat handoff ${sub.id}: seat ${seatId} belongs to another artist`);
   }
-  const periodEnd = seat.current_period_end
-    ?? (sub.items.data[0]?.current_period_end ? new Date(sub.items.data[0].current_period_end * 1000).toISOString() : null);
+  const periodEnd =
+    seat.current_period_end ??
+    (sub.items.data[0]?.current_period_end
+      ? new Date(sub.items.data[0].current_period_end * 1000).toISOString()
+      : null);
   // Two Stripe events for the same handoff can arrive at once. Only the update that actually moves the row does the
   // billing change and the emails, so a retry can never take a second seat off the bill or send twice.
-  const { data: marked, error: seatErr } = await db().from("artist_seats").update({
-    status: "handed_off", handed_off_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-  } as never).eq("id", seat.id).neq("status", "handed_off").select("id");
+  const { data: marked, error: seatErr } = await db()
+    .from("artist_seats")
+    .update({
+      status: "handed_off",
+      handed_off_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as never)
+    .eq("id", seat.id)
+    .neq("status", "handed_off")
+    .select("id");
   if (seatErr) throw seatErr;
   if (!marked?.length) return;
 
@@ -171,7 +244,10 @@ async function completeSeatHandoff(env: StripeEnv, sub: StripeSubscriptionLike, 
       } else {
         const quantity = line.quantity ?? 1;
         await stripe.subscriptions.update(ownerSub.id, {
-          items: quantity <= 1 ? [{ id: line.id, deleted: true }] : [{ id: line.id, quantity: quantity - 1 }],
+          items:
+            quantity <= 1
+              ? [{ id: line.id, deleted: true }]
+              : [{ id: line.id, quantity: quantity - 1 }],
           proration_behavior: "none",
         });
       }
@@ -196,10 +272,12 @@ async function completeSeatHandoff(env: StripeEnv, sub: StripeSubscriptionLike, 
 function invoicePaymentIntent(invoice: unknown): string | null {
   const i = invoice as {
     payment_intent?: string | { id: string } | null;
-    payments?: { data?: { payment?: { payment_intent?: string | { id: string } | null } | null }[] } | null;
+    payments?: {
+      data?: { payment?: { payment_intent?: string | { id: string } | null } | null }[];
+    } | null;
   } | null;
   const value = i?.payment_intent ?? i?.payments?.data?.[0]?.payment?.payment_intent;
-  return typeof value === "string" ? value : value?.id ?? null;
+  return typeof value === "string" ? value : (value?.id ?? null);
 }
 
 /**
@@ -207,7 +285,11 @@ function invoicePaymentIntent(invoice: unknown): string | null {
  * writes no `subscriptions` row and sends no plan email, it only starts the pause it was bought for and keeps billing
  * $1.99 a month until the member resumes, which cancels it.
  */
-async function saveVaultSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted: boolean): Promise<boolean> {
+async function saveVaultSubscription(
+  sub: StripeSubscriptionLike,
+  env: StripeEnv,
+  deleted: boolean,
+): Promise<boolean> {
   if (!isVaultSubscription(sub, VAULT_LOOKUP_KEY)) return false;
   const { subscriptionId, starts, userId } = {
     subscriptionId: sub.id,
@@ -222,7 +304,9 @@ async function saveVaultSubscription(sub: StripeSubscriptionLike, env: StripeEnv
     return true;
   }
   if (!userId || !starts) {
-    console.warn(`Vault subscription ${subscriptionId} has no pause start on it, so no pause was started.`);
+    console.warn(
+      `Vault subscription ${subscriptionId} has no pause start on it, so no pause was started.`,
+    );
     return true;
   }
   await startVaultPause(db, { user_id: userId, subscriptionId, starts }, env);
@@ -230,14 +314,22 @@ async function saveVaultSubscription(sub: StripeSubscriptionLike, env: StripeEnv
 }
 
 /** The pause's subscription, or null when this id belongs to a plan, a seat or a kit. */
-async function vaultSub(env: StripeEnv, subscriptionId: string): Promise<StripeSubscriptionLike | null> {
-  const sub = (await createStripeClient(env).subscriptions.retrieve(subscriptionId)) as unknown as StripeSubscriptionLike;
+async function vaultSub(
+  env: StripeEnv,
+  subscriptionId: string,
+): Promise<StripeSubscriptionLike | null> {
+  const sub = (await createStripeClient(env).subscriptions.retrieve(
+    subscriptionId,
+  )) as unknown as StripeSubscriptionLike;
   return isVaultSubscription(sub, VAULT_LOOKUP_KEY) ? sub : null;
 }
 
 /** The end of the month an invoice paid for: the line's period in newer API versions, the invoice's own otherwise. */
 function invoicePeriodEnd(invoice: Stripe.Invoice): number | null {
-  const i = invoice as unknown as { period_end?: number | null; lines?: { data?: { period?: { end?: number | null } | null }[] } | null };
+  const i = invoice as unknown as {
+    period_end?: number | null;
+    lines?: { data?: { period?: { end?: number | null } | null }[] } | null;
+  };
   return i.lines?.data?.[0]?.period?.end ?? i.period_end ?? null;
 }
 
@@ -245,7 +337,11 @@ function invoicePeriodEnd(invoice: Stripe.Invoice): number | null {
  * One paid month of a pause is one `purchases` row, keyed to its invoice: the Billing Console can then refund a single
  * month, and a $0 trial invoice writes nothing. Returns true when the invoice belongs to a pause.
  */
-async function saveVaultMonth(env: StripeEnv, invoice: Stripe.Invoice, subscriptionId: string): Promise<boolean> {
+async function saveVaultMonth(
+  env: StripeEnv,
+  invoice: Stripe.Invoice,
+  subscriptionId: string,
+): Promise<boolean> {
   const sub = await vaultSub(env, subscriptionId);
   if (!sub) return false;
   const userId = sub.metadata?.["userId"] ?? null;
@@ -254,7 +350,11 @@ async function saveVaultMonth(env: StripeEnv, invoice: Stripe.Invoice, subscript
     return true;
   }
   const key = vaultMonthKey(invoice.id);
-  const { data } = await db().from("purchases").select("details").eq("stripe_session_id", key).maybeSingle();
+  const { data } = await db()
+    .from("purchases")
+    .select("details")
+    .eq("stripe_session_id", key)
+    .maybeSingle();
   const row = vaultMonthRow(
     {
       subscriptionId,
@@ -267,14 +367,19 @@ async function saveVaultMonth(env: StripeEnv, invoice: Stripe.Invoice, subscript
     data as { details?: Record<string, string> | null } | null,
   );
   if (!row) return true;
-  const { error } = await db().from("purchases").upsert({
-    user_id: userId,
-    stripe_session_id: row.key,
-    kind: "vault",
-    price_ids: [VAULT_LOOKUP_KEY],
-    details: row.details,
-    environment: env,
-  } as never, { onConflict: "stripe_session_id" });
+  const { error } = await db()
+    .from("purchases")
+    .upsert(
+      {
+        user_id: userId,
+        stripe_session_id: row.key,
+        kind: "vault",
+        price_ids: [VAULT_LOOKUP_KEY],
+        details: row.details,
+        environment: env,
+      } as never,
+      { onConflict: "stripe_session_id" },
+    );
   if (error) throw error;
   return true;
 }
@@ -289,9 +394,14 @@ async function saveVaultMonth(env: StripeEnv, invoice: Stripe.Invoice, subscript
  * What the row may say is `kitYearRow` in `branding-subscription.ts` with its test: an unpaid period never unlocks a
  * kit, and a refunded year can't be reopened by a late renewal or cancellation.
  */
-async function saveBrandingSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted: boolean) {
+async function saveBrandingSubscription(
+  sub: StripeSubscriptionLike,
+  env: StripeEnv,
+  deleted: boolean,
+) {
   if (!isBrandingSubscription(sub, BRANDING_LOOKUP_KEY)) return false;
-  const item = sub.items.data.find((i) => i.price.lookup_key === BRANDING_LOOKUP_KEY) ?? sub.items.data[0];
+  const item =
+    sub.items.data.find((i) => i.price.lookup_key === BRANDING_LOOKUP_KEY) ?? sub.items.data[0];
   const userId = sub.metadata?.["userId"] ?? null;
   const start = item?.current_period_start ?? sub.current_period_start ?? null;
   const end = item?.current_period_end ?? sub.current_period_end ?? null;
@@ -299,23 +409,43 @@ async function saveBrandingSubscription(sub: StripeSubscriptionLike, env: Stripe
   let invoiceId: string | null = null;
   let paid = false;
   try {
-    const invoices = await createStripeClient(env).invoices.list({ subscription: sub.id, status: "paid", limit: 1 });
+    const invoices = await createStripeClient(env).invoices.list({
+      subscription: sub.id,
+      status: "paid",
+      limit: 1,
+    });
     const invoice = invoices.data[0] ?? null;
     invoiceId = invoice?.id ?? null;
     paymentIntent = invoicePaymentIntent(invoice);
     // Paid, and for this period rather than an older year: nothing unlocks on an invoice that hasn't cleared.
-    paid = !!invoice && (invoice.amount_paid ?? 0) > 0 && (!start || (invoice.period_start ?? 0) >= start);
+    paid =
+      !!invoice &&
+      (invoice.amount_paid ?? 0) > 0 &&
+      (!start || (invoice.period_start ?? 0) >= start);
   } catch (e) {
     console.warn(`Branding subscription ${sub.id}: its paid invoice could not be read`, e);
   }
   const key = `sub:${sub.id}`;
-  const { data: existing, error: readErr } = await db().from("purchases").select("id, details").eq("stripe_session_id", key).maybeSingle();
+  const { data: existing, error: readErr } = await db()
+    .from("purchases")
+    .select("id, details")
+    .eq("stripe_session_id", key)
+    .maybeSingle();
   if (readErr) throw readErr;
   const row = kitYearRow(
     {
-      subscriptionId: sub.id, periodStart: start, periodEnd: end, invoiceId, paymentIntent, paid,
+      subscriptionId: sub.id,
+      periodStart: start,
+      periodEnd: end,
+      invoiceId,
+      paymentIntent,
+      paid,
       // A cancellation keeps the paid year; it only stops the page promising another one (founder, 2026-11-19).
-      renews: !deleted && !sub.cancel_at_period_end && sub.status !== "canceled" && sub.status !== "incomplete_expired",
+      renews:
+        !deleted &&
+        !sub.cancel_at_period_end &&
+        sub.status !== "canceled" &&
+        sub.status !== "incomplete_expired",
       canceledAt: deleted ? new Date().toISOString() : null,
     },
     existing as { details?: Record<string, string> | null } | null,
@@ -325,7 +455,10 @@ async function saveBrandingSubscription(sub: StripeSubscriptionLike, env: Stripe
   if (!userId) {
     // Created outside our checkout (e.g. in the Stripe dashboard): only update a row we already know.
     if (existing) {
-      const { error } = await db().from("purchases").update({ details: row.details } as never).eq("stripe_session_id", key);
+      const { error } = await db()
+        .from("purchases")
+        .update({ details: row.details } as never)
+        .eq("stripe_session_id", key);
       if (error) throw error;
     }
     return true;
@@ -340,21 +473,32 @@ async function saveBrandingSubscription(sub: StripeSubscriptionLike, env: Stripe
     // The paid year starts at the period's start, so the kit's twelve months count from the money, not the event.
     ...(row.created_at ? { created_at: row.created_at } : {}),
   };
-  const { error } = await db().from("purchases").upsert(saved as never, { onConflict: "stripe_session_id" });
+  const { error } = await db()
+    .from("purchases")
+    .upsert(saved as never, { onConflict: "stripe_session_id" });
   if (error) throw error;
   // The kit the year was bought for, named at checkout (founder, 2026-11-19): the link is exact, so the paid year
   // unlocks that kit and no other. A year bought without a kit waits for the next kit the member creates.
   const kitId = sub.metadata?.["kitId"];
   if (kitId && paid) {
-    const { error: linkErr } = await db().from("brand_kits").update({ paid_key: row.key } as never).eq("id", kitId).eq("user_id", userId);
+    const { error: linkErr } = await db()
+      .from("brand_kits")
+      .update({ paid_key: row.key } as never)
+      .eq("id", kitId)
+      .eq("user_id", userId);
     if (linkErr) console.warn(`Branding kit ${kitId} could not be linked to ${row.key}`, linkErr);
   }
   return true;
 }
 
 /** The kit's own subscription, or null when this id belongs to a plan or a seat. */
-async function brandingSub(env: StripeEnv, subscriptionId: string): Promise<StripeSubscriptionLike | null> {
-  const sub = (await createStripeClient(env).subscriptions.retrieve(subscriptionId)) as unknown as StripeSubscriptionLike;
+async function brandingSub(
+  env: StripeEnv,
+  subscriptionId: string,
+): Promise<StripeSubscriptionLike | null> {
+  const sub = (await createStripeClient(env).subscriptions.retrieve(
+    subscriptionId,
+  )) as unknown as StripeSubscriptionLike;
   return isBrandingSubscription(sub, BRANDING_LOOKUP_KEY) ? sub : null;
 }
 
@@ -362,11 +506,17 @@ async function brandingSub(env: StripeEnv, subscriptionId: string): Promise<Stri
 async function sendKitRenewal(env: StripeEnv, invoice: Stripe.Invoice, subscriptionId: string) {
   // The first year has its purchase receipt; this is about the years after it.
   if (invoice.billing_reason !== "subscription_cycle") return;
-  const { data } = await db().from("purchases").select("user_id, details").eq("stripe_session_id", `sub:${subscriptionId}`).maybeSingle();
+  const { data } = await db()
+    .from("purchases")
+    .select("user_id, details")
+    .eq("stripe_session_id", `sub:${subscriptionId}`)
+    .maybeSingle();
   const row = data as { user_id: string; details: Record<string, string> } | null;
   // A refunded year is closed, and a plan's invoice has no kit row at all.
   if (!row || row.details["refunded_at"]) return;
-  const email = (invoice as unknown as { customer_email?: string | null }).customer_email || (await userEmail(row.user_id));
+  const email =
+    (invoice as unknown as { customer_email?: string | null }).customer_email ||
+    (await userEmail(row.user_id));
   if (!email) return console.warn(`Kit renewal ${invoice.id}: there is no email to send to`);
   const { sendKitRenewalEmail } = await import("@/lib/branding-emails.server");
   const res = await sendKitRenewalEmail({
@@ -384,10 +534,18 @@ async function sendKitRenewal(env: StripeEnv, invoice: Stripe.Invoice, subscript
  * A kit's charge that didn't go through, first year or renewal. Returns true when the subscription is a kit's, so the
  * plan's own failed-payment email never fires for it.
  */
-async function sendKitPaymentFailed(env: StripeEnv, invoice: Stripe.Invoice, subscriptionId: string): Promise<boolean> {
+async function sendKitPaymentFailed(
+  env: StripeEnv,
+  invoice: Stripe.Invoice,
+  subscriptionId: string,
+): Promise<boolean> {
   const sub = await brandingSub(env, subscriptionId);
   if (!sub) return false;
-  const { data } = await db().from("purchases").select("details").eq("stripe_session_id", `sub:${subscriptionId}`).maybeSingle();
+  const { data } = await db()
+    .from("purchases")
+    .select("details")
+    .eq("stripe_session_id", `sub:${subscriptionId}`)
+    .maybeSingle();
   const details = (data as { details?: Record<string, string> } | null)?.details ?? null;
   // A refunded year is closed: no payment notice goes out for it.
   if (details?.["refunded_at"]) return true;
@@ -410,7 +568,8 @@ async function sendKitPaymentFailed(env: StripeEnv, invoice: Stripe.Invoice, sub
     amount: invoice.amount_due ?? null,
     currency: invoice.currency ?? null,
   });
-  if (!res.sent) console.warn(`Kit failed-payment email for ${subscriptionId} not sent: ${res.reason}`);
+  if (!res.sent)
+    console.warn(`Kit failed-payment email for ${subscriptionId} not sent: ${res.reason}`);
   return true;
 }
 
@@ -428,27 +587,44 @@ async function saveSubscription(sub: StripeSubscriptionLike, env: StripeEnv, del
   if (!row) return console.warn(`Skipping subscription ${sub.id}: price has no plan lookup key`);
   const userId = sub.metadata?.["userId"];
   if (userId) {
-    const { error } = await db().from("subscriptions").upsert({ ...row, user_id: userId } as never, { onConflict: "stripe_subscription_id" });
+    const { error } = await db()
+      .from("subscriptions")
+      .upsert({ ...row, user_id: userId } as never, { onConflict: "stripe_subscription_id" });
     if (error) throw error;
     // The artist's plan replaced their seat: record the handoff once the subscription exists, so their tier never dips.
     const seatId = sub.metadata?.["seatId"];
-    if (sub.metadata?.["kind"] === "seat_handoff" && seatId) await completeSeatHandoff(env, sub, seatId, userId);
+    if (sub.metadata?.["kind"] === "seat_handoff" && seatId)
+      await completeSeatHandoff(env, sub, seatId, userId);
   } else {
     // Created outside our checkout (e.g. in the Stripe dashboard): only update a row we already know.
-    const { error } = await db().from("subscriptions").update(row as never).eq("stripe_subscription_id", sub.id);
+    const { error } = await db()
+      .from("subscriptions")
+      .update(row as never)
+      .eq("stripe_subscription_id", sub.id);
     if (error) throw error;
   }
 }
 
 async function checkoutCompleted(session: Stripe.Checkout.Session, env: StripeEnv) {
   if (session.mode === "subscription" && session.subscription) {
-    return syncSubscription(env, typeof session.subscription === "string" ? session.subscription : session.subscription.id);
+    return syncSubscription(
+      env,
+      typeof session.subscription === "string" ? session.subscription : session.subscription.id,
+    );
   }
   const row = purchaseRow(session as Parameters<typeof purchaseRow>[0], env);
   if (!row) return console.warn(`Checkout ${session.id} has no paid one-time purchase to record`);
-  const { data: saved, error } = await db().from("purchases").upsert(row as never, { onConflict: "stripe_session_id" }).select("id, user_id, details").single();
+  const { data: saved, error } = await db()
+    .from("purchases")
+    .upsert(row as never, { onConflict: "stripe_session_id" })
+    .select("id, user_id, details")
+    .single();
   if (error) throw error;
-  const purchase = saved as unknown as { id: string; user_id: string; details: Record<string, string> } | null;
+  const purchase = saved as unknown as {
+    id: string;
+    user_id: string;
+    details: Record<string, string>;
+  } | null;
   // Renew now paid: move the next charge a year past the renewal it paid for. 500 on failure so Stripe retries.
   if (row.kind === "renew" && purchase) {
     const { admin, applyEarlyRenewal } = await import("@/lib/retention.server");
@@ -474,18 +650,21 @@ async function checkoutCompleted(session: Stripe.Checkout.Session, env: StripeEn
     try {
       const { admin, startRegistration } = await import("@/lib/registration.server");
       await startRegistration(await admin(), purchase);
-    } catch (e) { console.error(`Registration intake for ${purchase.id} failed:`, e); }
+    } catch (e) {
+      console.error(`Registration intake for ${purchase.id} failed:`, e);
+    }
   }
 }
 
 /** Marks the one-time purchase paid by this charge as refunded (kept for history, no longer unlocks anything). */
 async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
-  const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  const pi =
+    typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
   const stripe = createStripeClient(env);
   // Newer Stripe API versions put the invoice on the payment intent rather than the charge, so read both shapes.
   const invoiceOf = (value: unknown) => {
     const v = (value as { invoice?: string | { id: string } | null } | null)?.invoice;
-    return typeof v === "string" ? v : v?.id ?? null;
+    return typeof v === "string" ? v : (v?.id ?? null);
   };
   let invoiceId: string | null = null;
   if (pi) {
@@ -502,49 +681,92 @@ async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
     const subId = invoiceSubscriptionId(invoice);
     // A pause's month is its own purchase row (`vault:<invoice id>`): refunding it also cancels the Vault subscription,
     // so no later month is charged, while the pause itself keeps running to its end (founder, 2026-11-20).
-    const { data: monthRow } = await db().from("purchases").select("id, details").eq("stripe_session_id", vaultMonthKey(invoiceId)).maybeSingle();
+    const { data: monthRow } = await db()
+      .from("purchases")
+      .select("id, details")
+      .eq("stripe_session_id", vaultMonthKey(invoiceId))
+      .maybeSingle();
     const vaultMonth = monthRow as { id: string; details: Record<string, string> } | null;
     if (vaultMonth) {
-      const { error } = await db().from("purchases")
-        .update({ details: { ...vaultMonth.details, refunded_at: new Date().toISOString() } } as never).eq("id", vaultMonth.id);
+      const { error } = await db()
+        .from("purchases")
+        .update({
+          details: { ...vaultMonth.details, refunded_at: new Date().toISOString() },
+        } as never)
+        .eq("id", vaultMonth.id);
       if (error) throw error;
       const vaultSubId = vaultMonth.details["subscription"];
       if (vaultSubId) {
-        try { await stripe.subscriptions.cancel(vaultSubId); }
-        catch (e) { console.error(`Vault subscription ${vaultSubId}: could not be cancelled after its month was refunded`, e); }
+        try {
+          await stripe.subscriptions.cancel(vaultSubId);
+        } catch (e) {
+          console.error(
+            `Vault subscription ${vaultSubId}: could not be cancelled after its month was refunded`,
+            e,
+          );
+        }
       }
       return;
     }
     if (subId) {
-      const { data } = await db().from("purchases").select("id, details").eq("stripe_session_id", `sub:${subId}`).maybeSingle();
+      const { data } = await db()
+        .from("purchases")
+        .select("id, details")
+        .eq("stripe_session_id", `sub:${subId}`)
+        .maybeSingle();
       const purchase = data as { id: string; details: Record<string, string> } | null;
       if (purchase) {
-        const { error } = await db().from("purchases")
-          .update({ details: { ...purchase.details, refunded_at: new Date().toISOString() } } as never).eq("id", purchase.id);
+        const { error } = await db()
+          .from("purchases")
+          .update({
+            details: { ...purchase.details, refunded_at: new Date().toISOString() },
+          } as never)
+          .eq("id", purchase.id);
         if (error) throw error;
         // A refund ends that kit right away, so the year it paid for must not renew (founder, 2026-11-19).
         try {
           await stripe.subscriptions.cancel(subId);
         } catch (e) {
-          console.error(`Branding subscription ${subId}: could not be cancelled after its refund`, e);
+          console.error(
+            `Branding subscription ${subId}: could not be cancelled after its refund`,
+            e,
+          );
         }
       }
       return;
     }
   }
   if (!pi) return;
-  const sessions = await createStripeClient(env).checkout.sessions.list({ payment_intent: pi, limit: 1 });
+  const sessions = await createStripeClient(env).checkout.sessions.list({
+    payment_intent: pi,
+    limit: 1,
+  });
   const sessionId = sessions.data[0]?.id;
   if (!sessionId) return;
-  const { data: row } = await db().from("purchases").select("id, user_id, kind, details").eq("stripe_session_id", sessionId).maybeSingle();
-  const purchase = row as { id: string; user_id: string; kind: string; details: Record<string, string> } | null;
+  const { data: row } = await db()
+    .from("purchases")
+    .select("id, user_id, kind, details")
+    .eq("stripe_session_id", sessionId)
+    .maybeSingle();
+  const purchase = row as {
+    id: string;
+    user_id: string;
+    kind: string;
+    details: Record<string, string>;
+  } | null;
   if (!purchase) return;
-  const { error } = await db().from("purchases")
-    .update({ details: { ...purchase.details, refunded_at: new Date().toISOString() } } as never).eq("id", purchase.id);
+  const { error } = await db()
+    .from("purchases")
+    .update({ details: { ...purchase.details, refunded_at: new Date().toISOString() } } as never)
+    .eq("id", purchase.id);
   if (error) throw error;
   // A refunded generated contract that hasn't gone out yet goes back to needing payment; sent ones stay as they are.
   if (purchase.kind === "contract") {
-    await db().from("contracts").update({ paid_purchase_id: null } as never).eq("paid_purchase_id" as never, purchase.id as never).eq("status" as never, "draft" as never);
+    await db()
+      .from("contracts")
+      .update({ paid_purchase_id: null } as never)
+      .eq("paid_purchase_id" as never, purchase.id as never)
+      .eq("status" as never, "draft" as never);
   }
   if (purchase.kind === "renew") {
     const { undoEarlyRenewal } = await import("@/lib/retention.server");
@@ -553,21 +775,34 @@ async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
 }
 
 /** A subscription just set to cancel (it wasn't before this event) gets the "your plan ends on DATE" email once. */
-async function cancelNotice(env: StripeEnv, sub: StripeSubscriptionLike, previous: Record<string, unknown> | undefined) {
+async function cancelNotice(
+  env: StripeEnv,
+  sub: StripeSubscriptionLike,
+  previous: Record<string, unknown> | undefined,
+) {
   // A kit's own subscription is not the plan, so its cancellation never sends the "your plan ends" email, and neither
   // does a pause's Vault subscription, which is cancelled whenever a pause ends.
   if (sub.items.data.some((i) => i.price.lookup_key === BRANDING_LOOKUP_KEY)) return;
   if (isVaultSubscription(sub, VAULT_LOOKUP_KEY)) return;
   const now = !!sub.cancel_at_period_end || !!sub.cancel_at;
-  const was = previous && (("cancel_at_period_end" in previous && previous["cancel_at_period_end"] === false) || ("cancel_at" in previous && previous["cancel_at"] === null));
+  const was =
+    previous &&
+    (("cancel_at_period_end" in previous && previous["cancel_at_period_end"] === false) ||
+      ("cancel_at" in previous && previous["cancel_at"] === null));
   if (!now || !was) return;
   const row = subscriptionRow(sub, env);
   let userId = sub.metadata?.["userId"];
   if (!userId) {
-    const { data } = await db().from("subscriptions").select("user_id").eq("stripe_subscription_id", sub.id).maybeSingle();
+    const { data } = await db()
+      .from("subscriptions")
+      .select("user_id")
+      .eq("stripe_subscription_id", sub.id)
+      .maybeSingle();
     userId = (data as { user_id?: string } | null)?.user_id;
   }
-  const endsOn = sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : row?.current_period_end;
+  const endsOn = sub.cancel_at
+    ? new Date(sub.cancel_at * 1000).toISOString()
+    : row?.current_period_end;
   if (!userId || !endsOn) return;
   const { admin, sendCancelledEmail } = await import("@/lib/retention.server");
   await sendCancelledEmail(await admin(), userId, sub.id, endsOn);
@@ -575,17 +810,24 @@ async function cancelNotice(env: StripeEnv, sub: StripeSubscriptionLike, previou
 
 /** Renewals: the invoice points at its subscription (location differs by Stripe API version). */
 function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
-  const i = invoice as unknown as { subscription?: string | { id: string } | null; parent?: { subscription_details?: { subscription?: string | { id: string } } | null } | null };
+  const i = invoice as unknown as {
+    subscription?: string | { id: string } | null;
+    parent?: { subscription_details?: { subscription?: string | { id: string } } | null } | null;
+  };
   const s = i.parent?.subscription_details?.subscription ?? i.subscription;
-  return typeof s === "string" ? s : s?.id ?? null;
+  return typeof s === "string" ? s : (s?.id ?? null);
 }
 
 export const Route = createFileRoute("/api/public/payments/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const env: StripeEnv = new URL(request.url).searchParams.get("env") === "live" ? "live" : "sandbox";
-        let event: { type: string; data: { object: any; previous_attributes?: Record<string, unknown> } }; // eslint-disable-line @typescript-eslint/no-explicit-any
+        const env: StripeEnv =
+          new URL(request.url).searchParams.get("env") === "live" ? "live" : "sandbox";
+        let event: {
+          type: string;
+          data: { object: unknown; previous_attributes?: Record<string, unknown> };
+        };
         try {
           event = await verifyWebhook(request, env);
         } catch (e) {
@@ -602,13 +844,20 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
               await sendReceipt(event.data.object as Stripe.Checkout.Session, env);
               break;
             case "customer.subscription.created":
-              await syncSubscription(env, event.data.object.id);
+              await syncSubscription(env, (event.data.object as { id: string }).id);
               break;
             case "customer.subscription.updated":
-              await syncSubscription(env, event.data.object.id);
+              await syncSubscription(env, (event.data.object as { id: string }).id);
               // Never fails the event: the email is a courtesy, the plan state is already saved.
-              try { await cancelNotice(env, event.data.object as StripeSubscriptionLike, event.data.previous_attributes); }
-              catch (e) { console.error("Cancel email failed:", e); }
+              try {
+                await cancelNotice(
+                  env,
+                  event.data.object as StripeSubscriptionLike,
+                  event.data.previous_attributes,
+                );
+              } catch (e) {
+                console.error("Cancel email failed:", e);
+              }
               break;
             case "customer.subscription.deleted": {
               const sub = event.data.object as unknown as StripeSubscriptionLike;
@@ -616,26 +865,37 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
               // A plan that is gone (cancelled in the portal, or by us while paused) leaves a live pause nothing to return
               // to: end it and stop the Vault fee rather than bill $1.99 a month forever (founder, 2026-11-21). A Vault,
               // kit or seat subscription is not a plan and must not touch a pause.
-              const planGone = sub.metadata?.["kind"] === "plan" || !!PRICE_TIER[sub.items.data[0]?.price.lookup_key ?? ""];
+              const planGone =
+                sub.metadata?.["kind"] === "plan" ||
+                !!PRICE_TIER[sub.items.data[0]?.price.lookup_key ?? ""];
               const userId = sub.metadata?.["userId"];
               if (planGone && userId) {
                 try {
                   const { admin, endPauseWithoutPlan } = await import("@/lib/retention.server");
                   await endPauseWithoutPlan(await admin(), userId, env);
-                } catch (e) { console.error("Ending the pause after its plan was deleted failed:", e); }
+                } catch (e) {
+                  console.error("Ending the pause after its plan was deleted failed:", e);
+                }
               }
               break;
             }
             case "invoice.paid": {
-              const id = invoiceSubscriptionId(event.data.object);
+              const id = invoiceSubscriptionId(event.data.object as Stripe.Invoice);
               if (id) {
                 // A pause's month is one row per paid invoice; a $0 trial invoice writes nothing.
-                const vaultMonth = await saveVaultMonth(env, event.data.object as Stripe.Invoice, id);
+                const vaultMonth = await saveVaultMonth(
+                  env,
+                  event.data.object as Stripe.Invoice,
+                  id,
+                );
                 await syncSubscription(env, id);
                 if (!vaultMonth) {
                   // A kit's year renewed: one email per invoice, never failing the event.
-                  try { await sendKitRenewal(env, event.data.object as Stripe.Invoice, id); }
-                  catch (e) { console.error("Kit renewal email failed:", e); }
+                  try {
+                    await sendKitRenewal(env, event.data.object as Stripe.Invoice, id);
+                  } catch (e) {
+                    console.error("Kit renewal email failed:", e);
+                  }
                 }
               }
               break;
@@ -644,14 +904,21 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
               // A yearly charge that didn't go through: tell them how to fix the card before anything is cut off.
               const invoice = event.data.object as Stripe.Invoice;
               const id = invoiceSubscriptionId(invoice);
-              const firstOrRenewal = invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create";
+              const firstOrRenewal =
+                invoice.billing_reason === "subscription_cycle" ||
+                invoice.billing_reason === "subscription_create";
               if (id && firstOrRenewal) {
                 // A pause whose monthly Vault fee can no longer be collected ends, and the account moves to the Free plan:
                 // Stripe retries first, and only the attempt with no retry left acts, so a bank hiccup never cuts a pause
                 // short (founder, 2026-11-20).
                 const vault = await vaultSub(env, id);
                 if (vault) {
-                  if (vaultCollectionGaveUp({ nextPaymentAttempt: invoice.next_payment_attempt ?? null, status: vault.status })) {
+                  if (
+                    vaultCollectionGaveUp({
+                      nextPaymentAttempt: invoice.next_payment_attempt ?? null,
+                      status: vault.status,
+                    })
+                  ) {
                     const { admin, failVaultPause } = await import("@/lib/retention.server");
                     await failVaultPause(await admin(), id, env);
                   }
@@ -665,13 +932,24 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
                 }
                 if (invoice.billing_reason === "subscription_cycle") {
                   await syncSubscription(env, id);
-                  const { data } = await db().from("subscriptions").select("user_id, price_id").eq("stripe_subscription_id", id).maybeSingle();
+                  const { data } = await db()
+                    .from("subscriptions")
+                    .select("user_id, price_id")
+                    .eq("stripe_subscription_id", id)
+                    .maybeSingle();
                   const sub = data as { user_id: string; price_id: string } | null;
                   if (sub) {
                     try {
                       const { sendPaymentFailedEmail } = await import("@/lib/retention.server");
-                      await sendPaymentFailedEmail(sub.user_id, sub.price_id, invoice.id ?? id, invoice.attempt_count ?? 1);
-                    } catch (e) { console.error("Payment failed email failed:", e); }
+                      await sendPaymentFailedEmail(
+                        sub.user_id,
+                        sub.price_id,
+                        invoice.id ?? id,
+                        invoice.attempt_count ?? 1,
+                      );
+                    } catch (e) {
+                      console.error("Payment failed email failed:", e);
+                    }
                   }
                 }
               }

@@ -21,10 +21,13 @@ export const lookupFor = (society: string): LookupKind =>
 
 /** The one check button for an agency: the method it searches by, and the words on the button. */
 export const checkLabel = (society: string, name: string) =>
-  lookupFor(society) === "isrc" ? "Copy ISRC & Check Repertoire ↗" : `Copy Writer Name & Check ${name} ↗`;
+  lookupFor(society) === "isrc"
+    ? "Copy ISRC & Check Repertoire ↗"
+    : `Copy Writer Name & Check ${name} ↗`;
 
 /** What the member copies with that button. */
-export const checkWhat = (society: string) => (lookupFor(society) === "isrc" ? "ISRC" : "writer name");
+export const checkWhat = (society: string) =>
+  lookupFor(society) === "isrc" ? "ISRC" : "writer name";
 
 /**
  * Said once, under a writer-based treatment (founder, 2026-11-15): names have to match the registration exactly, which is

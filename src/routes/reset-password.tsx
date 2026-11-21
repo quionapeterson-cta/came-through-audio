@@ -16,7 +16,10 @@ export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       { title: "Reset Password — Came Through Audio" },
-      { name: "description", content: "Choose a new password for your Came Through Audio account." },
+      {
+        name: "description",
+        content: "Choose a new password for your Came Through Audio account.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -36,7 +39,11 @@ function ResetPassword() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   // The staff invite lands here with ?invite=1 (founder, 2026-11-05): same page, but it has to say what it is for.
-  const [invite] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("invite") === "1");
+  const [invite] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("invite") === "1",
+  );
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -44,19 +51,35 @@ function ResetPassword() {
     });
     // The token in the link is processed on load; give it a moment before calling the link expired.
     const t = setTimeout(() => {
-      void supabase.auth.getSession().then(({ data }) => setState((s) => (s === "checking" ? (data.session ? "ready" : "expired") : s)));
+      void supabase.auth
+        .getSession()
+        .then(({ data }) =>
+          setState((s) => (s === "checking" ? (data.session ? "ready" : "expired") : s)),
+        );
     }, 1500);
-    return () => { sub.subscription.unsubscribe(); clearTimeout(t); };
+    return () => {
+      sub.subscription.unsubscribe();
+      clearTimeout(t);
+    };
   }, []);
 
   async function save(e: FormEvent) {
     e.preventDefault();
-    if (!passwordValid(password)) { toast.error("Your new password needs to pass every check."); return; }
-    if (password !== confirm) { toast.error("The passwords don't match."); return; }
+    if (!passwordValid(password)) {
+      toast.error("Your new password needs to pass every check.");
+      return;
+    }
+    if (password !== confirm) {
+      toast.error("The passwords don't match.");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Password updated. You're logged in.");
     navigate({ to: "/workspace", search: { tab: undefined } });
   }
@@ -76,41 +99,92 @@ function ResetPassword() {
 
   return (
     <div className="min-h-screen bg-ink text-ink-foreground">
-      <header className="mx-auto flex max-w-5xl items-center px-4 py-5 sm:px-6"><BrandLogo /></header>
+      <header className="mx-auto flex max-w-5xl items-center px-4 py-5 sm:px-6">
+        <BrandLogo />
+      </header>
       <main className="mx-auto max-w-md px-4 py-10 sm:px-6">
         <div className="rounded-2xl bg-background p-8 text-foreground shadow-2xl">
           <KeyRound className="h-8 w-8 text-primary" />
           {state === "checking" ? (
-            <p className="mt-4 flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Checking your reset link…</p>
+            <p className="mt-4 flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Checking your reset link…
+            </p>
           ) : state === "ready" ? (
             <form onSubmit={save} className="mt-4 space-y-4">
-              <h1 className="text-2xl font-bold">{invite ? "Welcome to the team" : "Choose a new password"}</h1>
+              <h1 className="text-2xl font-bold">
+                {invite ? "Welcome to the team" : "Choose a new password"}
+              </h1>
               {invite && (
                 <p className="text-sm text-muted-foreground">
-                  This email is your staff sign-in. Choose a password, then open Admin → My Queue from your workspace.
-                  Your member account, if you have one, stays on its own email.
+                  This email is your staff sign-in. Choose a password, then open Admin → My Queue
+                  from your workspace. Your member account, if you have one, stays on its own email.
                 </p>
               )}
-              <PasswordField id="new-password" label="New password" value={password} onChange={setPassword} />
+              <PasswordField
+                id="new-password"
+                label="New password"
+                value={password}
+                onChange={setPassword}
+              />
               <div className="space-y-1.5">
                 <Label htmlFor="confirm-password">Confirm new password</Label>
-                <Input id="confirm-password" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
-                {confirm && <p className={`text-xs ${confirm === password ? "text-primary" : "text-destructive"}`}>{confirm === password ? "Passwords match" : "Passwords don't match yet"}</p>}
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
+                />
+                {confirm && (
+                  <p
+                    className={`text-xs ${confirm === password ? "text-primary" : "text-destructive"}`}
+                  >
+                    {confirm === password ? "Passwords match" : "Passwords don't match yet"}
+                  </p>
+                )}
               </div>
-              <Button type="submit" className="h-12 w-full" disabled={busy || !passwordValid(password) || password !== confirm}>{busy ? "Saving…" : "Save new password"}</Button>
+              <Button
+                type="submit"
+                className="h-12 w-full"
+                disabled={busy || !passwordValid(password) || password !== confirm}
+              >
+                {busy ? "Saving…" : "Save new password"}
+              </Button>
             </form>
           ) : sent ? (
             <div className="mt-4 space-y-2">
               <h1 className="text-2xl font-bold">Check your email</h1>
-              <p className="text-muted-foreground">If an account uses that email, a new reset link is on its way. It expires in one hour.</p>
+              <p className="text-muted-foreground">
+                If an account uses that email, a new reset link is on its way. It expires in one
+                hour.
+              </p>
             </div>
           ) : (
             <form onSubmit={resend} className="mt-4 space-y-4">
               <h1 className="text-2xl font-bold">This reset link expired</h1>
-              <p className="text-sm text-muted-foreground">Reset links work once and expire after an hour. Enter your email for a new one.</p>
-              <div className="space-y-1.5"><Label htmlFor="reset-email">Email</Label><Input id="reset-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-              <Button type="submit" className="h-12 w-full" disabled={busy}>{busy ? "Sending…" : "Send a new link"}</Button>
-              <p className="text-center text-sm"><Link to="/" className="font-semibold text-primary">Back to home</Link></p>
+              <p className="text-sm text-muted-foreground">
+                Reset links work once and expire after an hour. Enter your email for a new one.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="h-12 w-full" disabled={busy}>
+                {busy ? "Sending…" : "Send a new link"}
+              </Button>
+              <p className="text-center text-sm">
+                <Link to="/" className="font-semibold text-primary">
+                  Back to home
+                </Link>
+              </p>
             </form>
           )}
         </div>

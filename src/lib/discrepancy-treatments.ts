@@ -1,5 +1,11 @@
 import { readIntake } from "@/lib/intake-session";
-import { compareList, stripVersion, versionTail, type ListResult, type ListWork } from "@/lib/agency-lists";
+import {
+  compareList,
+  stripVersion,
+  versionTail,
+  type ListResult,
+  type ListWork,
+} from "@/lib/agency-lists";
 import { agencyKind, registersRecording } from "@/lib/agency-kind";
 import { isCatalogId } from "@/lib/ids";
 import { titleKey } from "@/lib/agency-lists";
@@ -24,7 +30,14 @@ import type { CatalogAction, CatalogField } from "@/lib/catalog-links";
 export const STORED_LISTS_KEY = "agency-lists";
 
 export type StoredLists = {
-  byId: Record<string, { file: string; result: ListResult; /** Which reading of the file produced this result. */ reader?: number | undefined }>;
+  byId: Record<
+    string,
+    {
+      file: string;
+      result: ListResult;
+      /** Which reading of the file produced this result. */ reader?: number | undefined;
+    }
+  >;
   shownId?: string | undefined;
 };
 
@@ -38,7 +51,11 @@ export type StoredLists = {
 export const STORED_READER = 4;
 
 /** "Clean Version", "clean", "Clean" — the same version name to a member's eye. */
-const bareVersion = (v: string) => norm(v).replace(/\bversion\b/g, "").replace(/\s+/g, " ").trim();
+const bareVersion = (v: string) =>
+  norm(v)
+    .replace(/\bversion\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 const sameVersion = (a: string, b: string) => bareVersion(a) === bareVersion(b);
 
 /**
@@ -47,13 +64,19 @@ const sameVersion = (a: string, b: string) => bareVersion(a) === bareVersion(b);
  * version it names, and an entry that names none takes one no other entry has claimed — the list's own order, never a guess
  * about which recording is which.
  */
-function spreadWorks(group: CatalogTrack[], candidates: ListWork[], set: (t: CatalogTrack, w: ListWork) => void) {
+function spreadWorks(
+  group: CatalogTrack[],
+  candidates: ListWork[],
+  set: (t: CatalogTrack, w: ListWork) => void,
+) {
   const versionOf = (t: CatalogTrack) => (t.metadata.version ?? "").trim() || versionTail(t.title);
   const claimed = new Set<ListWork>();
   for (const t of group) {
     const named = versionOf(t);
     if (!named) continue;
-    const pick = candidates.find((w) => !claimed.has(w) && !!w.version && sameVersion(w.version, named));
+    const pick = candidates.find(
+      (w) => !claimed.has(w) && !!w.version && sameVersion(w.version, named),
+    );
     if (!pick) continue;
     claimed.add(pick);
     set(t, pick);
@@ -90,13 +113,20 @@ export function worksFromResult(result: ListResult): ListWork[] {
 }
 
 /** The saved comparisons read again by today's rules, or the same object when they were already read by them. */
-export function rereadStored(stored: StoredLists | undefined, tracks: CatalogTrack[], societies: { id: string; name: string }[] = []): StoredLists | undefined {
+export function rereadStored(
+  stored: StoredLists | undefined,
+  tracks: CatalogTrack[],
+  societies: { id: string; name: string }[] = [],
+): StoredLists | undefined {
   if (!stored) return stored;
   let changed = false;
   const byId: StoredLists["byId"] = {};
   for (const [societyId, entry] of Object.entries(stored.byId)) {
     const works = worksFromResult(entry.result);
-    if (entry.reader === STORED_READER || !works.length) { byId[societyId] = entry; continue; }
+    if (entry.reader === STORED_READER || !works.length) {
+      byId[societyId] = entry;
+      continue;
+    }
     changed = true;
     byId[societyId] = {
       ...entry,
@@ -146,7 +176,14 @@ export const KIND_LABEL: Record<DisagreementKind, string> = {
 };
 
 /** What kind of fix the difference takes. The chart decides which buttons to offer from this. */
-export type TreatmentAction = "check-distributor" | "add-version" | "keep-both" | "adopt" | "alternate-title" | "waiting" | "review";
+export type TreatmentAction =
+  | "check-distributor"
+  | "add-version"
+  | "keep-both"
+  | "adopt"
+  | "alternate-title"
+  | "waiting"
+  | "review";
 
 export type Treatment = {
   headline: string;
@@ -166,14 +203,16 @@ export type Treatment = {
 export const TREATMENTS = {
   checkDistributor: {
     headline: "Check your distributor for which copy is right",
-    detail: "Your catalog and the agency list different titles for ISRC {isrc}. Check the public repertoire listing and your distributor dashboard, then update the mismatched side.",
+    detail:
+      "Your catalog and the agency list different titles for ISRC {isrc}. Check the public repertoire listing and your distributor dashboard, then update the mismatched side.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
   } as Treatment,
   crossAgency: {
     headline: "Check your distributor for which copy is right",
-    detail: "Two agencies disagree about ISRC {isrc} for this same recording. Check the public repertoire listing and your distributor dashboard, then bring the other agency onto the copy your distributor delivered.",
+    detail:
+      "Two agencies disagree about ISRC {isrc} for this same recording. Check the public repertoire listing and your distributor dashboard, then bring the other agency onto the copy your distributor delivered.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
@@ -182,14 +221,16 @@ export const TREATMENTS = {
   // card where the titles agree.
   isrcMismatch: {
     headline: "Check your distributor for which copy is right",
-    detail: "Your catalog and the agency list different ISRCs for this recording. Check the public repertoire listing and your distributor dashboard, then correct the side that holds the wrong code.",
+    detail:
+      "Your catalog and the agency list different ISRCs for this recording. Check the public repertoire listing and your distributor dashboard, then correct the side that holds the wrong code.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
   } as Treatment,
   addVersion: {
     headline: "Add the version",
-    detail: "Two distinct ISRCs share this song title. Verify both recordings in the public repertoire search, then add the missing version to your catalog.",
+    detail:
+      "Two distinct ISRCs share this song title. Verify both recordings in the public repertoire search, then add the missing version to your catalog.",
     primary: "+ Add Version to Catalog",
     secondary: "Check Repertoire ↗",
     action: "add-version",
@@ -198,7 +239,8 @@ export const TREATMENTS = {
   // and nothing disagrees (founder, 2026-11-14): the pair is the thing to act on, not a mismatch.
   pairVersions: {
     headline: "Name each version of this title",
-    detail: "The agency holds more than one ISRC under this title, so this song has more than one recording. Your catalog holds both: name the version on each entry so the agency pairs each code with the right master.",
+    detail:
+      "The agency holds more than one ISRC under this title, so this song has more than one recording. Your catalog holds both: name the version on each entry so the agency pairs each code with the right master.",
     primary: "+ Add Version to Catalog",
     secondary: "Check Repertoire ↗",
     action: "add-version",
@@ -206,42 +248,48 @@ export const TREATMENTS = {
   // Two agencies describing one code two ways: one code names one recording, so the audio itself is in question.
   agencyVersion: {
     headline: "Check with your distributor which version this ISRC is",
-    detail: "Two agencies describe ISRC {isrc} as different versions. One code names one recording, so confirm the master your distributor delivered, then bring the other agency onto it and add the version it names to your catalog.",
+    detail:
+      "Two agencies describe ISRC {isrc} as different versions. One code names one recording, so confirm the master your distributor delivered, then bring the other agency onto it and add the version it names to your catalog.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
   } as Treatment,
   keepBoth: {
     headline: "Register both ISRCs and mark the old release Retired",
-    detail: "Keep the newer ISRC active for current royalties, verify the older ISRC in repertoire search, and set the old release status to Retired in your catalog.",
+    detail:
+      "Keep the newer ISRC active for current royalties, verify the older ISRC in repertoire search, and set the old release status to Retired in your catalog.",
     primary: "Manage Versions in Catalog",
     secondary: "Check Repertoire ↗",
     action: "keep-both",
   } as Treatment,
   submit: {
     headline: "Submit recording to agency",
-    detail: "ISRC {isrc} is in your catalog but missing from the public repertoire database. Double-check via ISRC Search, then submit it through your distributor or agency portal.",
+    detail:
+      "ISRC {isrc} is in your catalog but missing from the public repertoire database. Double-check via ISRC Search, then submit it through your distributor or agency portal.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Open Catalog Entry",
     action: "review",
   } as Treatment,
   adoptAgency: {
     headline: "Add this ISRC from the agency",
-    detail: "The agency holds ISRC {isrc} for this recording and your catalog has none. Take theirs, so the two records match and the recording is never left unmatched.",
+    detail:
+      "The agency holds ISRC {isrc} for this recording and your catalog has none. Take theirs, so the two records match and the recording is never left unmatched.",
     primary: "Copy Agency ISRC & Check Repertoire ↗",
     secondary: "Open Catalog Entry",
     action: "adopt",
   } as Treatment,
   waiting: {
     headline: "Waiting for the release",
-    detail: "The agency has nothing to match yet because this release is not out. Nothing is wrong here; check the public repertoire again after release day.",
+    detail:
+      "The agency has nothing to match yet because this release is not out. Nothing is wrong here; check the public repertoire again after release day.",
     primary: "Check Repertoire ↗",
     secondary: "Open Catalog Entry",
     action: "waiting",
   } as Treatment,
   review: {
     headline: "Review the difference",
-    detail: "The details differ but neither side is clearly wrong. Open the song, compare the values, and fix the copy you control.",
+    detail:
+      "The details differ but neither side is clearly wrong. Open the song, compare the values, and fix the copy you control.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Open Catalog Entry",
     action: "review",
@@ -250,21 +298,24 @@ export const TREATMENTS = {
   // and four silent ones (founder, 2026-11-14).
   iswc: {
     headline: "Check which ISWC is right",
-    detail: "The ISWC belongs to the composition, not the recording, so the two sides should always agree on it. Confirm it in the public repertoire, then correct the side that is wrong.",
+    detail:
+      "The ISWC belongs to the composition, not the recording, so the two sides should always agree on it. Confirm it in the public repertoire, then correct the side that is wrong.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
   } as Treatment,
   writerAtAgency: {
     headline: "Register {name} at the agency",
-    detail: "Your catalog names {name}, and the agency's registration does not. Until they are added there, their share of this song cannot be matched or paid.",
+    detail:
+      "Your catalog names {name}, and the agency's registration does not. Until they are added there, their share of this song cannot be matched or paid.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
   } as Treatment,
   writerInAgency: {
     headline: "Decide whether {name} belongs on this song",
-    detail: "The agency's registration names {name}, who is not in your catalog. Add them here if they wrote on it; if they did not, ask the agency to remove them so the splits match your split sheet.",
+    detail:
+      "The agency's registration names {name}, who is not in your catalog. Add them here if they wrote on it; if they did not, ask the agency to remove them so the splits match your split sheet.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
@@ -274,7 +325,8 @@ export const TREATMENTS = {
   // whether the work comes back at all, so the rule says so and the copy hands over the full name to use.
   spelling: {
     headline: "Match the writer's full registered name",
-    detail: "Repertoire search finds a writer only when the name matches the registration exactly — a missing middle name finds nothing, and neither does a different spelling. Put the full registered name in My Catalog and search that at the agency.",
+    detail:
+      "Repertoire search finds a writer only when the name matches the registration exactly — a missing middle name finds nothing, and neither does a different spelling. Put the full registered name in My Catalog and search that at the agency.",
     primary: "Copy Writer Name & Check Repertoire ↗",
     secondary: "Fix the Writers in My Catalog",
     action: "check-distributor",
@@ -283,21 +335,24 @@ export const TREATMENTS = {
   // the catalog's title is wrong. The member knows which, so the card offers both and decides nothing for them.
   alternateTitle: {
     headline: "Alternate Title? Fix in Catalog",
-    detail: "The agency files this work under a different name than your catalog. If that name is another title this song goes by, save it as an alternate title and both records agree; if your title is the wrong one, correct it in My Catalog.",
+    detail:
+      "The agency files this work under a different name than your catalog. If that name is another title this song goes by, save it as an alternate title and both records agree; if your title is the wrong one, correct it in My Catalog.",
     primary: "Save as Alternate Title",
     secondary: "Fix the Title in My Catalog",
     action: "alternate-title",
   } as Treatment,
   ipi: {
     headline: "Check which IPI is right",
-    detail: "A writer's IPI is their permanent ID, and the two records hold different numbers. Confirm it in the public repertoire, then correct the side that is wrong.",
+    detail:
+      "A writer's IPI is their permanent ID, and the two records hold different numbers. Confirm it in the public repertoire, then correct the side that is wrong.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
   } as Treatment,
   share: {
     headline: "Settle the split",
-    detail: "The two records give this writer different shares. Match the agency's percentage to your split sheet, or fix the split sheet if that is the side that is wrong.",
+    detail:
+      "The two records give this writer different shares. Match the agency's percentage to your split sheet, or fix the split sheet if that is the side that is wrong.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
@@ -312,7 +367,8 @@ const fill = (sentence: string, isrc: string, name = "") =>
 export const treatmentText = (t: Treatment, isrc: string, name = "") => fill(t.detail, isrc, name);
 
 /** The treatment's headline, written for this row, so no `{name}` ever reaches the screen. */
-export const treatmentHeadline = (t: Treatment, isrc: string, name = "") => fill(t.headline, isrc, name);
+export const treatmentHeadline = (t: Treatment, isrc: string, name = "") =>
+  fill(t.headline, isrc, name);
 
 /**
  * The writer a writer-specific issue is about, read from the issue sentence the comparison wrote (the name leads it), so a
@@ -336,13 +392,18 @@ export function nameFromIssue(issue: string): string {
  * The rule for one issue on its own, whatever the row's headline difference is: every difference the comparison found gets
  * the fix it actually needs (founder, 2026-11-14).
  */
-export function treatmentForIssue(issue: string, ctx: { catalogIsrc: string; agencyIsrc: string }): Treatment {
+export function treatmentForIssue(
+  issue: string,
+  ctx: { catalogIsrc: string; agencyIsrc: string },
+): Treatment {
   const text = issue.toLowerCase();
   if (/^not on the /.test(text)) return TREATMENTS.submit;
   if (/iswc/.test(text)) return TREATMENTS.iswc;
-  if (/^the agency has version /.test(text) || /second isrc for /.test(text)) return TREATMENTS.addVersion;
+  if (/^the agency has version /.test(text) || /second isrc for /.test(text))
+    return TREATMENTS.addVersion;
   // An agency name that differs is an alternate title before it is anything else (founder, 2026-11-15).
-  if (/^the agency calls it/.test(text) || /^the agency registers this work as/.test(text)) return TREATMENTS.alternateTitle;
+  if (/^the agency calls it/.test(text) || /^the agency registers this work as/.test(text))
+    return TREATMENTS.alternateTitle;
   if (/\.? isn't on the agency's registration$/.test(text)) return TREATMENTS.writerAtAgency;
   if (/who isn't in your catalog$/.test(text)) return TREATMENTS.writerInAgency;
   if (/spelling/.test(text)) return TREATMENTS.spelling;
@@ -351,22 +412,42 @@ export function treatmentForIssue(issue: string, ctx: { catalogIsrc: string; age
   if (/retire|used to carry|earlier/.test(text)) return TREATMENTS.keepBoth;
   if (/isrc|code/.test(text)) {
     if (!ctx.catalogIsrc && ctx.agencyIsrc) return TREATMENTS.adoptAgency;
-    if (ctx.catalogIsrc && ctx.agencyIsrc && ctx.catalogIsrc.toUpperCase() !== ctx.agencyIsrc.toUpperCase()) return TREATMENTS.checkDistributor;
+    if (
+      ctx.catalogIsrc &&
+      ctx.agencyIsrc &&
+      ctx.catalogIsrc.toUpperCase() !== ctx.agencyIsrc.toUpperCase()
+    )
+      return TREATMENTS.checkDistributor;
     return TREATMENTS.submit;
   }
   return TREATMENTS.review;
 }
 
 /** One listed difference, with the rule that fixes it and the sentence written out for this row. */
-export type RowFix = { issue: string; treatment: Treatment; code: string; headline: string; text: string };
+export type RowFix = {
+  issue: string;
+  treatment: Treatment;
+  code: string;
+  headline: string;
+  text: string;
+};
 
 /** Every issue on a row, in the order the comparison found them, each with its own treatment. */
-export function fixesFor(issues: string[], ctx: { catalogIsrc: string; agencyIsrc: string }): RowFix[] {
+export function fixesFor(
+  issues: string[],
+  ctx: { catalogIsrc: string; agencyIsrc: string },
+): RowFix[] {
   const code = ctx.agencyIsrc || ctx.catalogIsrc;
   return [...new Set(issues)].map((issue) => {
     const treatment = treatmentForIssue(issue, ctx);
     const name = nameFromIssue(issue);
-    return { issue, treatment, code, headline: treatmentHeadline(treatment, code, name), text: treatmentText(treatment, code, name) };
+    return {
+      issue,
+      treatment,
+      code,
+      headline: treatmentHeadline(treatment, code, name),
+      text: treatmentText(treatment, code, name),
+    };
   });
 }
 
@@ -375,7 +456,14 @@ export function fixesFor(issues: string[], ctx: { catalogIsrc: string; agencyIsr
  * with two spellings each are two cases of "fix the spelling on one side", so the rule is written once and both writers
  * are named under it.
  */
-export type FixGroup = { key: string; headline: string; text: string; issues: string[]; code: string; treatment: Treatment };
+export type FixGroup = {
+  key: string;
+  headline: string;
+  text: string;
+  issues: string[];
+  code: string;
+  treatment: Treatment;
+};
 
 export function groupFixes(fixes: RowFix[]): FixGroup[] {
   const groups = new Map<string, FixGroup>();
@@ -383,15 +471,28 @@ export function groupFixes(fixes: RowFix[]): FixGroup[] {
     // The rule, its own words and the code it checks: the same rule over two different codes is two separate checks.
     const key = `${f.treatment.primary}|${f.headline}|${f.text}|${f.code}`;
     const seen = groups.get(key);
-    if (seen) { seen.issues.push(f.issue); continue; }
-    groups.set(key, { key, headline: f.headline, text: f.text, issues: [f.issue], code: f.code, treatment: f.treatment });
+    if (seen) {
+      seen.issues.push(f.issue);
+      continue;
+    }
+    groups.set(key, {
+      key,
+      headline: f.headline,
+      text: f.text,
+      issues: [f.issue],
+      code: f.code,
+      treatment: f.treatment,
+    });
   }
   return [...groups.values()];
 }
 
 /** The case itself, without the advice the rule already gives, so a grouped list stays one line per case. */
 export const issueCase = (issue: string) =>
-  issue.replace(/\s+[—–]\s+same (writer|recording|title|work)[\s\S]*$/i, "").replace(/\s+[—–]\s+one title[\s\S]*$/i, "").trim();
+  issue
+    .replace(/\s+[—–]\s+same (writer|recording|title|work)[\s\S]*$/i, "")
+    .replace(/\s+[—–]\s+one title[\s\S]*$/i, "")
+    .trim();
 
 /**
  * The exact field a card's fix link opens in My Catalog (founder, 2026-11-14). Every "Edit in My Catalog" and every fix
@@ -403,7 +504,8 @@ export function fieldFor(row: DifferenceRow): CatalogField {
   if (row.kind === "alternate-title") return "title";
   if (!registersRecording(row.claims[0]?.society ?? "")) {
     const said = row.issues.join(" ");
-    if (/IPI|share|spelling|isn't on the agency's registration|isn't in your catalog/i.test(said)) return "writers";
+    if (/IPI|share|spelling|isn't on the agency's registration|isn't in your catalog/i.test(said))
+      return "writers";
     if (/ISWC/.test(said)) return "iswc";
     return "title";
   }
@@ -446,14 +548,19 @@ export const PUBLIC_REPERTOIRE: Record<string, string> = {
 };
 
 /** The public search for a society's id, falling back to the ISRC search every recording can be looked up in. */
-export const repertoireUrl = (society: string) => PUBLIC_REPERTOIRE[society] ?? "https://isrc.soundexchange.com/";
+export const repertoireUrl = (society: string) =>
+  PUBLIC_REPERTOIRE[society] ?? "https://isrc.soundexchange.com/";
 
 /** The member's own account at the agency a card is about, for the "Sign in to …" link beside the treatment. */
 export const signInFor = (society: string, fallbackUrl = "") => portalFor(society, fallbackUrl);
 
 /** One agency's claim about a song: the society, and the code (and title) it has on file. */
 export type AgencyClaim = {
-  society: string; name: string; isrc: string; title: string; url: string;
+  society: string;
+  name: string;
+  isrc: string;
+  title: string;
+  url: string;
   /** The artist this agency credits, when its list prints one. */
   artist?: string | undefined;
   /** The version this agency names for the recording, read from its own list. */
@@ -525,7 +632,9 @@ export type DifferenceRow = {
   /** The agency's own name for the work, when that name is what the member may want to keep as an alternate title. */
   alternateTitle?: string | undefined;
   /** A composition's own fields, on both sides: what a PRO or The MLC registers instead of a code and an artist. */
-  composition?: { catalog: { iswc: string; writers: string }; agency: { iswc: string; writers: string } } | undefined;
+  composition?:
+    | { catalog: { iswc: string; writers: string }; agency: { iswc: string; writers: string } }
+    | undefined;
 };
 
 /** A value to copy, with the words on the button and the words for what was copied. */
@@ -539,8 +648,16 @@ export type CopyTarget = { label: string; value: string; what: string };
  * BMI search for "Qui-Ona Peterson" returned nothing until the full registered name went in — so the card offers one
  * check and one value, and the ISWC is what the search shows once it finds the work.
  */
-function workCheck(society: string, name: string, row: { title: string; iswc: string; writer: string; hasIswc: boolean }): { treatment: Treatment; copy: DifferenceRow["copy"] } {
-  const primary: CopyTarget = { label: checkLabel(society, name), value: row.writer || row.title, what: checkWhat(society) };
+function workCheck(
+  society: string,
+  name: string,
+  row: { title: string; iswc: string; writer: string; hasIswc: boolean },
+): { treatment: Treatment; copy: DifferenceRow["copy"] } {
+  const primary: CopyTarget = {
+    label: checkLabel(society, name),
+    value: row.writer || row.title,
+    what: checkWhat(society),
+  };
   return {
     copy: { primary },
     treatment: {
@@ -561,7 +678,10 @@ export function societyName(id: string, societies: { id: string; name: string }[
 }
 
 /** The release state the chart prints, from the song's own catalog entry. */
-export function releaseState(m: { releaseDate: string; unreleased?: boolean; retiredIscrs?: string[] }, agencyIsrc = ""): ReleaseState {
+export function releaseState(
+  m: { releaseDate: string; unreleased?: boolean; retiredIscrs?: string[] },
+  agencyIsrc = "",
+): ReleaseState {
   const today = new Date().toISOString().slice(0, 10);
   const retired = (m.retiredIscrs ?? []).map((c) => c.trim().toUpperCase()).filter(Boolean);
   if (agencyIsrc && retired.includes(agencyIsrc.trim().toUpperCase())) return "earlier";
@@ -574,7 +694,12 @@ export function releaseState(m: { releaseDate: string; unreleased?: boolean; ret
  * The one treatment decision. An earlier code already on record wins, because nothing is left to decide; then a song with
  * no code of its own; then two real codes; then a different recording under the same title.
  */
-export function treatmentFor(input: { kind: DisagreementKind; catalogIsrc: string; retiredIscrs: string[]; releaseState: ReleaseState }): Treatment {
+export function treatmentFor(input: {
+  kind: DisagreementKind;
+  catalogIsrc: string;
+  retiredIscrs: string[];
+  releaseState: ReleaseState;
+}): Treatment {
   const { kind, retiredIscrs, releaseState: state } = input;
   // A difference that is visible is never excused as waiting: a catalog with no release date filled in still holds the
   // wrong code, and "Waiting for the release" is only for a song whose values are genuinely absent (founder, 2026-11-13).
@@ -582,7 +707,8 @@ export function treatmentFor(input: { kind: DisagreementKind; catalogIsrc: strin
   if (kind === "version-pair") return TREATMENTS.pairVersions;
   if (kind === "agency-version-conflict") return TREATMENTS.agencyVersion;
   if (kind === "earlier-isrc" || retiredIscrs.length > 0) return TREATMENTS.keepBoth;
-  if (kind === "version-difference") return state === "waiting" ? TREATMENTS.waiting : TREATMENTS.addVersion;
+  if (kind === "version-difference")
+    return state === "waiting" ? TREATMENTS.waiting : TREATMENTS.addVersion;
   if (kind === "same-title-different-isrc") return TREATMENTS.addVersion;
   if (kind === "cross-agency-split") return TREATMENTS.crossAgency;
   if (kind === "missing-catalog-isrc") return TREATMENTS.adoptAgency;
@@ -597,14 +723,17 @@ export function summaryFor(row: DifferenceRow): string {
   const agency = row.claims.map((c) => c.name).join(" and ") || "The agency";
   // A composition list registers the work, not the recording: no ISRC, no artist, no version to disagree about.
   if (row.composition) {
-    if (row.kind === "missing-from-list") return `${agency} does not list this work. Its title, ISWC and writers are what a registration is filed under, so check the work there before filing it again.`;
+    if (row.kind === "missing-from-list")
+      return `${agency} does not list this work. Its title, ISWC and writers are what a registration is filed under, so check the work there before filing it again.`;
     return row.kind === "title-mismatch"
       ? `${agency} registers this work under a different title than your catalog. The composition is the same; the name is not, and both lists should read the same.`
       : `${agency} registers the composition, not the recording: the work title, its ISWC and its writers are what the two lists have to agree on.`;
   }
   // Two codes under one title, in the member's own terms: another version, or the old code beside the new one.
-  if (row.secondCode) return `${agency} holds ${row.agencyCodes.length} ISRCs under this one title. Two codes under one title mean another version of the recording, or the retired code beside the current one.`;
-  if (row.kind === "alternate-title") return `${agency} files this ${row.composition ? "work" : "recording"} under a different name than your catalog. If that is another title this song goes by, save it as an alternate title; if not, correct the title.`;
+  if (row.secondCode)
+    return `${agency} holds ${row.agencyCodes.length} ISRCs under this one title. Two codes under one title mean another version of the recording, or the retired code beside the current one.`;
+  if (row.kind === "alternate-title")
+    return `${agency} files this ${row.composition ? "work" : "recording"} under a different name than your catalog. If that is another title this song goes by, save it as an alternate title; if not, correct the title.`;
   switch (row.kind) {
     case "same-title-different-isrc":
       return `${agency} holds an ISRC for this title that your catalog does not, which is how one song ends up split across two recordings.`;
@@ -634,14 +763,16 @@ export function summaryFor(row: DifferenceRow): string {
 }
 
 /** True for anything that looks like an ISRC, so a title or a share is never compared as one. */
-export const looksLikeIsrc = (s: string) => /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/i.test(s.replace(/[^A-Za-z0-9]/g, ""));
+export const looksLikeIsrc = (s: string) =>
+  /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/i.test(s.replace(/[^A-Za-z0-9]/g, ""));
 
 /**
  * Character-level comparison for the chart's value readouts. The two codes are aligned by position, which is how an ISRC
  * actually differs (one designation character), and the segments come back in display order.
  */
 export function diffSegments(a: string, b: string): { value: string; changed: boolean }[] {
-  const left = a ?? "", right = b ?? "";
+  const left = a ?? "",
+    right = b ?? "";
   if (!left || !right) return [{ value: left, changed: false }];
   const out: { value: string; changed: boolean }[] = [];
   const max = Math.max(left.length, right.length);
@@ -662,19 +793,33 @@ export function diffSegments(a: string, b: string): { value: string; changed: bo
 export function diffWords(a: string, b: string): { value: string; changed: boolean }[] {
   const words = (a ?? "").split(/(\s+)/).filter(Boolean);
   const other = new Set((b ?? "").toLowerCase().split(/\s+/).filter(Boolean));
-  return words.map((w) => ({ value: w, changed: /[a-z0-9]/i.test(w) && !other.has(w.toLowerCase()) }));
+  return words.map((w) => ({
+    value: w,
+    changed: /[a-z0-9]/i.test(w) && !other.has(w.toLowerCase()),
+  }));
 }
 
 /** Reads the issues a society reported into the one kind the chart shows. */
-function kindOf(issues: string[], catalogIsrc: string, agencyIsrc: string, retiredIscrs: string[]): DisagreementKind {
+function kindOf(
+  issues: string[],
+  catalogIsrc: string,
+  agencyIsrc: string,
+  retiredIscrs: string[],
+): DisagreementKind {
   const text = issues.join(" ").toLowerCase();
-  if (agencyIsrc && retiredIscrs.map((c) => c.toUpperCase()).includes(agencyIsrc.toUpperCase())) return "earlier-isrc";
+  if (agencyIsrc && retiredIscrs.map((c) => c.toUpperCase()).includes(agencyIsrc.toUpperCase()))
+    return "earlier-isrc";
   if (!catalogIsrc && agencyIsrc) return "missing-catalog-isrc";
   if (/retire|used to carry|earlier/.test(text)) return "earlier-isrc";
-  if (/^the agency has version /.test(text) || /is not released yet, and the agency lists this recording without a version/.test(text)) return "version-difference";
+  if (
+    /^the agency has version /.test(text) ||
+    /is not released yet, and the agency lists this recording without a version/.test(text)
+  )
+    return "version-difference";
   // "The agency holds a second ISRC for ..." is another recording of one title, never an isolated mismatch.
   if (/second isrc for /.test(text)) return "same-title-different-isrc";
-  if (/isrc|code/.test(text)) return catalogIsrc && agencyIsrc && catalogIsrc !== agencyIsrc ? "isrc-mismatch" : "other";
+  if (/isrc|code/.test(text))
+    return catalogIsrc && agencyIsrc && catalogIsrc !== agencyIsrc ? "isrc-mismatch" : "other";
   if (/release|album|date/.test(text)) return "missing-release";
   return "other";
 }
@@ -690,7 +835,11 @@ type BuildInput = {
  * single row carrying an `occurrences` count, and two agencies holding different codes for one song become one
  * cross-agency row so the disagreement is read once, not twice.
  */
-export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] }: BuildInput): DifferenceRow[] {
+export function buildDifferenceRows({
+  stored,
+  tracks: allTracks,
+  societies = [],
+}: BuildInput): DifferenceRow[] {
   if (!stored) return [];
   // A Royalty Inspector song is not in My Catalog, so there is no entry to open or fix: its id is not a catalog uuid and
   // its card's fix would have written an "h:…" id to Postgres (founder, 2026-11-14).
@@ -704,7 +853,10 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
   /** Every work a song matched on each list, keyed `${society}:${trackId}` — even when nothing disagreed. */
   const listWorks = new Map<string, ListWork>();
   /** Every code each list holds under a song's title, read once, so a card can show the one that matched too. */
-  const allCodes = new Map<string, { isrc: string; title: string; version: string; artist: string }[]>();
+  const allCodes = new Map<
+    string,
+    { isrc: string; title: string; version: string; artist: string }[]
+  >();
 
   const releaseOf = (track: CatalogTrack, state: ReleaseState) => ({
     title: track.metadata.album.trim(),
@@ -726,7 +878,8 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
     const composition = !registersRecording(societyId);
     // `d.title` is the catalog's title; the agency's own title, version and artist come from the work on its list, so a
     // name difference is read from the file rather than compared with itself (founder, 2026-11-14).
-    for (const m of [...entry.result.matched, ...entry.result.differences]) if (m.work) listWorks.set(`${societyId}:${m.trackId}`, m.work);
+    for (const m of [...entry.result.matched, ...entry.result.differences])
+      if (m.work) listWorks.set(`${societyId}:${m.trackId}`, m.work);
     for (const c of entry.result.clashes) listWorks.set(`${societyId}:${c.trackId}`, c.work);
     // Every code the list holds under a title, whether or not that row disagreed: the catalog's own version is usually the
     // one that matched cleanly, and a card that left it out listed three of the four versions (founder, 2026-11-14).
@@ -735,24 +888,44 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       if (!w?.isrc) continue;
       const raw = w.title.trim();
       const key = `${societyId}:${m.trackId}`;
-      allCodes.set(key, [...(allCodes.get(key) ?? []), {
-        isrc: w.isrc.trim(),
-        title: (w.coreTitle ?? stripVersion(raw)).trim(),
-        version: (w.version ?? versionTail(raw)).trim(),
-        artist: (w.artist ?? "").trim(),
-      }]);
+      allCodes.set(key, [
+        ...(allCodes.get(key) ?? []),
+        {
+          isrc: w.isrc.trim(),
+          title: (w.coreTitle ?? stripVersion(raw)).trim(),
+          version: (w.version ?? versionTail(raw)).trim(),
+          artist: (w.artist ?? "").trim(),
+        },
+      ]);
     }
     // Two catalog entries under one title take the two works the list holds under it, each by the version it names.
     for (const group of composition ? [] : byTitle.values()) {
       if (group.length < 2) continue;
       const core = norm(stripVersion(group[0]!.title));
-      const candidates = worksFromResult(entry.result).filter((w) => norm(w.coreTitle ?? stripVersion(w.title)) === core);
+      const candidates = worksFromResult(entry.result).filter(
+        (w) => norm(w.coreTitle ?? stripVersion(w.title)) === core,
+      );
       if (candidates.length < 2) continue;
       spreadWorks(group, candidates, (t, w) => listWorks.set(`${societyId}:${t.id}`, w));
     }
-    const grouped = new Map<string, { titles: string[]; codes: { isrc: string; title: string; version: string; artist: string }[]; issues: string[]; iswc: string; writers: string[] }>();
+    const grouped = new Map<
+      string,
+      {
+        titles: string[];
+        codes: { isrc: string; title: string; version: string; artist: string }[];
+        issues: string[];
+        iswc: string;
+        writers: string[];
+      }
+    >();
     for (const d of entry.result.differences) {
-      const g = grouped.get(d.trackId) ?? { titles: [], codes: [], issues: [], iswc: "", writers: [] };
+      const g = grouped.get(d.trackId) ?? {
+        titles: [],
+        codes: [],
+        issues: [],
+        iswc: "",
+        writers: [],
+      };
       // The agency's own title, read as the file wrote it: "Quit Playing With Me (Dirty Version)" names the version "Dirty
       // Version". Reading the version off the stripped title found nothing, so every code showed "Not named" while the
       // file listed all four (founder, 2026-11-14).
@@ -762,9 +935,16 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       g.titles.push(agencyTitle);
       if (composition) {
         if (!g.iswc && d.work?.iswc) g.iswc = d.work.iswc.trim();
-        for (const w of d.work?.writers ?? []) if (w.name && !g.writers.includes(w.name)) g.writers.push(w.name);
+        for (const w of d.work?.writers ?? [])
+          if (w.name && !g.writers.includes(w.name)) g.writers.push(w.name);
       }
-      if (!composition && d.work?.isrc) g.codes.push({ isrc: d.work.isrc.trim(), title: agencyTitle, version, artist: (d.work.artist ?? "").trim() });
+      if (!composition && d.work?.isrc)
+        g.codes.push({
+          isrc: d.work.isrc.trim(),
+          title: agencyTitle,
+          version,
+          artist: (d.work.artist ?? "").trim(),
+        });
       g.issues.push(...d.issues);
       grouped.set(d.trackId, g);
     }
@@ -774,8 +954,12 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       const m = track.metadata;
       const catalogIsrc = m.isrc.trim();
       // One row per code the list holds under this title, each with the version and artist that row names.
-      const codes = composition ? [] : (allCodes.get(`${societyId}:${trackId}`) ?? g.codes)
-        .filter((c, i, all) => c.isrc && all.findIndex((x) => x.isrc.toUpperCase() === c.isrc.toUpperCase()) === i);
+      const codes = composition
+        ? []
+        : (allCodes.get(`${societyId}:${trackId}`) ?? g.codes).filter(
+            (c, i, all) =>
+              c.isrc && all.findIndex((x) => x.isrc.toUpperCase() === c.isrc.toUpperCase()) === i,
+          );
       const agencyCodes = codes.map((c) => c.isrc.toUpperCase()).filter(Boolean);
       const agencyVersions = [...new Set(codes.map((c) => c.version).filter(Boolean))];
       const agencyArtists = [...new Set(codes.map((c) => c.artist).filter(Boolean))];
@@ -787,20 +971,39 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       // ("24/7 Love" is "TWENTY FOUR SEVEN LOVE" on a BMI list — founder, 2026-11-14).
       // A name the song already carries as an alternate title is settled: saving it is what the card asked for, so the
       // card has to go once it is saved, without waiting for the list to be uploaded again (founder, 2026-11-15).
-      const alternateKeys = (m.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean).map(titleKey);
-      const titleKnown = g.titles.some((x) => titleKey(x) !== titleKey(catalogTitleCore) && alternateKeys.includes(titleKey(x)));
-      const titleDiffers = g.titles.some((x) => titleKey(x) !== titleKey(catalogTitleCore) && !alternateKeys.includes(titleKey(x)));
+      const alternateKeys = (m.alternateTitles ?? [])
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .map(titleKey);
+      const titleKnown = g.titles.some(
+        (x) => titleKey(x) !== titleKey(catalogTitleCore) && alternateKeys.includes(titleKey(x)),
+      );
+      const titleDiffers = g.titles.some(
+        (x) => titleKey(x) !== titleKey(catalogTitleCore) && !alternateKeys.includes(titleKey(x)),
+      );
       const bothCodes = !!catalogIsrc && !!agencyIsrc;
       const codeDiffers = bothCodes && catalogIsrc.toUpperCase() !== agencyIsrc.toUpperCase();
       // A composition has no version and no recording artist: those are the recording's, and comparing them to a PRO's
       // work filed every BMI song as "Artist: Not on the list" (founder, 2026-11-14).
-      const versions = composition ? { catalog: "", agency: "" } : { catalog: (m.version ?? "").trim() || versionTail(track.title), agency: agencyVersions.join(" · ") };
-      const artists = composition ? { catalog: "", agency: "" } : { catalog: track.artist ?? "", agency: agencyArtists[0] ?? "" };
+      const versions = composition
+        ? { catalog: "", agency: "" }
+        : {
+            catalog: (m.version ?? "").trim() || versionTail(track.title),
+            agency: agencyVersions.join(" · "),
+          };
+      const artists = composition
+        ? { catalog: "", agency: "" }
+        : { catalog: track.artist ?? "", agency: agencyArtists[0] ?? "" };
       // Two or more codes under one title is one recording with more than one version — or the retired code beside the
       // current one — never an isolated metadata mismatch (founder, 2026-11-14).
-      const secondCode = !composition && agencyCodes.length > 1 && !!catalogIsrc && agencyCodes.includes(catalogIsrc.toUpperCase());
+      const secondCode =
+        !composition &&
+        agencyCodes.length > 1 &&
+        !!catalogIsrc &&
+        agencyCodes.includes(catalogIsrc.toUpperCase());
       // The four cases the treatment table names, decided by what actually disagrees: the title, the code, or both.
-      const retiredCodeOnList = !!agencyIsrc && retired.map((c) => c.toUpperCase()).includes(agencyIsrc.toUpperCase());
+      const retiredCodeOnList =
+        !!agencyIsrc && retired.map((c) => c.toUpperCase()).includes(agencyIsrc.toUpperCase());
       // The saved comparison says "second ISRC for this title" when the list holds two codes; that is the same rule as
       // two codes on this row, and both are another version rather than one code standing in for another.
       const secondCodeReported = secondCode || g.issues.some((i) => /second ISRC for/i.test(i));
@@ -811,22 +1014,46 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
           ? "alternate-title"
           : kindOf([...new Set(g.issues)], catalogIsrc, agencyIsrc, retired)
         : retiredCodeOnList
-        ? "earlier-isrc"
-        : secondCodeReported
-        ? "same-title-different-isrc"
-        : titleDiffers && bothCodes
-          ? (codeDiffers ? "isrc-mismatch" : "alternate-title")
-          : !titleDiffers && codeDiffers
-            // One code on the list and a different one in the catalog: the two records name different recordings, so
-            // the member checks which copy the distributor delivered. "Two codes under one title" is the case above.
-            ? "isrc-mismatch"
-            : kindOf([...new Set(g.issues)], catalogIsrc, agencyIsrc, retired);
+          ? "earlier-isrc"
+          : secondCodeReported
+            ? "same-title-different-isrc"
+            : titleDiffers && bothCodes
+              ? codeDiffers
+                ? "isrc-mismatch"
+                : "alternate-title"
+              : !titleDiffers && codeDiffers
+                ? // One code on the list and a different one in the catalog: the two records name different recordings, so
+                  // the member checks which copy the distributor delivered. "Two codes under one title" is the case above.
+                  "isrc-mismatch"
+                : kindOf([...new Set(g.issues)], catalogIsrc, agencyIsrc, retired);
       // The agency side lists every code the list holds under the title, so four versions read as four rows with their own
       // codes instead of one blank row and three bare codes (founder, 2026-11-14).
       const claims: AgencyClaim[] = composition
-        ? [{ society: societyId, name: nameOf(societyId), isrc: "", title: g.titles[0] || track.title, url: urlOf(societyId), artist: "", version: "", iswc: g.iswc, writers: g.writers }]
-        : (codes.length ? codes : [{ isrc: agencyIsrc, title: g.titles[0] ?? track.title, version: "", artist: "" }])
-          .map((c) => ({ society: societyId, name: nameOf(societyId), isrc: c.isrc, title: c.title || track.title, url: urlOf(societyId), artist: c.artist, version: c.version }));
+        ? [
+            {
+              society: societyId,
+              name: nameOf(societyId),
+              isrc: "",
+              title: g.titles[0] || track.title,
+              url: urlOf(societyId),
+              artist: "",
+              version: "",
+              iswc: g.iswc,
+              writers: g.writers,
+            },
+          ]
+        : (codes.length
+            ? codes
+            : [{ isrc: agencyIsrc, title: g.titles[0] ?? track.title, version: "", artist: "" }]
+          ).map((c) => ({
+            society: societyId,
+            name: nameOf(societyId),
+            isrc: c.isrc,
+            title: c.title || track.title,
+            url: urlOf(societyId),
+            artist: c.artist,
+            version: c.version,
+          }));
       const claim: AgencyClaim = claims[0]!;
       // A composition is looked up at its own agency by the words it registers, never by a code: no card ever offers
       // "Copy ISRC" or sends the member to their distributor about a work (founder, 2026-11-14).
@@ -838,7 +1065,12 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
             hasIswc: !!g.iswc,
           })
         : undefined;
-      const base = treatmentFor({ kind, catalogIsrc, retiredIscrs: retired, releaseState: composition ? "current" : state });
+      const base = treatmentFor({
+        kind,
+        catalogIsrc,
+        retiredIscrs: retired,
+        releaseState: composition ? "current" : state,
+      });
       // A name that differs is answered first — "Alternate Title? Fix in Catalog" — and the one check sits beside it, so a
       // work card still offers exactly one repertoire check (founder, 2026-11-15).
       const treatment: Treatment = !check
@@ -854,9 +1086,11 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
           : { ...base, ...check.treatment };
       // The saved comparison still carries the title issue until the list is read again; when the name is now an
       // alternate title, that issue is settled and is not repeated (founder, 2026-11-15).
-      const issues = [...new Set(g.issues)].filter((i) =>
-        !(titleKnown && /^The agency registers this work as|^The agency calls it /.test(i)));
-      const versionsDiffer = !!versions.agency && !!versions.catalog && norm(versions.agency) !== norm(versions.catalog);
+      const issues = [...new Set(g.issues)].filter(
+        (i) => !(titleKnown && /^The agency registers this work as|^The agency calls it /.test(i)),
+      );
+      const versionsDiffer =
+        !!versions.agency && !!versions.catalog && norm(versions.agency) !== norm(versions.catalog);
       const artistsDiffer = !!artists.agency && norm(artists.agency) !== norm(artists.catalog);
       // Nothing to decide when both sides read the same recording: a stored comparison made before the name rule was
       // fixed still carries its old issue, and a card showing four identical fields is never a difference
@@ -865,8 +1099,17 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       // A title the list holds under two codes is never suppressed: the second code is the difference worth reading.
       const identical = composition
         ? !issues.length
-        : !secondCode && !titleDiffers && !codeDiffers && !versionsDiffer && !artistsDiffer && nameOnly;
-      if (agencyIsrc) claimsByTrack.set(trackId, [...(claimsByTrack.get(trackId) ?? []).filter((c) => c.society !== societyId), claim]);
+        : !secondCode &&
+          !titleDiffers &&
+          !codeDiffers &&
+          !versionsDiffer &&
+          !artistsDiffer &&
+          nameOnly;
+      if (agencyIsrc)
+        claimsByTrack.set(trackId, [
+          ...(claimsByTrack.get(trackId) ?? []).filter((c) => c.society !== societyId),
+          claim,
+        ]);
       if (identical) continue;
       rows.push({
         key: `${societyId}:${trackId}`,
@@ -886,10 +1129,25 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
         kind,
         issues,
         treatment,
-        fixes: fixesFor(issues, { catalogIsrc, agencyIsrc }).map((f) => (check
-          ? { ...f, treatment: { ...f.treatment, primary: check.treatment.primary, secondary: check.treatment.secondary, action: "review" as const } }
-          : f)),
-        status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
+        fixes: fixesFor(issues, { catalogIsrc, agencyIsrc }).map((f) =>
+          check
+            ? {
+                ...f,
+                treatment: {
+                  ...f.treatment,
+                  primary: check.treatment.primary,
+                  secondary: check.treatment.secondary,
+                  action: "review" as const,
+                },
+              }
+            : f,
+        ),
+        status:
+          treatment.action === "waiting"
+            ? "waiting"
+            : retired.length
+              ? "both-registered"
+              : "needs-triage",
         side: "catalog",
         ...(check ? { copy: check.copy, check: check.copy?.primary } : {}),
         ...((m.alternateTitles ?? []).some((t) => t.trim())
@@ -901,7 +1159,10 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
               composition: {
                 catalog: {
                   iswc: (m.iswc ?? "").trim(),
-                  writers: [...m.writers, ...m.composers].map((w) => creditName(w)).filter(Boolean).join(" · "),
+                  writers: [...m.writers, ...m.composers]
+                    .map((w) => creditName(w))
+                    .filter(Boolean)
+                    .join(" · "),
                 },
                 agency: { iswc: g.iswc, writers: g.writers.join(" · ") },
               },
@@ -922,7 +1183,10 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
     byPair.set(key, [...(byPair.get(key) ?? []), t]);
   }
   for (const [pairKey, group] of byPair) {
-    const catalogCodes = group.map((t) => ({ isrc: t.metadata.isrc.trim(), version: (t.metadata.version ?? "").trim() || versionTail(t.title) }));
+    const catalogCodes = group.map((t) => ({
+      isrc: t.metadata.isrc.trim(),
+      version: (t.metadata.version ?? "").trim() || versionTail(t.title),
+    }));
     const distinct = [...new Set(catalogCodes.map((c) => c.isrc.toUpperCase()).filter(Boolean))];
     if (distinct.length < 2) continue;
     for (const societyId of Object.keys(stored.byId)) {
@@ -931,17 +1195,30 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       for (const t of group) {
         const w = listWorks.get(`${societyId}:${t.id}`);
         if (!w?.isrc) continue;
-        all.push({ society: societyId, name: nameOf(societyId), isrc: w.isrc.trim(), title: (w.coreTitle ?? stripVersion(w.title)).trim(), url: urlOf(societyId), artist: w.artist ?? "", version: w.version ?? versionTail(w.title) });
+        all.push({
+          society: societyId,
+          name: nameOf(societyId),
+          isrc: w.isrc.trim(),
+          title: (w.coreTitle ?? stripVersion(w.title)).trim(),
+          url: urlOf(societyId),
+          artist: w.artist ?? "",
+          version: w.version ?? versionTail(w.title),
+        });
       }
       // The list must hold more than one recording: one entry there is a missing code, which its own card already reports.
       // Claims are one per distinct code, so four catalog entries the list knows under a single code are never shown as a
       // pair of recordings (founder, 2026-11-14).
-      const claims = all.filter((c, i, every) => every.findIndex((x) => x.isrc.toUpperCase() === c.isrc.toUpperCase()) === i);
+      const claims = all.filter(
+        (c, i, every) =>
+          every.findIndex((x) => x.isrc.toUpperCase() === c.isrc.toUpperCase()) === i,
+      );
       if (claims.length < 2) continue;
       const first = group[0]!;
       const m = first.metadata;
       const state = releaseState(m);
-      const issues = [`Two ISRCs under "${stripVersion(first.title) || first.title}": ${distinct.join(", ")}`];
+      const issues = [
+        `Two ISRCs under "${stripVersion(first.title) || first.title}": ${distinct.join(", ")}`,
+      ];
       rows.push({
         key: `pair:${societyId}:${pairKey}`,
         songId: first.id,
@@ -958,14 +1235,20 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
           catalog: [...new Set(catalogCodes.map((c) => c.version).filter(Boolean))].join(" · "),
           agency: [...new Set(claims.map((c) => c.version ?? "").filter(Boolean))].join(" · "),
         },
-        artists: { catalog: first.artist ?? "", agency: claims.find((c) => c.artist)?.artist ?? "" },
+        artists: {
+          catalog: first.artist ?? "",
+          agency: claims.find((c) => c.artist)?.artist ?? "",
+        },
         agencyCodes: claims.map((c) => ({ isrc: c.isrc, version: c.version ?? "" })),
         catalogCodes,
         secondCode: false,
         kind: "version-pair",
         issues,
         treatment: TREATMENTS.pairVersions,
-        fixes: fixesFor(issues, { catalogIsrc: distinct[0] ?? "", agencyIsrc: claims[0]?.isrc ?? "" }),
+        fixes: fixesFor(issues, {
+          catalogIsrc: distinct[0] ?? "",
+          agencyIsrc: claims[0]?.isrc ?? "",
+        }),
         status: "needs-triage",
         side: "catalog",
       });
@@ -977,10 +1260,22 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
   const allClaims = new Map<string, AgencyClaim[]>();
   for (const [key, w] of listWorks) {
     const at = key.indexOf(":");
-    const societyId = key.slice(0, at), trackId = key.slice(at + 1);
+    const societyId = key.slice(0, at),
+      trackId = key.slice(at + 1);
     if (!w.isrc) continue;
-    const claim: AgencyClaim = { society: societyId, name: nameOf(societyId), isrc: w.isrc.trim(), title: (w.coreTitle ?? stripVersion(w.title)).trim(), url: urlOf(societyId), artist: w.artist ?? "", version: w.version ?? "" };
-    allClaims.set(trackId, [...(allClaims.get(trackId) ?? []).filter((c) => c.society !== societyId), claim]);
+    const claim: AgencyClaim = {
+      society: societyId,
+      name: nameOf(societyId),
+      isrc: w.isrc.trim(),
+      title: (w.coreTitle ?? stripVersion(w.title)).trim(),
+      url: urlOf(societyId),
+      artist: w.artist ?? "",
+      version: w.version ?? "",
+    };
+    allClaims.set(trackId, [
+      ...(allClaims.get(trackId) ?? []).filter((c) => c.society !== societyId),
+      claim,
+    ]);
   }
   for (const [trackId, claims] of allClaims) {
     const track = byId.get(trackId);
@@ -992,7 +1287,9 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
     const m = track.metadata;
     const retired = (m.retiredIscrs ?? []).filter(Boolean);
     const state = releaseState(m, claims[0]!.isrc);
-    const issues = claims.filter((c) => c.version).map((c) => `${c.name} names "${c.version}" for ISRC ${c.isrc}`);
+    const issues = claims
+      .filter((c) => c.version)
+      .map((c) => `${c.name} names "${c.version}" for ISRC ${c.isrc}`);
     const treatment = TREATMENTS.agencyVersion;
     rows.push({
       key: `agencyversions:${trackId}`,
@@ -1004,10 +1301,15 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       catalogIsrc: m.isrc.trim(),
       retiredIscrs: retired,
       release: releaseOf(track, state),
-      versions: { catalog: (m.version ?? "").trim() || versionTail(track.title), agency: claims[0]!.version ?? "" },
+      versions: {
+        catalog: (m.version ?? "").trim() || versionTail(track.title),
+        agency: claims[0]!.version ?? "",
+      },
       artists: { catalog: track.artist ?? "", agency: claims[0]?.artist ?? "" },
       agencyCodes: claims.map((c) => ({ isrc: c.isrc, version: c.version ?? "" })),
-      catalogCodes: [{ isrc: m.isrc.trim(), version: (m.version ?? "").trim() || versionTail(track.title) }].filter((c) => c.isrc),
+      catalogCodes: [
+        { isrc: m.isrc.trim(), version: (m.version ?? "").trim() || versionTail(track.title) },
+      ].filter((c) => c.isrc),
       secondCode: false,
       kind: "agency-version-conflict",
       issues,
@@ -1027,7 +1329,12 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
     const m = track.metadata;
     const retired = (m.retiredIscrs ?? []).filter(Boolean);
     const state = releaseState(m);
-    const treatment = treatmentFor({ kind: "cross-agency-split", catalogIsrc: m.isrc.trim(), retiredIscrs: retired, releaseState: state });
+    const treatment = treatmentFor({
+      kind: "cross-agency-split",
+      catalogIsrc: m.isrc.trim(),
+      retiredIscrs: retired,
+      releaseState: state,
+    });
     rows.push({
       key: `agencies:${trackId}`,
       songId: trackId,
@@ -1038,17 +1345,32 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       catalogIsrc: m.isrc.trim(),
       retiredIscrs: retired,
       release: releaseOf(track, state),
-      versions: { catalog: (m.version ?? "").trim() || versionTail(track.title), agency: claims.find((c) => c.version)?.version ?? "" },
+      versions: {
+        catalog: (m.version ?? "").trim() || versionTail(track.title),
+        agency: claims.find((c) => c.version)?.version ?? "",
+      },
       // A cross-agency row is its own kind: two agencies are not two codes under one title.
-      agencyCodes: claims.filter((c) => c.isrc).map((c) => ({ isrc: c.isrc, version: c.version ?? "" })),
-      catalogCodes: [{ isrc: m.isrc.trim(), version: (m.version ?? "").trim() || versionTail(track.title) }].filter((c) => c.isrc),
+      agencyCodes: claims
+        .filter((c) => c.isrc)
+        .map((c) => ({ isrc: c.isrc, version: c.version ?? "" })),
+      catalogCodes: [
+        { isrc: m.isrc.trim(), version: (m.version ?? "").trim() || versionTail(track.title) },
+      ].filter((c) => c.isrc),
       secondCode: false,
       artists: { catalog: track.artist ?? "", agency: claims.find((c) => c.artist)?.artist ?? "" },
       kind: "cross-agency-split",
       issues: claims.map((c) => `${c.name}: ${c.isrc}`),
       treatment,
-      fixes: fixesFor(claims.map((c) => `${c.name}: ${c.isrc}`), { catalogIsrc: m.isrc.trim(), agencyIsrc: claims[0]?.isrc ?? "" }),
-      status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
+      fixes: fixesFor(
+        claims.map((c) => `${c.name}: ${c.isrc}`),
+        { catalogIsrc: m.isrc.trim(), agencyIsrc: claims[0]?.isrc ?? "" },
+      ),
+      status:
+        treatment.action === "waiting"
+          ? "waiting"
+          : retired.length
+            ? "both-registered"
+            : "needs-triage",
       side: "agencies",
     });
   }
@@ -1067,7 +1389,12 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       if (composition) {
         const writers = [...m.writers, ...m.composers].map((w) => creditName(w)).filter(Boolean);
         const iswc = (m.iswc ?? "").trim();
-        const check = workCheck(societyId, nameOf(societyId), { title: m.title, iswc, writer: writers[0] ?? "", hasIswc: !!iswc });
+        const check = workCheck(societyId, nameOf(societyId), {
+          title: m.title,
+          iswc,
+          writer: writers[0] ?? "",
+          hasIswc: !!iswc,
+        });
         const treatment: Treatment = {
           ...check.treatment,
           headline: `Register this work with ${nameOf(societyId)}`,
@@ -1079,7 +1406,19 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
           title: track.title || "Untitled",
           artist: track.artist,
           occurrences: 1,
-          claims: [{ society: societyId, name: nameOf(societyId), isrc: "", title: m.title, url: urlOf(societyId), artist: "", version: "", iswc, writers }],
+          claims: [
+            {
+              society: societyId,
+              name: nameOf(societyId),
+              isrc: "",
+              title: m.title,
+              url: urlOf(societyId),
+              artist: "",
+              version: "",
+              iswc,
+              writers,
+            },
+          ],
           catalogIsrc: "",
           retiredIscrs: retired,
           release: releaseOf(track, state),
@@ -1091,14 +1430,25 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
           kind: "missing-from-list",
           issues: [`Not on the ${nameOf(societyId)} list`],
           treatment,
-          fixes: fixesFor([`Not on the ${nameOf(societyId)} list`], { catalogIsrc: "", agencyIsrc: "" }).map((f) => ({
+          fixes: fixesFor([`Not on the ${nameOf(societyId)} list`], {
+            catalogIsrc: "",
+            agencyIsrc: "",
+          }).map((f) => ({
             ...f,
-            treatment: { ...f.treatment, primary: treatment.primary, secondary: treatment.secondary, action: "review" as const },
+            treatment: {
+              ...f.treatment,
+              primary: treatment.primary,
+              secondary: treatment.secondary,
+              action: "review" as const,
+            },
           })),
           status: treatment.action === "waiting" ? "waiting" : "needs-triage",
           side: "catalog",
           copy: check.copy,
-          composition: { catalog: { iswc, writers: writers.join(" · ") }, agency: { iswc: "", writers: "" } },
+          composition: {
+            catalog: { iswc, writers: writers.join(" · ") },
+            agency: { iswc: "", writers: "" },
+          },
         });
         continue;
       }
@@ -1109,26 +1459,46 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
         title: track.title || "Untitled",
         artist: track.artist,
         occurrences: 1,
-        claims: [{ society: societyId, name: nameOf(societyId), isrc: "", title: miss.title, url: urlOf(societyId) }],
+        claims: [
+          {
+            society: societyId,
+            name: nameOf(societyId),
+            isrc: "",
+            title: miss.title,
+            url: urlOf(societyId),
+          },
+        ],
         catalogIsrc: m.isrc.trim(),
         retiredIscrs: retired,
         release: releaseOf(track, state),
         versions: { catalog: (m.version ?? "").trim() || versionTail(track.title), agency: "" },
         agencyCodes: [],
-        catalogCodes: [{ isrc: m.isrc.trim(), version: (m.version ?? "").trim() || versionTail(track.title) }].filter((c) => c.isrc),
+        catalogCodes: [
+          { isrc: m.isrc.trim(), version: (m.version ?? "").trim() || versionTail(track.title) },
+        ].filter((c) => c.isrc),
         secondCode: false,
         artists: { catalog: track.artist ?? "", agency: "" },
         kind: "missing-from-list",
         issues: [`Not on the ${nameOf(societyId)} list`],
         treatment,
-        fixes: fixesFor([`Not on the ${nameOf(societyId)} list`], { catalogIsrc: m.isrc.trim(), agencyIsrc: "" }),
-        status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
+        fixes: fixesFor([`Not on the ${nameOf(societyId)} list`], {
+          catalogIsrc: m.isrc.trim(),
+          agencyIsrc: "",
+        }),
+        status:
+          treatment.action === "waiting"
+            ? "waiting"
+            : retired.length
+              ? "both-registered"
+              : "needs-triage",
         side: "catalog",
       });
     }
   }
 
-  return rows.sort((a, b) => a.title.localeCompare(b.title) || a.claims[0]!.name.localeCompare(b.claims[0]!.name));
+  return rows.sort(
+    (a, b) => a.title.localeCompare(b.title) || a.claims[0]!.name.localeCompare(b.claims[0]!.name),
+  );
 }
 
 /** How many rows are still work, for the intake handoff badge. */

@@ -50,11 +50,18 @@ export function readWorkingAs(list: WorkingProfile[]): string | null {
   try {
     const id = localStorage.getItem(KEY);
     return id && list.some((p) => p.userId === id) ? id : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 export function rememberWorkingAs(userId: string | null) {
-  try { if (userId) localStorage.setItem(KEY, userId); else localStorage.removeItem(KEY); } catch { /* storage blocked */ }
+  try {
+    if (userId) localStorage.setItem(KEY, userId);
+    else localStorage.removeItem(KEY);
+  } catch {
+    /* storage blocked */
+  }
 }
 
 /** The seats are only switchable while they are paid for: a cancelled seat keeps working until its year ends. */

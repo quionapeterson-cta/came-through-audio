@@ -6,10 +6,18 @@ import { getContractBrand, getMyBrand } from "@/lib/brand-kit.functions";
  * check can't run (signed out, offline, migration not run yet), the document simply keeps our header.
  */
 export async function myBrand(use: BrandUse, kitId?: string | null): Promise<PdfBrand | null> {
-  try { return await getMyBrand({ data: { use, kitId: kitId ?? null } }); } catch { return null; }
+  try {
+    return await getMyBrand({ data: { use, kitId: kitId ?? null } });
+  } catch {
+    return null;
+  }
 }
 
 /** The sender's kit on a contract the signed-in user owns or was sent. */
 export async function contractBrand(contractId: string): Promise<PdfBrand | null> {
-  try { return await getContractBrand({ data: { contractId } }); } catch { return null; }
+  try {
+    return await getContractBrand({ data: { contractId } });
+  } catch {
+    return null;
+  }
 }

@@ -16,12 +16,15 @@ export function validSignLinkToken(partyId: string, token: string) {
   return got.length === want.length && timingSafeEqual(got, want);
 }
 
-export const signLink = (origin: string, partyId: string) => `${origin}/contract/${partyId}?t=${signLinkToken(partyId)}`;
+export const signLink = (origin: string, partyId: string) =>
+  `${origin}/contract/${partyId}?t=${signLinkToken(partyId)}`;
 
 export const newSignCode = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
 
 export const hashSignCode = (partyId: string, code: string) =>
-  createHash("sha256").update(`${process.env["SESSION_SECRET"] ?? "cta"}|${partyId}|${code}`).digest("hex");
+  createHash("sha256")
+    .update(`${process.env["SESSION_SECRET"] ?? "cta"}|${partyId}|${code}`)
+    .digest("hex");
 
 /** "j•••@example.com", so the page can say where the code went without showing the whole address. */
 export const maskEmail = (email: string) => email.replace(/^(.)[^@]*/, "$1•••");

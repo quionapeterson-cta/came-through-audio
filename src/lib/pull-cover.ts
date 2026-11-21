@@ -16,9 +16,14 @@ export async function coverFileFrom(url: string, name = "cover"): Promise<File |
     const res = await fetch(url);
     if (!res.ok) return null;
     const blob = await res.blob();
-    const type = blob.type === "image/png" ? "image/png" : blob.type === "image/jpeg" ? "image/jpeg" : "";
+    const type =
+      blob.type === "image/png" ? "image/png" : blob.type === "image/jpeg" ? "image/jpeg" : "";
     if (!type) return null;
-    return new File([blob], `${name.replace(/[\\/:*?"<>|]/g, "-") || "cover"}.${coverExtension(type)}`, { type });
+    return new File(
+      [blob],
+      `${name.replace(/[\\/:*?"<>|]/g, "-") || "cover"}.${coverExtension(type)}`,
+      { type },
+    );
   } catch {
     return null;
   }

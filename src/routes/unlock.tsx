@@ -15,7 +15,11 @@ export const Route = createFileRoute("/unlock")({
   head: () => ({
     meta: [
       { title: "Private Preview · Came Through Audio" },
-      { name: "description", content: "Came Through Audio is in private preview. Enter the staging passcode to continue." },
+      {
+        name: "description",
+        content:
+          "Came Through Audio is in private preview. Enter the staging passcode to continue.",
+      },
       { property: "og:title", content: "Private Preview · Came Through Audio" },
       { property: "og:description", content: "Came Through Audio is in private preview." },
     ],
@@ -44,7 +48,10 @@ function Unlock() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-2xl border border-primary/30 bg-card p-8 shadow-lg">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-sm rounded-2xl border border-primary/30 bg-card p-8 shadow-lg"
+      >
         <h1 className="text-center text-2xl font-bold">
           <span className="text-foreground">Came Through </span>
           <span className="text-primary">Audio</span>
@@ -65,7 +72,9 @@ function Unlock() {
           aria-label="Passcode"
           className="mt-4 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
         />
-        {error && <p className="mt-2 text-sm text-destructive">That passcode isn't right. Try again.</p>}
+        {error && (
+          <p className="mt-2 text-sm text-destructive">That passcode isn't right. Try again.</p>
+        )}
         <button
           type="submit"
           disabled={busy}

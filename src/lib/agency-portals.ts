@@ -27,9 +27,21 @@ export const AGENCY_PORTALS: Record<string, AgencyPortal> = {
     signIn: "https://sxdirect.soundexchange.com/login/",
     cta: "Sign in and submit recording",
   },
-  ascap: { name: "ASCAP Member Access", signIn: "https://www.ascap.com/member-access#login", cta: "Sign in and register the work" },
-  bmi: { name: "BMI Online Services", signIn: "https://ols.bmi.com/", cta: "Sign in and register the work" },
-  mlc: { name: "The MLC Portal", signIn: "https://portal.themlc.com/login", cta: "Sign in and register the work" },
+  ascap: {
+    name: "ASCAP Member Access",
+    signIn: "https://www.ascap.com/member-access#login",
+    cta: "Sign in and register the work",
+  },
+  bmi: {
+    name: "BMI Online Services",
+    signIn: "https://ols.bmi.com/",
+    cta: "Sign in and register the work",
+  },
+  mlc: {
+    name: "The MLC Portal",
+    signIn: "https://portal.themlc.com/login",
+    cta: "Sign in and register the work",
+  },
 };
 
 /**
@@ -37,5 +49,11 @@ export const AGENCY_PORTALS: Record<string, AgencyPortal> = {
  * never left without a way in, and never given a link we have not checked.
  */
 export function portalFor(society: string, fallbackUrl = ""): AgencyPortal {
-  return AGENCY_PORTALS[society] ?? { name: "the agency account", signIn: fallbackUrl, cta: "Sign in to the agency account" };
+  return (
+    AGENCY_PORTALS[society] ?? {
+      name: "the agency account",
+      signIn: fallbackUrl,
+      cta: "Sign in to the agency account",
+    }
+  );
 }

@@ -12,7 +12,10 @@ function healthy(): StripePriceLike[] {
     currency: "usd",
     active: true,
     type: row.billing === "one-time" ? "one_time" : "recurring",
-    recurring: row.billing === "one-time" ? null : { interval: row.billing === "recurring-monthly" ? "month" : "year" },
+    recurring:
+      row.billing === "one-time"
+        ? null
+        : { interval: row.billing === "recurring-monthly" ? "month" : "year" },
   }));
 }
 

@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  DUPLICATE_CHECKS, addDays, assessDuplicateGroup, duplicateChecksDone, duplicateRefundBlock, groupPossibleDuplicates,
-  paymentState, readCharge, type ChargeFacts,
+  DUPLICATE_CHECKS,
+  addDays,
+  assessDuplicateGroup,
+  duplicateChecksDone,
+  duplicateRefundBlock,
+  groupPossibleDuplicates,
+  paymentState,
+  readCharge,
+  type ChargeFacts,
 } from "./duplicate-charges";
 
 const at = (daysAgo: number) => new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
@@ -74,7 +81,9 @@ describe("groupPossibleDuplicates", () => {
   });
 
   it("ignores zero-amount rows", () => {
-    expect(groupPossibleDuplicates([charge({ amountCents: 0 }), charge({ id: "b", amountCents: 0 })])).toEqual([]);
+    expect(
+      groupPossibleDuplicates([charge({ amountCents: 0 }), charge({ id: "b", amountCents: 0 })]),
+    ).toEqual([]);
   });
 });
 
@@ -93,7 +102,12 @@ describe("assessDuplicateGroup", () => {
   it("refuses to call two different things a duplicate", () => {
     const verdict = assessDuplicateGroup([
       charge({ id: "seat", item: "Artist seat", createdAt: at(2) }),
-      charge({ id: "ai", paymentIntent: "pi_2", item: "AI Protection (one song)", createdAt: at(1) }),
+      charge({
+        id: "ai",
+        paymentIntent: "pi_2",
+        item: "AI Protection (one song)",
+        createdAt: at(1),
+      }),
     ]);
     expect(verdict.kind).toBe("not_duplicate");
     if (verdict.kind !== "not_duplicate") throw new Error("expected not a duplicate");
@@ -134,16 +148,31 @@ describe("duplicateRefundBlock", () => {
   it("needs every check ticked", () => {
     expect(duplicateChecksDone(all)).toBe(true);
     expect(duplicateChecksDone(all.slice(0, 3))).toBe(false);
-    expect(duplicateRefundBlock({ checks: all.slice(0, 3), settled: true, held: false, refunded: false })).toMatch(/all 4 checks/);
+    expect(
+      duplicateRefundBlock({
+        checks: all.slice(0, 3),
+        settled: true,
+        held: false,
+        refunded: false,
+      }),
+    ).toMatch(/all 4 checks/);
   });
 
   it("refuses a hold, an unsettled payment and a payment already refunded, checks or not", () => {
-    expect(duplicateRefundBlock({ checks: all, settled: false, held: true, refunded: false })).toMatch(/hasn't settled/);
-    expect(duplicateRefundBlock({ checks: all, settled: false, held: false, refunded: false })).toMatch(/No money moved/);
-    expect(duplicateRefundBlock({ checks: all, settled: true, held: false, refunded: true })).toMatch(/already refunded in full/);
+    expect(
+      duplicateRefundBlock({ checks: all, settled: false, held: true, refunded: false }),
+    ).toMatch(/hasn't settled/);
+    expect(
+      duplicateRefundBlock({ checks: all, settled: false, held: false, refunded: false }),
+    ).toMatch(/No money moved/);
+    expect(
+      duplicateRefundBlock({ checks: all, settled: true, held: false, refunded: true }),
+    ).toMatch(/already refunded in full/);
   });
 
   it("lets a verified duplicate through", () => {
-    expect(duplicateRefundBlock({ checks: all, settled: true, held: false, refunded: false })).toBeNull();
+    expect(
+      duplicateRefundBlock({ checks: all, settled: true, held: false, refunded: false }),
+    ).toBeNull();
   });
 });

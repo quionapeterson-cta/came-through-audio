@@ -6,7 +6,8 @@ export const Route = createFileRoute("/api/public/cron/task-reminders")({
     handlers: {
       POST: async ({ request }) => {
         const secret = process.env["CRON_SECRET"];
-        if (!secret || (request.headers.get("authorization") ?? "") !== `Bearer ${secret}`) return new Response("Unauthorized", { status: 401 });
+        if (!secret || (request.headers.get("authorization") ?? "") !== `Bearer ${secret}`)
+          return new Response("Unauthorized", { status: 401 });
         const { sendDueTaskReminders } = await import("@/lib/task-reminders.server");
         return Response.json(await sendDueTaskReminders());
       },

@@ -553,7 +553,9 @@ export function PdfTemplateStudio() {
   const [template, setTemplate] = useState<PdfTemplate>(blank);
   const [activeId, setActiveId] = useState<string | null>(null);
   /** Where the caret sat in the selected clause body, so a token pill inserts there instead of at the end. */
-  const [bodyCaret, setBodyCaret] = useState<{ id: string; start: number; end: number } | null>(null);
+  const [bodyCaret, setBodyCaret] = useState<{ id: string; start: number; end: number } | null>(
+    null,
+  );
   const [sample, setSample] = useState(false);
   const [library, setLibrary] = useState<SavedTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -666,51 +668,51 @@ export function PdfTemplateStudio() {
                 }
               : kind === "date"
                 ? { id: newId(), kind, label: "Effective date", value: todayIso(), format: "long" }
-              : kind === "printName"
-                ? { id: newId(), kind, label: "Print legal name" }
-              : kind === "seal"
-                ? { id: newId(), kind, tier: "gold", label: "CTA" }
-                : kind === "section"
-                  ? {
-                      id: newId(),
-                      kind,
-                      title: "New form",
-                      subtitle: "Packet section",
-                      formKey: `form${template.blocks.length + 1}`,
-                      optional: true,
-                    }
-                  : kind === "fields"
-                    ? {
-                        id: newId(),
-                        kind,
-                        heading: "Details",
-                        role: "recipient",
-                        fields: [
-                          {
-                            id: newId(),
-                            label: "Full name",
-                            type: "text",
-                            role: "recipient",
-                            required: true,
-                          },
-                        ],
-                      }
-                    : kind === "checkboxes"
+                : kind === "printName"
+                  ? { id: newId(), kind, label: "Print legal name" }
+                  : kind === "seal"
+                    ? { id: newId(), kind, tier: "gold", label: "CTA" }
+                    : kind === "section"
                       ? {
                           id: newId(),
                           kind,
-                          heading: "I agree",
-                          role: "recipient",
-                          mode: "multi",
-                          options: [{ id: newId(), label: "I agree to these terms" }],
+                          title: "New form",
+                          subtitle: "Packet section",
+                          formKey: `form${template.blocks.length + 1}`,
+                          optional: true,
                         }
-                      : {
-                          id: newId(),
-                          kind,
-                          heading: "Signature",
-                          role: "recipient",
-                          showDate: true,
-                        };
+                      : kind === "fields"
+                        ? {
+                            id: newId(),
+                            kind,
+                            heading: "Details",
+                            role: "recipient",
+                            fields: [
+                              {
+                                id: newId(),
+                                label: "Full name",
+                                type: "text",
+                                role: "recipient",
+                                required: true,
+                              },
+                            ],
+                          }
+                        : kind === "checkboxes"
+                          ? {
+                              id: newId(),
+                              kind,
+                              heading: "I agree",
+                              role: "recipient",
+                              mode: "multi",
+                              options: [{ id: newId(), label: "I agree to these terms" }],
+                            }
+                          : {
+                              id: newId(),
+                              kind,
+                              heading: "Signature",
+                              role: "recipient",
+                              showDate: true,
+                            };
     // Add where the next block belongs (founder, 2026-11-21): directly below the selected block, or at the bottom only
     // when nothing is selected. Appending every time put a new signature line after the seal however the page was read.
     setTemplate((t) => {
@@ -782,9 +784,10 @@ export function PdfTemplateStudio() {
     // Inside a clause, the pill lands at the caret (founder, 2026-11-21); other blocks have no caret to read, so they
     // keep the safe append-at-the-end behaviour.
     if (active.kind === "clause") {
-      const caret = bodyCaret?.id === active.id
-        ? bodyCaret
-        : { id: active.id, start: active.body.length, end: active.body.length };
+      const caret =
+        bodyCaret?.id === active.id
+          ? bodyCaret
+          : { id: active.id, start: active.body.length, end: active.body.length };
       const next = insertTokenAt(active.body, key, caret.start, caret.end);
       patch(active.id, { body: next.text });
       setBodyCaret({ id: active.id, start: next.caret, end: next.caret });
@@ -1474,7 +1477,8 @@ export function PdfTemplateStudio() {
                             aria-label="Clause body"
                           />
                           <p className="text-[11px] text-muted-foreground">
-                            Put the caret where a variable belongs, then click its pill below to insert it there.
+                            Put the caret where a variable belongs, then click its pill below to
+                            insert it there.
                           </p>
                           <Textarea
                             value={active.help}
@@ -1541,7 +1545,8 @@ export function PdfTemplateStudio() {
                             Print these signature lines
                           </label>
                           <p className="text-[11px] text-muted-foreground">
-                            Switch this off when the template has its own Signature and Print Legal Name blocks.
+                            Switch this off when the template has its own Signature and Print Legal
+                            Name blocks.
                           </p>
                         </>
                       )}
@@ -1555,9 +1560,9 @@ export function PdfTemplateStudio() {
                             aria-label="Print name label"
                           />
                           <p className="text-[11px] text-muted-foreground">
-                            The label is yours to change, for example Participant Print Legal Name or Parent/Guardian
-                            Print Legal Name. The line fills from the {"{{PRINT_LEGAL_NAME}}"} answer in Company
-                            Contracts Step 2.
+                            The label is yours to change, for example Participant Print Legal Name
+                            or Parent/Guardian Print Legal Name. The line fills from the{" "}
+                            {"{{PRINT_LEGAL_NAME}}"} answer in Company Contracts Step 2.
                           </p>
                         </>
                       )}
@@ -1843,8 +1848,8 @@ export function PdfTemplateStudio() {
                             ))}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            The day is fixed on the block, so a signed copy printed later still reads the
-                            same date.
+                            The day is fixed on the block, so a signed copy printed later still
+                            reads the same date.
                           </p>
                         </>
                       )}

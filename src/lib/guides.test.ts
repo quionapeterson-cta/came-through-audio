@@ -1,18 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { BLUEPRINT_GUIDES, CHEAT_SHEETS, crossedSteps, GUIDE_LINKS, GUIDES, linkFor } from "@/lib/guides";
+import {
+  BLUEPRINT_GUIDES,
+  CHEAT_SHEETS,
+  crossedSteps,
+  GUIDE_LINKS,
+  GUIDES,
+  linkFor,
+} from "@/lib/guides";
 
 const royalty = BLUEPRINT_GUIDES.find((g) => g.id === "royalty-registration")!;
 
 describe("blueprint guides", () => {
   it("links every royalty registration item to the screen that finishes it", () => {
-    for (const item of royalty.checklist ?? []) expect(linkFor(royalty.id, item)?.label, item).toBeTruthy();
+    for (const item of royalty.checklist ?? [])
+      expect(linkFor(royalty.id, item)?.label, item).toBeTruthy();
   });
 
   it("only links items that are on their guide's checklist", () => {
     for (const [guideId, links] of Object.entries(GUIDE_LINKS)) {
       const guide = GUIDES.find((g) => g.id === guideId);
       expect(guide, guideId).toBeTruthy();
-      for (const item of Object.keys(links)) expect(guide!.checklist, `${guideId}: ${item}`).toContain(item);
+      for (const item of Object.keys(links))
+        expect(guide!.checklist, `${guideId}: ${item}`).toContain(item);
     }
   });
 
@@ -20,7 +29,11 @@ describe("blueprint guides", () => {
     for (const links of Object.values(GUIDE_LINKS)) {
       for (const link of Object.values(links)) {
         expect(link.label.trim()).not.toBe("");
-        if (link.where === "blueprint") expect(GUIDES.some((g) => g.id === link.guideId), link.label).toBe(true);
+        if (link.where === "blueprint")
+          expect(
+            GUIDES.some((g) => g.id === link.guideId),
+            link.label,
+          ).toBe(true);
       }
     }
   });
@@ -33,7 +46,8 @@ describe("blueprint guides", () => {
     for (const g of BLUEPRINT_GUIDES) {
       if (!g.stepOf) continue;
       expect(g.stepOf.length, g.id).toBe(g.checklist!.length);
-      for (const at of g.stepOf) expect(at >= 0 && at < g.steps.length, `${g.id}: step ${at}`).toBe(true);
+      for (const at of g.stepOf)
+        expect(at >= 0 && at < g.steps.length, `${g.id}: step ${at}`).toBe(true);
     }
   });
 
@@ -45,7 +59,9 @@ describe("blueprint guides", () => {
     // Two items prove the same step, so one tick leaves the instructions alone.
     const embed = BLUEPRINT_GUIDES.find((g) => g.id === "embed-defaults")!;
     expect(crossedSteps(embed, ["Artist name and label"]).has(0)).toBe(false);
-    expect(crossedSteps(embed, ["Artist name and label", "Contact email to embed"]).has(0)).toBe(true);
+    expect(crossedSteps(embed, ["Artist name and label", "Contact email to embed"]).has(0)).toBe(
+      true,
+    );
   });
 
   it("prints the copyright pamphlet with the composition and the master explained in full", () => {
@@ -68,7 +84,10 @@ describe("blueprint guides", () => {
   it("points every numbered step at a checklist item, so no instruction is left unfinished", () => {
     for (const g of BLUEPRINT_GUIDES) {
       const claimed = new Set((g.checklist ?? []).map((_, i) => g.stepOf?.[i] ?? i));
-      const unclaimed = g.steps.map((_, i) => i).filter((i) => !claimed.has(i)).map((i) => `${g.id} step ${i + 1}: ${g.steps[i]!.title}`);
+      const unclaimed = g.steps
+        .map((_, i) => i)
+        .filter((i) => !claimed.has(i))
+        .map((i) => `${g.id} step ${i + 1}: ${g.steps[i]!.title}`);
       expect(unclaimed).toEqual([]);
     }
   });

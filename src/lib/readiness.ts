@@ -4,27 +4,60 @@ import { isBmi } from "@/lib/publishing";
 
 /** Registration targets. Only PRO registration (BMI/ASCAP) also needs each writer's PRO affiliation. */
 export type ReadinessTarget = "mlc" | "soundexchange" | "pro";
-export type MissingCode = "author" | "composer" | "legal_name" | "pro" | "role" | "split"
-  | "ipi" | "publisher" | "samples" | "written_for" | "duration" | "genre" | "release" | "isrc" | "upc" | "master" | "iswc";
+export type MissingCode =
+  | "author"
+  | "composer"
+  | "legal_name"
+  | "pro"
+  | "role"
+  | "split"
+  | "ipi"
+  | "publisher"
+  | "samples"
+  | "written_for"
+  | "duration"
+  | "genre"
+  | "release"
+  | "isrc"
+  | "upc"
+  | "master"
+  | "iswc";
 /** `field` is the form input id to jump to, e.g. "writers-1-legalName". */
 export type MissingItem = { code: MissingCode; message: string; field: string };
 /** `missing` blocks registration and exports; `warnings` (splits not at 100%) are shown but never hold a song back. */
-export type Readiness = { ready: boolean; missing: MissingItem[]; warnings: MissingItem[];
+export type Readiness = {
+  ready: boolean;
+  missing: MissingItem[];
+  warnings: MissingItem[];
   /** How many requirements were looked at, met or not, so a meter can read the share a song has instead of all-or-nothing. */
-  checked: number };
+  checked: number;
+};
 // Registration assistance treats warnings as blocking: splits must be settled before registering (ExpertAssistance).
 
-type Listed = { row: Contributor; group: "writers" | "composers"; index: number; author: boolean; composer: boolean };
+type Listed = {
+  row: Contributor;
+  group: "writers" | "composers";
+  index: number;
+  author: boolean;
+  composer: boolean;
+};
 
 /** A row counts once anything is filled in, so a share or IPI without a name gets flagged too. */
-const used = (r: Contributor) => !!(creditName(r) || r.pro?.trim() || r.ipi?.trim() || r.percentage?.trim());
+const used = (r: Contributor) =>
+  !!(creditName(r) || r.pro?.trim() || r.ipi?.trim() || r.percentage?.trim());
 
 const listed = (m: Pick<Metadata, "writers" | "composers">): Listed[] => {
   const out: Listed[] = [];
   (m.writers ?? []).forEach((row, index) => {
     if (!used(row)) return;
     const role = writerRole(row.role);
-    out.push({ row, group: "writers", index, author: role !== "Composer", composer: role !== "Author" });
+    out.push({
+      row,
+      group: "writers",
+      index,
+      author: role !== "Composer",
+      composer: role !== "Author",
+    });
   });
   // Entries saved before writer roles existed are composers.
   (m.composers ?? []).forEach((row, index) => {
@@ -36,12 +69,19 @@ const listed = (m: Pick<Metadata, "writers" | "composers">): Listed[] => {
 /** Who collects a writer's publisher share on a song (founder, 2026-10-25). Blank = not answered. */
 export type WriterPublishing = "" | "publisher" | "self" | "bmi" | "none";
 export const PUBLISHING_LABEL: Record<Exclude<WriterPublishing, "">, string> = {
-  publisher: "My publisher (listed below)", self: "Self-published", bmi: "BMI pays me the publisher share", none: "None: no publishing on this song",
+  publisher: "My publisher (listed below)",
+  self: "Self-published",
+  bmi: "BMI pays me the publisher share",
+  none: "None: no publishing on this song",
 };
-type PubSong = Pick<Metadata, "writers" | "composers" | "publishers"> & Partial<Pick<Metadata, "selfPublished" | "bmiWriterPublishing">>;
+type PubSong = Pick<Metadata, "writers" | "composers" | "publishers"> &
+  Partial<Pick<Metadata, "selfPublished" | "bmiWriterPublishing">>;
 
 /** A writer row's answer, or the song's Self-published / BMI answer when the row has none. */
-export function writerPublishing(w: Contributor, m: Partial<Pick<Metadata, "selfPublished" | "bmiWriterPublishing">>): WriterPublishing {
+export function writerPublishing(
+  w: Contributor,
+  m: Partial<Pick<Metadata, "selfPublished" | "bmiWriterPublishing">>,
+): WriterPublishing {
   if (w.publishing) return w.publishing;
   if (m.selfPublished) return "self";
   if (m.bmiWriterPublishing && isBmi(w)) return "bmi";
@@ -54,10 +94,21 @@ export function writerPublishing(w: Contributor, m: Partial<Pick<Metadata, "self
  * It must total exactly 100%, like writer splits: a warning on exports, a block on registration.
  */
 export type PiePart = { label: string; share: number; field: string };
-export function publisherPie(m: PubSong): { parts: PiePart[]; total: number; state: "ok" | "under" | "over" | "empty" } {
+export function publisherPie(m: PubSong): {
+  parts: PiePart[];
+  total: number;
+  state: "ok" | "under" | "over" | "empty";
+} {
   const parts: PiePart[] = [];
-  const pubs = (m.publishers ?? []).map((row, index) => ({ row, index })).filter(({ row }) => creditName(row) || row.percentage?.trim() || row.ipi?.trim());
-  for (const { row, index } of pubs) parts.push({ label: creditName(row) || `Publisher ${index + 1}`, share: Number(row.percentage) || 0, field: `publishers-${index}-share` });
+  const pubs = (m.publishers ?? [])
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => creditName(row) || row.percentage?.trim() || row.ipi?.trim());
+  for (const { row, index } of pubs)
+    parts.push({
+      label: creditName(row) || `Publisher ${index + 1}`,
+      share: Number(row.percentage) || 0,
+      field: `publishers-${index}-share`,
+    });
   for (const { row, group, index } of listed(m)) {
     const answer = writerPublishing(row, m);
     // The song-wide Self-published / BMI answer next to a listed publisher is a conflict reported on its own.
@@ -66,19 +117,34 @@ export function publisherPie(m: PubSong): { parts: PiePart[]; total: number; sta
     const paidByBmi = answer === "bmi" || (answer === "" && !pubs.length && isBmi(row));
     if (answer !== "self" && !paidByBmi) continue;
     const share = Number(row.pubShare?.trim() || row.percentage) || 0;
-    parts.push({ label: `${creditName(row) || `Writer ${index + 1}`}, ${paidByBmi ? "paid by BMI" : "self-published"}`, share, field: `${group}-${index}-pubShare` });
+    parts.push({
+      label: `${creditName(row) || `Writer ${index + 1}`}, ${paidByBmi ? "paid by BMI" : "self-published"}`,
+      share,
+      field: `${group}-${index}-pubShare`,
+    });
   }
   const total = Math.round(parts.reduce((n, p) => n + p.share, 0) * 100) / 100;
   // Everyone marked "None" and no publisher listed: the publishing belongs to someone, so they need to be listed.
-  if (!parts.length) return { parts, total, state: listed(m).length && listed(m).every(({ row }) => writerPublishing(row, m) === "none") ? "empty" : "ok" };
+  if (!parts.length)
+    return {
+      parts,
+      total,
+      state:
+        listed(m).length && listed(m).every(({ row }) => writerPublishing(row, m) === "none")
+          ? "empty"
+          : "ok",
+    };
   return { parts, total, state: total === 100 ? "ok" : total < 100 ? "under" : "over" };
 }
 /** One line for the pie, e.g. "Publisher shares total 80% (Lee Songs 50% · Ann Lee, self-published 30%)." */
 export function pieMessage(pie: ReturnType<typeof publisherPie>): string | undefined {
   const who = pie.parts.map((p) => `${p.label} ${p.share}%`).join(" · ");
-  if (pie.state === "empty") return "Every writer is marked \"None\" for publishing. Add the publisher that holds this song's publishing.";
-  if (pie.state === "under") return `Publisher shares total ${pie.total}% (${who}). Add the missing ${Math.round((100 - pie.total) * 100) / 100}% so they equal exactly 100%.`;
-  if (pie.state === "over") return `Publisher shares total ${pie.total}% (${who}). Lower them by ${Math.round((pie.total - 100) * 100) / 100}% so they equal exactly 100%.`;
+  if (pie.state === "empty")
+    return 'Every writer is marked "None" for publishing. Add the publisher that holds this song\'s publishing.';
+  if (pie.state === "under")
+    return `Publisher shares total ${pie.total}% (${who}). Add the missing ${Math.round((100 - pie.total) * 100) / 100}% so they equal exactly 100%.`;
+  if (pie.state === "over")
+    return `Publisher shares total ${pie.total}% (${who}). Lower them by ${Math.round((pie.total - 100) * 100) / 100}% so they equal exactly 100%.`;
   return undefined;
 }
 
@@ -87,7 +153,10 @@ export function pieMessage(pie: ReturnType<typeof publisherPie>): string | undef
  * Self-published, "no publishing on this song", or BMI (BMI writers only: BMI pays them the publisher share too, so
  * with no publisher they need nothing else at BMI and The MLC). `rules` "pro" is ASCAP's: a publisher or Self-published.
  */
-export function publishingGaps(m: PubSong, rules: "pro" | "bmi" | "mlc" = "mlc"): (MissingItem & { who: string })[] {
+export function publishingGaps(
+  m: PubSong,
+  rules: "pro" | "bmi" | "mlc" = "mlc",
+): (MissingItem & { who: string })[] {
   const pubs = (m.publishers ?? []).filter((p) => creditName(p));
   const out: (MissingItem & { who: string })[] = [];
   for (const { row, group, index } of listed(m)) {
@@ -96,11 +165,28 @@ export function publishingGaps(m: PubSong, rules: "pro" | "bmi" | "mlc" = "mlc")
     const answer = writerPublishing(row, m);
     if (answer === "self" || answer === "none") continue;
     if (answer === "bmi") {
-      if (!isBmi(row)) out.push({ code: "publisher", who, field, message: `${who} isn't with BMI, so BMI can't pay their publisher share. Choose another publishing answer on their row.` });
+      if (!isBmi(row))
+        out.push({
+          code: "publisher",
+          who,
+          field,
+          message: `${who} isn't with BMI, so BMI can't pay their publisher share. Choose another publishing answer on their row.`,
+        });
     } else if (answer === "publisher") {
-      if (!pubs.length) out.push({ code: "publisher", who, field: "publishers-0-name", message: `Add ${who}'s publisher under Publishers, or change the publishing answer on their row.` });
+      if (!pubs.length)
+        out.push({
+          code: "publisher",
+          who,
+          field: "publishers-0-name",
+          message: `Add ${who}'s publisher under Publishers, or change the publishing answer on their row.`,
+        });
     } else if (!pubs.length && !(isBmi(row) && rules !== "pro")) {
-      out.push({ code: "publisher", who, field, message: `Who collects ${who}'s publisher share? Add their publisher, or choose Self-published or "None: no publishing on this song" on their row.` });
+      out.push({
+        code: "publisher",
+        who,
+        field,
+        message: `Who collects ${who}'s publisher share? Add their publisher, or choose Self-published or "None: no publishing on this song" on their row.`,
+      });
     }
   }
   return out;
@@ -115,12 +201,20 @@ export function publishingGaps(m: PubSong, rules: "pro" | "bmi" | "mlc" = "mlc")
  * user decides, so warnings never hold back an export. Registration assistance does block on them. SoundExchange registers the recording, so it skips splits.
  * Author/Composer counts toward both. Embedding and saving are never gated on this.
  */
-export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" | "instrumental"> & { publishers?: Contributor[]; selfPublished?: boolean; bmiWriterPublishing?: boolean }, target?: ReadinessTarget): Readiness {
+export function registrationReadiness(
+  m: Pick<Metadata, "writers" | "composers" | "instrumental"> & {
+    publishers?: Contributor[];
+    selfPublished?: boolean;
+    bmiWriterPublishing?: boolean;
+  },
+  target?: ReadinessTarget,
+): Readiness {
   const people = listed(m);
   const missing: MissingItem[] = [];
   const warnings: MissingItem[] = [];
   const first = people[0];
-  const roleField = first?.group === "writers" ? `writers-${first.index}-role` : "writers-0-legalName";
+  const roleField =
+    first?.group === "writers" ? `writers-${first.index}-role` : "writers-0-legalName";
   // Every requirement is counted, met or not, so the health meter can read the share of a song's details that is in
   // rather than one whole agency at a time (founder, 2026-11-12). Splits stay warnings: they block registration, never
   // an export.
@@ -129,23 +223,61 @@ export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" 
     checked += 1;
     if (!met) (bucket === "warning" ? warnings : missing).push(item);
   };
-  if (!m.instrumental) ask(people.some((p) => p.author), { code: "author", message: "Who wrote the lyrics? Set a writer's Role to Author or Author/Composer. No lyrics? Check Instrumental.", field: roleField });
-  ask(people.some((p) => p.composer), { code: "composer", message: "Who made the music? Set a writer's Role to Composer or Author/Composer.", field: roleField });
+  if (!m.instrumental)
+    ask(
+      people.some((p) => p.author),
+      {
+        code: "author",
+        message:
+          "Who wrote the lyrics? Set a writer's Role to Author or Author/Composer. No lyrics? Check Instrumental.",
+        field: roleField,
+      },
+    );
+  ask(
+    people.some((p) => p.composer),
+    {
+      code: "composer",
+      message: "Who made the music? Set a writer's Role to Composer or Author/Composer.",
+      field: roleField,
+    },
+  );
   for (const p of people) {
     const who = creditName(p.row) || `writer ${p.index + 1}`;
-    ask(!!p.row.legalName?.trim(), { code: "legal_name", message: `Add a legal name for ${who}`, field: `${p.group}-${p.index}-legalName` });
-    if (target === "pro") ask(!!p.row.pro?.trim() && p.row.pro !== "None", { code: "pro", message: `Add a PRO affiliation for ${who}`, field: `${p.group}-${p.index}-pro` });
+    ask(!!p.row.legalName?.trim(), {
+      code: "legal_name",
+      message: `Add a legal name for ${who}`,
+      field: `${p.group}-${p.index}-legalName`,
+    });
+    if (target === "pro")
+      ask(!!p.row.pro?.trim() && p.row.pro !== "None", {
+        code: "pro",
+        message: `Add a PRO affiliation for ${who}`,
+        field: `${p.group}-${p.index}-pro`,
+      });
   }
   if (people.length && target !== "soundexchange") {
     const split = splitStatus(people.map((p) => p.row));
     const at = `${first!.group}-${first!.index}-share`;
-    const splitItem = split.state === "empty"
-      ? { code: "split" as const, message: "Add each writer's split. Splits must add up to exactly 100% to register.", field: at }
-      : split.state === "under"
-        ? { code: "split" as const, message: `Writer splits total ${split.total}%. Add the missing ${split.left}% so they equal exactly 100%.`, field: at }
-        : split.state === "over"
-          ? { code: "split" as const, message: `Writer splits total ${split.total}%. Lower them by ${split.over}% so they equal exactly 100%.`, field: at }
-          : undefined;
+    const splitItem =
+      split.state === "empty"
+        ? {
+            code: "split" as const,
+            message: "Add each writer's split. Splits must add up to exactly 100% to register.",
+            field: at,
+          }
+        : split.state === "under"
+          ? {
+              code: "split" as const,
+              message: `Writer splits total ${split.total}%. Add the missing ${split.left}% so they equal exactly 100%.`,
+              field: at,
+            }
+          : split.state === "over"
+            ? {
+                code: "split" as const,
+                message: `Writer splits total ${split.total}%. Lower them by ${split.over}% so they equal exactly 100%.`,
+                field: at,
+              }
+            : undefined;
     ask(!splitItem, splitItem ?? { code: "split", message: "", field: at }, "warning");
     // The publisher half as one pie: listed publishers plus Self-published / BMI-paid writers, exactly 100%.
     // It only counts once every writer's publishing has an answer and the writer splits add up: until then the pie can't
@@ -154,7 +286,13 @@ export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" 
     const pie = publisherPie({ ...m, publishers: m.publishers ?? [] });
     const pieMessage_ = !warnings.length && !gaps.length ? pieMessage(pie) : undefined;
     checked += 1;
-    if (pieMessage_) warnings.push({ code: "split", message: pieMessage_, field: pie.parts.find((p) => p.share === 0)?.field ?? pie.parts[0]?.field ?? "publishers-0-name" });
+    if (pieMessage_)
+      warnings.push({
+        code: "split",
+        message: pieMessage_,
+        field:
+          pie.parts.find((p) => p.share === 0)?.field ?? pie.parts[0]?.field ?? "publishers-0-name",
+      });
   }
   return { ready: missing.length === 0, missing, warnings, checked };
 }
@@ -181,14 +319,26 @@ export function registrationWriters(m: Pick<Metadata, "writers" | "composers">) 
 
 /** Agencies our team registers with (Expert Registration Assistance). */
 export type RegistrationAgency = "ascap" | "bmi" | "mlc" | "soundexchange";
-export const REGISTRATION_AGENCY_LABEL: Record<RegistrationAgency, string> = { ascap: "ASCAP", bmi: "BMI", mlc: "The MLC", soundexchange: "SoundExchange" };
+export const REGISTRATION_AGENCY_LABEL: Record<RegistrationAgency, string> = {
+  ascap: "ASCAP",
+  bmi: "BMI",
+  mlc: "The MLC",
+  soundexchange: "SoundExchange",
+};
 /** "ASCAP" / "The MLC" (as stored on a purchase) → agency key. */
 export const registrationAgency = (label: string): RegistrationAgency | undefined =>
-  (Object.entries(REGISTRATION_AGENCY_LABEL) as [RegistrationAgency, string][]).find(([, l]) => l === label.trim())?.[0];
+  (Object.entries(REGISTRATION_AGENCY_LABEL) as [RegistrationAgency, string][]).find(
+    ([, l]) => l === label.trim(),
+  )?.[0];
 /** `missing` blocks submitting the song for registration with that agency; `tips` are recommended, never blocking. */
-export type RegistrationCheck = { agency: RegistrationAgency; ready: boolean; missing: MissingItem[]; tips: MissingItem[];
+export type RegistrationCheck = {
+  agency: RegistrationAgency;
+  ready: boolean;
+  missing: MissingItem[];
+  tips: MissingItem[];
   /** Every requirement this agency asks about, met or not (the health meter reads the share that is met). */
-  total: number };
+  total: number;
+};
 
 const hasPro = (r: Contributor) => !!r.pro?.trim() && r.pro !== "None";
 const isReleased = (date: string, today: string) => !!date && date <= today;
@@ -198,7 +348,11 @@ const isReleased = (date: string, today: string) => !!date && date <= today;
  * so the core rules stay in one place. Stricter than the export gate on purpose: it is only used for registration
  * assistance, never for saving, embedding or the user's own exports. Splits always block here.
  */
-export function registrationCheck(m: Metadata, agency: RegistrationAgency, today = new Date().toISOString().slice(0, 10)): RegistrationCheck {
+export function registrationCheck(
+  m: Metadata,
+  agency: RegistrationAgency,
+  today = new Date().toISOString().slice(0, 10),
+): RegistrationCheck {
   const missing: MissingItem[] = [];
   const tips: MissingItem[] = [];
   // `total` counts every requirement the agency asks about, met or not, so the meter reads what is filled in rather than
@@ -208,20 +362,53 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
     total += 1;
     if (!met) missing.push({ code, message, field });
   };
-  const tip = (code: MissingCode, message: string, field: string) => tips.push({ code, message, field });
-  const pubs = (m.publishers ?? []).map((row, index) => ({ row, index })).filter(({ row }) => creditName(row) || row.percentage?.trim() || row.ipi?.trim());
+  const tip = (code: MissingCode, message: string, field: string) =>
+    tips.push({ code, message, field });
+  const pubs = (m.publishers ?? [])
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => creditName(row) || row.percentage?.trim() || row.ipi?.trim());
 
   if (agency === "soundexchange") {
-    need(!!m.isrc.trim(), "isrc", "Add the recording's ISRC. SoundExchange matches every play to it.", "isrc");
+    need(
+      !!m.isrc.trim(),
+      "isrc",
+      "Add the recording's ISRC. SoundExchange matches every play to it.",
+      "isrc",
+    );
     const share = Number(m.masterShare || 0);
-    need(share > 0 && share <= 100, "master", "Add the share of the master you own (most independent artists own 100%).", "masterShare");
-    need(!!m.upc.trim(), "upc", "Add the release's UPC (or EAN). SoundExchange needs at least one release for each recording.", "upc");
+    need(
+      share > 0 && share <= 100,
+      "master",
+      "Add the share of the master you own (most independent artists own 100%).",
+      "masterShare",
+    );
+    need(
+      !!m.upc.trim(),
+      "upc",
+      "Add the release's UPC (or EAN). SoundExchange needs at least one release for each recording.",
+      "upc",
+    );
     // The collection rights dates come from the catalog's own calendars; blank means inception and perpetuity, which is a
     // real answer, so they are a tip and never a block (founder, 2026-11-14).
-    if (!m.rightsStart.trim() && !m.rightsStartInception) tip("master", "Add the Rights start date, or tick Inception if the claim runs from the beginning.", "rightsStart");
-    if (!m.rightsEnd.trim() && !m.rightsEndPerpetuity) tip("master", "Add the Rights end date, or tick Perpetuity if the claim never ends.", "rightsEnd");
+    if (!m.rightsStart.trim() && !m.rightsStartInception)
+      tip(
+        "master",
+        "Add the Rights start date, or tick Inception if the claim runs from the beginning.",
+        "rightsStart",
+      );
+    if (!m.rightsEnd.trim() && !m.rightsEndPerpetuity)
+      tip(
+        "master",
+        "Add the Rights end date, or tick Perpetuity if the claim never ends.",
+        "rightsEnd",
+      );
     if (!m.releaseDate) tip("release", "Add the release date.", "releaseDate");
-    if (!m.recordedIn.trim()) tip("release", "Add the country it was recorded in (helps collect royalties outside the US).", "recordedIn");
+    if (!m.recordedIn.trim())
+      tip(
+        "release",
+        "Add the country it was recorded in (helps collect royalties outside the US).",
+        "recordedIn",
+      );
     return { agency, ready: !missing.length, missing, tips, total };
   }
 
@@ -230,56 +417,145 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
   total = base.checked;
   // Every writer who belongs to a PRO has an IPI number; all three agencies identify writers by it.
   for (const { row, group, index } of listed(m)) {
-    if (hasPro(row)) need(!!row.ipi?.trim(), "ipi", `Add the IPI name number for ${creditName(row) || `writer ${index + 1}`}. Find it in their ${row.pro} account.`, `${group}-${index}-ipi`);
+    if (hasPro(row))
+      need(
+        !!row.ipi?.trim(),
+        "ipi",
+        `Add the IPI name number for ${creditName(row) || `writer ${index + 1}`}. Find it in their ${row.pro} account.`,
+        `${group}-${index}-ipi`,
+      );
   }
   // A writer's role is the member's own answer (founder, 2026-11-09): a PRO list never says who wrote the words and who
   // wrote the music, so a blank role would otherwise be registered as both. Saving and embedding stay unblocked; only
   // registration waits for the answer.
   for (const { row, group, index } of listed(m)) {
     if (group !== "writers") continue;
-    need(!!row.role?.trim(), "role", `Say what ${creditName(row) || `writer ${index + 1}`} wrote: the words, the music, or both. A registration never tells us.`, `writers-${index}-role`);
+    need(
+      !!row.role?.trim(),
+      "role",
+      `Say what ${creditName(row) || `writer ${index + 1}`} wrote: the words, the music, or both. A registration never tells us.`,
+      `writers-${index}-role`,
+    );
   }
 
   // Who collects the publisher share: a listed publisher, or nobody (self-published / self-administered). At BMI, a
   // writer of any role with no publisher is paid the publisher share too, so BMI needs neither (PLAN-bmi-no-publisher).
   // Each writer's publisher share needs a home (publishingGaps): a listed publisher, Self-published, BMI (BMI writers
   // only) or "no publishing on this song". The song-level answers can't sit next to a listed publisher.
-  if (m.selfPublished && pubs.length) need(false, "publisher", "You checked Self-published but also listed a publisher. Keep one.", "selfPublished");
-  else if (m.bmiWriterPublishing && pubs.length) need(false, "publisher", "You said there's no publishing company but also listed a publisher. Keep one.", "bmiWriterPublishing");
+  if (m.selfPublished && pubs.length)
+    need(
+      false,
+      "publisher",
+      "You checked Self-published but also listed a publisher. Keep one.",
+      "selfPublished",
+    );
+  else if (m.bmiWriterPublishing && pubs.length)
+    need(
+      false,
+      "publisher",
+      "You said there's no publishing company but also listed a publisher. Keep one.",
+      "bmiWriterPublishing",
+    );
   else {
     const gaps = publishingGaps(m, agency === "bmi" ? "bmi" : agency === "mlc" ? "mlc" : "pro");
     for (const g of gaps) need(false, g.code, g.message, g.field);
     // The MLC: BMI writers with no publisher still upload; the bulk file lists the writer as publisher with the
     // placeholder IPI, removed in The MLC Portal afterwards (founder-verified, 2026-10-25), so it never costs health.
-    if (!gaps.length && !pubs.length && listed(m).some(({ row }) => isBmi(row) && writerPublishing(row, m) !== "none" && writerPublishing(row, m) !== "self")) {
-      if (agency === "mlc") tip("publisher", "No publisher: BMI pays you the publisher share. The MLC file lists you as publisher with the placeholder IPI 123456789; remove it in The MLC Portal after the upload.", "selfPublished");
-      else if (agency === "bmi") tip("publisher", "No publisher: BMI pays you the publisher share too, in proportion to your split.", "selfPublished");
+    if (
+      !gaps.length &&
+      !pubs.length &&
+      listed(m).some(
+        ({ row }) =>
+          isBmi(row) && writerPublishing(row, m) !== "none" && writerPublishing(row, m) !== "self",
+      )
+    ) {
+      if (agency === "mlc")
+        tip(
+          "publisher",
+          "No publisher: BMI pays you the publisher share. The MLC file lists you as publisher with the placeholder IPI 123456789; remove it in The MLC Portal after the upload.",
+          "selfPublished",
+        );
+      else if (agency === "bmi")
+        tip(
+          "publisher",
+          "No publisher: BMI pays you the publisher share too, in proportion to your split.",
+          "selfPublished",
+        );
     }
   }
   for (const { row, index } of pubs) {
     const who = creditName(row) || `publisher ${index + 1}`;
     need(!!creditName(row), "publisher", `Add a name for ${who}.`, `publishers-${index}-name`);
-    if (agency !== "mlc") need(hasPro(row), "pro", `Add a PRO affiliation for ${who}.`, `publishers-${index}-pro`);
-    if (agency === "bmi") need(!!row.ipi?.trim(), "ipi", `Add the IPI name number for ${who}.`, `publishers-${index}-ipi`);
+    if (agency !== "mlc")
+      need(hasPro(row), "pro", `Add a PRO affiliation for ${who}.`, `publishers-${index}-pro`);
+    if (agency === "bmi")
+      need(
+        !!row.ipi?.trim(),
+        "ipi",
+        `Add the IPI name number for ${who}.`,
+        `publishers-${index}-ipi`,
+      );
   }
 
   if (agency === "mlc") {
-    need(!!m.isrc.trim(), "isrc", "Add the recording's ISRC. The MLC pays by matching streams to the song through its recordings.", "isrc");
-    if (!m.iswc.trim()) tip("iswc", "Not needed to register at The MLC. Add the ISWC later, once your PRO assigns it.", "iswc");
+    need(
+      !!m.isrc.trim(),
+      "isrc",
+      "Add the recording's ISRC. The MLC pays by matching streams to the song through its recordings.",
+      "isrc",
+    );
+    if (!m.iswc.trim())
+      tip(
+        "iswc",
+        "Not needed to register at The MLC. Add the ISWC later, once your PRO assigns it.",
+        "iswc",
+      );
     return { agency, ready: !missing.length, missing, tips, total };
   }
 
-  need(!!m.samples, "samples", "Answer whether the song uses a sample or is based on another song.", "samples");
+  need(
+    !!m.samples,
+    "samples",
+    "Answer whether the song uses a sample or is based on another song.",
+    "samples",
+  );
   if (m.samples === "Yes") {
-    need(!!m.sampleTitle.trim(), "samples", "Add the title of the song it samples or is based on.", "sampleTitle");
-    need(!!m.sampleWriters.trim(), "samples", "Add the writers of the song it samples or is based on.", "sampleWriters");
+    need(
+      !!m.sampleTitle.trim(),
+      "samples",
+      "Add the title of the song it samples or is based on.",
+      "sampleTitle",
+    );
+    need(
+      !!m.sampleWriters.trim(),
+      "samples",
+      "Add the writers of the song it samples or is based on.",
+      "sampleWriters",
+    );
   }
   if (agency === "bmi") {
     need(!!m.duration.trim(), "duration", "Add the song's duration (mm:ss).", "duration");
     need(!!m.primaryGenre, "genre", "Choose the song's primary genre.", "primaryGenre");
-    need(!!m.writtenFor, "written_for", "Answer whether the song was written for a film, TV show, stage show or ad.", "writtenFor");
-    if (m.writtenFor && m.writtenFor !== "No") need(!!m.productionTitle.trim(), "written_for", "Add the title of the production it was written for.", "productionTitle");
-    if (isReleased(m.releaseDate, today)) need(!!m.label.trim(), "release", "Released songs need a record label. Self-released? Use your artist or label name.", "label");
+    need(
+      !!m.writtenFor,
+      "written_for",
+      "Answer whether the song was written for a film, TV show, stage show or ad.",
+      "writtenFor",
+    );
+    if (m.writtenFor && m.writtenFor !== "No")
+      need(
+        !!m.productionTitle.trim(),
+        "written_for",
+        "Add the title of the production it was written for.",
+        "productionTitle",
+      );
+    if (isReleased(m.releaseDate, today))
+      need(
+        !!m.label.trim(),
+        "release",
+        "Released songs need a record label. Self-released? Use your artist or label name.",
+        "label",
+      );
     if (!m.iswc.trim()) tip("iswc", "Add the ISWC if one has been assigned.", "iswc");
   } else {
     if (!m.isrc.trim()) tip("isrc", "Add the ISRC so ASCAP can match streams to the song.", "isrc");
@@ -289,7 +565,10 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
 }
 
 /** One song checked against every agency in an order. */
-export function registrationChecks(m: Metadata, agencies: RegistrationAgency[], today?: string): RegistrationCheck[] {
+export function registrationChecks(
+  m: Metadata,
+  agencies: RegistrationAgency[],
+  today?: string,
+): RegistrationCheck[] {
   return agencies.map((a) => registrationCheck(m, a, today));
 }
-

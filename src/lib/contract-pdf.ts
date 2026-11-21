@@ -1,22 +1,52 @@
-import { addSignatureFont, brandFooter, brandHeader, COBALT, ensureSpace, INK, kitAccent, kitCover, kitWatermark, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
+import {
+  addSignatureFont,
+  brandFooter,
+  brandHeader,
+  COBALT,
+  ensureSpace,
+  INK,
+  kitAccent,
+  kitCover,
+  kitWatermark,
+  MUTED,
+  newBrandedPdf,
+  sectionTitle,
+} from "@/lib/brand-pdf";
 import { hexRgb, type PdfBrand } from "@/lib/brand-kit";
 import { safeName } from "@/lib/catalog";
 import { COMPANY_LEGAL_NAME, SIGNATURE_FONT } from "@/lib/contract-blueprints";
 
-export type PdfSignature = { name: string; role: string; signedAt: string | null; signatureName?: string | null; signatureHash?: string | null };
+export type PdfSignature = {
+  name: string;
+  role: string;
+  signedAt: string | null;
+  signatureName?: string | null;
+  signatureHash?: string | null;
+};
 
 /**
  * A contract as a branded PDF: the text, then a signature block per party. Signed copies add each typed signature,
  * its time stamp and verification hash, and the SHA-256 of the locked text, so any later change is detectable.
  */
 export async function downloadContractPdf(o: {
-  title: string; body: string; parties: PdfSignature[]; bodyHash?: string | null; status: string; brand?: PdfBrand | null;
+  title: string;
+  body: string;
+  parties: PdfSignature[];
+  bodyHash?: string | null;
+  status: string;
+  brand?: PdfBrand | null;
   /** Company agreements: the Company party signs in the LLC's block (Company Name / By / Printed Name / Title, 3.9). */
   company?: { signerTitle: string } | undefined;
 }) {
   const pdf = await newBrandedPdf(o.brand);
   const cursive = await addSignatureFont(pdf, SIGNATURE_FONT);
-  const signature = (text: string, x: number, y: number) => (cursive ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(20) : pdf.setFont("times", "italic").setFontSize(18)).setTextColor(...INK).text(text, x, y);
+  const signature = (text: string, x: number, y: number) =>
+    (cursive
+      ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(20)
+      : pdf.setFont("times", "italic").setFontSize(18)
+    )
+      .setTextColor(...INK)
+      .text(text, x, y);
   const w = pdf.internal.pageSize.getWidth();
   // The agreement carries no status line (founder, 2026-11-17): contracts are the outgoing and incoming business
   // agreement itself, so the printed copy is the same document whether it was printed before or after signing, and
@@ -28,19 +58,32 @@ export async function downloadContractPdf(o: {
   let y = brandHeader(pdf, o.title, undefined, undefined, o.brand);
   const accent = o.brand ? kitAccent(o.brand) : COBALT;
   // A line is its own choice (founder, 2026-11-07): a straight rule with square ends, so corners only ever belong to a box.
-  const boxed = o.brand?.options.signature === "box", rounded = boxed && o.brand?.options.corners !== "square";
+  const boxed = o.brand?.options.signature === "box",
+    rounded = boxed && o.brand?.options.corners !== "square";
 
   // The first line repeats the title in capitals; skip it since the header already shows the title.
   const lines = o.body.split("\n");
   if (lines[0]?.trim() === o.title.trim().toUpperCase()) lines.shift();
   for (const raw of lines) {
     const line = raw.trimEnd();
-    if (!line.trim()) { y += 3; continue; }
-    const heading = /^[A-Z0-9 &().,'-]+$/.test(line) && /[A-Z]/.test(line) && line.length < 60 || /^\d+\.\s+[A-Z][A-Z &()'-]+$/.test(line);
+    if (!line.trim()) {
+      y += 3;
+      continue;
+    }
+    const heading =
+      (/^[A-Z0-9 &().,'-]+$/.test(line) && /[A-Z]/.test(line) && line.length < 60) ||
+      /^\d+\.\s+[A-Z][A-Z &()'-]+$/.test(line);
     // Section titles: our cobalt on Came Through Audio documents; with a Branding Kit, their header color or Primary
     // Black, so our blue never clashes with their brand (founder, 2026-10-27).
-    const headingColor = o.brand ? (o.brand.headerColor ? hexRgb(o.brand.headerColor) : INK) : COBALT;
-    pdf.setFont("helvetica", heading ? "bold" : "normal").setFontSize(heading ? 10.5 : 10).setTextColor(...(heading ? headingColor : INK));
+    const headingColor = o.brand
+      ? o.brand.headerColor
+        ? hexRgb(o.brand.headerColor)
+        : INK
+      : COBALT;
+    pdf
+      .setFont("helvetica", heading ? "bold" : "normal")
+      .setFontSize(heading ? 10.5 : 10)
+      .setTextColor(...(heading ? headingColor : INK));
     for (const part of pdf.splitTextToSize(line, w - 36) as string[]) {
       y = ensureSpace(pdf, y, 6);
       pdf.text(part, 18, y);
@@ -50,37 +93,93 @@ export async function downloadContractPdf(o: {
   }
 
   y = ensureSpace(pdf, y + 6, 20 + o.parties.length * 30);
-  y = sectionTitle(pdf, y, "Signatures", o.brand ? (o.brand.headerColor ? hexRgb(o.brand.headerColor) : INK) : COBALT);
+  y = sectionTitle(
+    pdf,
+    y,
+    "Signatures",
+    o.brand ? (o.brand.headerColor ? hexRgb(o.brand.headerColor) : INK) : COBALT,
+  );
   for (const p of o.parties) {
     if (o.company && p.role === "Company") {
       // Company Name: Came Through Audio, LLC · By: (signature) · Printed Name · Title.
       y = ensureSpace(pdf, y, 40);
-      const row = (k: string, v: string) => { pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(...MUTED).text(k, 18, y); pdf.setFont("helvetica", "normal").setTextColor(...INK).text(v, 48, y); };
-      row("Company Name:", COMPANY_LEGAL_NAME); y += 9;
-      pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(...MUTED).text("By:", 18, y);
+      const row = (k: string, v: string) => {
+        pdf
+          .setFont("helvetica", "bold")
+          .setFontSize(9)
+          .setTextColor(...MUTED)
+          .text(k, 18, y);
+        pdf
+          .setFont("helvetica", "normal")
+          .setTextColor(...INK)
+          .text(v, 48, y);
+      };
+      row("Company Name:", COMPANY_LEGAL_NAME);
+      y += 9;
+      pdf
+        .setFont("helvetica", "bold")
+        .setFontSize(9)
+        .setTextColor(...MUTED)
+        .text("By:", 18, y);
       if (p.signedAt && p.signatureName) signature(p.signatureName, 48, y - 1);
-      pdf.setDrawColor(...MUTED).setLineWidth(0.3).line(48, y + 1.5, 130, y + 1.5);
-      if (p.signedAt) pdf.setFont("helvetica", "normal").setFontSize(9).setTextColor(...MUTED).text(`Signed ${new Date(p.signedAt).toLocaleString()}`, 135, y);
+      pdf
+        .setDrawColor(...MUTED)
+        .setLineWidth(0.3)
+        .line(48, y + 1.5, 130, y + 1.5);
+      if (p.signedAt)
+        pdf
+          .setFont("helvetica", "normal")
+          .setFontSize(9)
+          .setTextColor(...MUTED)
+          .text(`Signed ${new Date(p.signedAt).toLocaleString()}`, 135, y);
       y += 7;
-      row("Printed Name:", p.name || "Legal name"); y += 5.5;
-      row("Title:", o.company.signerTitle || "Founder & CEO"); y += 4.5;
-      if (p.signatureHash) { pdf.setFont("helvetica", "normal").setFontSize(6.5).setTextColor(...MUTED).text(`Verification hash: ${p.signatureHash}`, 18, y); y += 4; }
+      row("Printed Name:", p.name || "Legal name");
+      y += 5.5;
+      row("Title:", o.company.signerTitle || "Founder & CEO");
+      y += 4.5;
+      if (p.signatureHash) {
+        pdf
+          .setFont("helvetica", "normal")
+          .setFontSize(6.5)
+          .setTextColor(...MUTED)
+          .text(`Verification hash: ${p.signatureHash}`, 18, y);
+        y += 4;
+      }
       y += 6;
       continue;
     }
     y = ensureSpace(pdf, y, boxed ? 38 : 30);
     const top = y;
     if (boxed) y += 5;
-    pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(...accent).text(p.role.toUpperCase(), boxed ? 22 : 18, y);
+    pdf
+      .setFont("helvetica", "bold")
+      .setFontSize(8)
+      .setTextColor(...accent)
+      .text(p.role.toUpperCase(), boxed ? 22 : 18, y);
     y += 7;
     if (p.signedAt && p.signatureName) {
       signature(p.signatureName, 18, y);
     }
     y += 2;
-    pdf.setDrawColor(...(o.brand ? accent : MUTED)).setLineWidth(0.3).line(boxed ? 22 : 18, y, 110, y);
+    pdf
+      .setDrawColor(...(o.brand ? accent : MUTED))
+      .setLineWidth(0.3)
+      .line(boxed ? 22 : 18, y, 110, y);
     y += 5;
-    pdf.setFont("helvetica", "normal").setFontSize(9).setTextColor(...INK).text(p.name || "Legal name", 18, y);
-    pdf.setTextColor(...MUTED).text(p.signedAt ? `Signed ${new Date(p.signedAt).toLocaleString()}` : "Date: ____________________", 120, y);
+    pdf
+      .setFont("helvetica", "normal")
+      .setFontSize(9)
+      .setTextColor(...INK)
+      .text(p.name || "Legal name", 18, y);
+    pdf
+      .setTextColor(...MUTED)
+      .text(
+        p.signedAt
+          ? `Signed ${new Date(p.signedAt).toLocaleString()}`
+          : "Date: ____________________",
+        120,
+        y,
+      );
     y += 4.5;
     if (p.signatureHash) {
       pdf.setFontSize(6.5).text(`Verification hash: ${p.signatureHash}`, 18, y);
@@ -97,7 +196,10 @@ export async function downloadContractPdf(o: {
   }
 
   y = ensureSpace(pdf, y, 22);
-  pdf.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...MUTED);
+  pdf
+    .setFont("helvetica", "normal")
+    .setFontSize(7.5)
+    .setTextColor(...MUTED);
   if (o.bodyHash) {
     pdf.text(`Contract text SHA-256: ${o.bodyHash}`, 18, y);
     y += 5;

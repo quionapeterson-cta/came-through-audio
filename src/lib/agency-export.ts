@@ -1,5 +1,12 @@
 import { saveBlob, type CatalogTrack } from "@/lib/catalog";
-import { isoDate, MLC_ROLE, parentGenre, performers, writerRole, type Contributor } from "@/lib/metadata";
+import {
+  isoDate,
+  MLC_ROLE,
+  parentGenre,
+  performers,
+  writerRole,
+  type Contributor,
+} from "@/lib/metadata";
 import { isBmi } from "@/lib/audit";
 import { registrationReadiness, registrationWriters, type MissingItem } from "@/lib/readiness";
 
@@ -48,7 +55,9 @@ const hms = (d: string) => {
   const m = /^(\d{1,3}):([0-5]\d)$/.exec(d ?? "");
   if (!m) return "";
   const t = Number(m[1]) * 60 + Number(m[2]);
-  return [Math.floor(t / 3600), Math.floor((t % 3600) / 60), t % 60].map((n) => String(n).padStart(2, "0")).join(":");
+  return [Math.floor(t / 3600), Math.floor((t % 3600) / 60), t % 60]
+    .map((n) => String(n).padStart(2, "0"))
+    .join(":");
 };
 
 /** mm:ss with two-digit minutes ("3:45" → "03:45"), the way agency forms want it, so nobody adds the zero by hand. */
@@ -71,7 +80,8 @@ const mlcNeedsPlaceholder = (m: CatalogTrack["metadata"]) => {
   return pubs.length > 1 && registrationWriters(m).length > pubs.length;
 };
 /** Titles whose MLC rows carry the placeholder publisher IPI, so the export can say which songs to tidy up. */
-export const mlcPlaceholderSongs = (tracks: CatalogTrack[]) => tracks.filter((t) => mlcNeedsPlaceholder(t.metadata)).map((t) => t.title || "Untitled");
+export const mlcPlaceholderSongs = (tracks: CatalogTrack[]) =>
+  tracks.filter((t) => mlcNeedsPlaceholder(t.metadata)).map((t) => t.title || "Untitled");
 
 /**
  * Rows for the official MLC "Format" sheet (21 columns), one row per writer; title only on the first row of a work.
@@ -81,7 +91,10 @@ export const mlcPlaceholderSongs = (tracks: CatalogTrack[]) => tracks.filter((t)
 export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
   const rows: (string | number)[][] = [];
   for (const { metadata: m } of tracks) {
-    const people = registrationWriters(m).map((w) => ({ c: w, role: MLC_ROLE[writerRole(w.role)] }));
+    const people = registrationWriters(m).map((w) => ({
+      c: w,
+      role: MLC_ROLE[writerRole(w.role)],
+    }));
     const pubs = named(m.publishers);
     // Alternate titles go in the AKA columns, one per writer row ("AT" = alternative title), as the template's example does.
     const akas = (m.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean);
@@ -90,10 +103,26 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
       // One publisher covers every writer; with several, they pair up with writers in order.
       const pub = pubs.length === 1 ? pubs[0] : pubs[i];
       rows.push([
-        i === 0 ? m.title : "", "", "", i === 0 ? m.iswc.replace(/[.\s-]/g, "").toUpperCase() : "", akas[i]?.toUpperCase() ?? "", akas[i] ? "AT" : "",
-        last.toUpperCase(), first.toUpperCase(), ipi(c.ipi), role, pub?.hfa?.trim().toUpperCase() ?? "",
-        (pub?.name ?? c.name).toUpperCase(), (pub && ipi(pub.ipi)) || MLC_PLACEHOLDER_IPI, "", "", "",
-        num(c.percentage), i === 0 ? m.title : "", i === 0 ? m.artist : "", i === 0 ? m.isrc.replace(/-/g, "").toUpperCase() : "",
+        i === 0 ? m.title : "",
+        "",
+        "",
+        i === 0 ? m.iswc.replace(/[.\s-]/g, "").toUpperCase() : "",
+        akas[i]?.toUpperCase() ?? "",
+        akas[i] ? "AT" : "",
+        last.toUpperCase(),
+        first.toUpperCase(),
+        ipi(c.ipi),
+        role,
+        pub?.hfa?.trim().toUpperCase() ?? "",
+        (pub?.name ?? c.name).toUpperCase(),
+        (pub && ipi(pub.ipi)) || MLC_PLACEHOLDER_IPI,
+        "",
+        "",
+        "",
+        num(c.percentage),
+        i === 0 ? m.title : "",
+        i === 0 ? m.artist : "",
+        i === 0 ? m.isrc.replace(/-/g, "").toUpperCase() : "",
         // A self-released song goes out under the artist as its label, the same rule the SoundExchange row uses.
         i === 0 ? m.label || m.artist : "",
       ]);
@@ -117,18 +146,44 @@ export function soundExchangeRows(tracks: CatalogTrack[]): (string | number | Da
     const year = (m.releaseDate ?? "").slice(0, 4);
     const label = m.label || m.artist;
     return [
-      artistCredit(m.artist, m.featured), m.title, m.isrc.replace(/-/g, "").toUpperCase(), m.masterBasis || "Copyright Owner",
+      artistCredit(m.artist, m.featured),
+      m.title,
+      m.isrc.replace(/-/g, "").toUpperCase(),
+      m.masterBasis || "Copyright Owner",
       // The claim is the catalog's Master ownership section: who claims it, how much, and from when (blank = inception /
       // perpetuity, which is what the form reads an empty date as).
-      Number(m.masterShare || 100) / 100, rightsCell(m.rightsStart), rightsCell(m.rightsEnd), m.collectionTerritories,
+      Number(m.masterShare || 100) / 100,
+      rightsCell(m.rightsStart),
+      rightsCell(m.rightsEnd),
+      m.collectionTerritories,
       // "Recording Version, if applicable" (live, remix, sped up): the catalog keeps it apart from the title.
       m.version,
       // Duration, then SoundExchange's main genre ("Trap" goes as Hip-Hop/Rap), then the recording date: blank unless a
       // full day was entered, because a year alone can't be made into an honest MM/DD/YYYY.
-      hms(m.duration), m.primaryGenre ? parentGenre(m.primaryGenre) : "", formDate(m.recordingDate), m.recordedIn, m.masteredIn, m.ownerNationality, formDate(m.releaseDate), m.firstReleaseCountry,
-      pLine(m.phonographic) || (year && label ? `${year} ${label}` : ""), m.iswc.replace(/[.\s-]/g, "").toUpperCase(),
-      registrationWriters(m).map((c) => c.name).join("; "), named(m.publishers).map((p) => p.name).join("; "),
-      m.artist, m.album || m.title, m.releaseVersion, m.upc, m.catalogNumber, formDate(m.releaseDate), m.releaseCountry, label,
+      hms(m.duration),
+      m.primaryGenre ? parentGenre(m.primaryGenre) : "",
+      formDate(m.recordingDate),
+      m.recordedIn,
+      m.masteredIn,
+      m.ownerNationality,
+      formDate(m.releaseDate),
+      m.firstReleaseCountry,
+      pLine(m.phonographic) || (year && label ? `${year} ${label}` : ""),
+      m.iswc.replace(/[.\s-]/g, "").toUpperCase(),
+      registrationWriters(m)
+        .map((c) => c.name)
+        .join("; "),
+      named(m.publishers)
+        .map((p) => p.name)
+        .join("; "),
+      m.artist,
+      m.album || m.title,
+      m.releaseVersion,
+      m.upc,
+      m.catalogNumber,
+      formDate(m.releaseDate),
+      m.releaseCountry,
+      label,
     ];
   });
 }
@@ -150,8 +205,15 @@ async function textSheet(rows: string[][], sheetName: string) {
       c.alignment = { vertical: "top", horizontal: "left" };
     });
   });
-  (rows[0] ?? []).forEach((_, j) => { ws.getColumn(j + 1).width = Math.min(60, Math.max(10, ...rows.map((r) => (r[j] ?? "").length + 2))); });
-  return new Blob([await wb.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  (rows[0] ?? []).forEach((_, j) => {
+    ws.getColumn(j + 1).width = Math.min(
+      60,
+      Math.max(10, ...rows.map((r) => (r[j] ?? "").length + 2)),
+    );
+  });
+  return new Blob([await wb.xlsx.writeBuffer()], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 }
 const text = (v: unknown) => (v === undefined || v === null ? "" : String(v));
 
@@ -159,41 +221,130 @@ const text = (v: unknown) => (v === undefined || v === null ? "" : String(v));
 export function proCheatSheet(tracks: CatalogTrack[]): string[][] {
   // The work-level answers ASCAP and BMI ask for sit on every party row (founder, 2026-11-12): the catalog has them and
   // the sheet was leaving them behind, so a member had to look them up again while filling the form.
-  const rows: unknown[][] = [["Work Title", "ISWC", "ISRC", "Performing Artist", "Duration (mm:ss)", "Party Type", "Name", "Role", "Share %", "PRO", "IPI #", "Alternate Titles", "Samples", "Written For", "Instrumental"]];
+  const rows: unknown[][] = [
+    [
+      "Work Title",
+      "ISWC",
+      "ISRC",
+      "Performing Artist",
+      "Duration (mm:ss)",
+      "Party Type",
+      "Name",
+      "Role",
+      "Share %",
+      "PRO",
+      "IPI #",
+      "Alternate Titles",
+      "Samples",
+      "Written For",
+      "Instrumental",
+    ],
+  ];
   for (const { metadata: m } of tracks) {
     // BMI asks for the duration; a text cell keeps 03:45 from turning into a time of day.
     const work = [
-      (m.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean).join("; "),
-      m.samples === "Yes" ? `Yes${m.sampleTitle ? `: ${m.sampleTitle}` : ""}${m.sampleWriters ? ` (${m.sampleWriters})` : ""}` : m.samples,
-      m.writtenFor === "" ? "" : m.writtenFor === "No" ? "No" : `Yes: ${m.writtenFor}${m.productionTitle ? ` — ${m.productionTitle}` : ""}`,
+      (m.alternateTitles ?? [])
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .join("; "),
+      m.samples === "Yes"
+        ? `Yes${m.sampleTitle ? `: ${m.sampleTitle}` : ""}${m.sampleWriters ? ` (${m.sampleWriters})` : ""}`
+        : m.samples,
+      m.writtenFor === ""
+        ? ""
+        : m.writtenFor === "No"
+          ? "No"
+          : `Yes: ${m.writtenFor}${m.productionTitle ? ` — ${m.productionTitle}` : ""}`,
       m.instrumental ? "Yes" : "No",
     ];
     const base = [m.title, m.iswc, m.isrc, m.artist, mmss(m.duration)];
-    for (const w of registrationWriters(m)) rows.push([...base, "Writer", w.name, w.role, w.percentage, w.pro, w.ipi, ...work]);
-    for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, p.ipi, ...work]);
+    for (const w of registrationWriters(m))
+      rows.push([...base, "Writer", w.name, w.role, w.percentage, w.pro, w.ipi, ...work]);
+    for (const p of named(m.publishers))
+      rows.push([
+        ...base,
+        "Publisher",
+        p.name,
+        "Original Publisher",
+        p.percentage,
+        p.pro,
+        p.ipi,
+        ...work,
+      ]);
     // No publisher: BMI pays its writers the publisher share, so the sheet says so instead of leaving it blank.
-    if (!named(m.publishers).length && registrationWriters(m).some(isBmi)) rows.push([...base, "Publisher", "None: BMI pays the publisher share to its writers", "", "", "BMI", "", ...work]);
+    if (!named(m.publishers).length && registrationWriters(m).some(isBmi))
+      rows.push([
+        ...base,
+        "Publisher",
+        "None: BMI pays the publisher share to its writers",
+        "",
+        "",
+        "BMI",
+        "",
+        ...work,
+      ]);
   }
   return rows.map((r) => r.map(text));
 }
 
 /** Master owner from the ℗ line ("℗ 2026 Came Through Audio" → "Came Through Audio"), else the label, else the artist. */
-const masterOwner = (m: CatalogTrack["metadata"]) => pLine(m.phonographic).replace(/^\d{4}\s+/, "").trim() || m.label || m.artist;
+const masterOwner = (m: CatalogTrack["metadata"]) =>
+  pLine(m.phonographic)
+    .replace(/^\d{4}\s+/, "")
+    .trim() ||
+  m.label ||
+  m.artist;
 
 /**
  * Neighbouring Rights Pack: one row per performer per recording, with the fields PPL and SoundExchange International
  * ask for. Songs without an ISRC are left out (societies match recordings by ISRC) and returned so the UI can say so.
  */
 export function neighbouringRows(tracks: CatalogTrack[]) {
-  const rows: string[][] = [["ISRC", "Title", "Main Artist", "Performer", "Featured / Non-featured", "Role", "Instrument", "Recorded In", "Year Recorded", "Master Owner", "Label", "Release Date", "UPC", "Duration"]];
+  const rows: string[][] = [
+    [
+      "ISRC",
+      "Title",
+      "Main Artist",
+      "Performer",
+      "Featured / Non-featured",
+      "Role",
+      "Instrument",
+      "Recorded In",
+      "Year Recorded",
+      "Master Owner",
+      "Label",
+      "Release Date",
+      "UPC",
+      "Duration",
+    ],
+  ];
   const skipped: CatalogTrack[] = [];
   for (const t of tracks) {
     const m = t.metadata;
-    if (!m.isrc.trim()) { skipped.push(t); continue; }
+    if (!m.isrc.trim()) {
+      skipped.push(t);
+      continue;
+    }
     const year = m.recordedYear || (m.releaseDate ?? "").slice(0, 4);
     for (const p of performers(m)) {
-      rows.push([m.isrc.replace(/-/g, "").toUpperCase(), m.title, artistCredit(m.artist, m.featured), p.name, p.featured ? "Featured" : "Non-featured", p.role, p.instrument,
-        m.recordedIn, year, masterOwner(m), m.label, m.releaseDate, m.upc, mmss(m.duration)].map(text));
+      rows.push(
+        [
+          m.isrc.replace(/-/g, "").toUpperCase(),
+          m.title,
+          artistCredit(m.artist, m.featured),
+          p.name,
+          p.featured ? "Featured" : "Non-featured",
+          p.role,
+          p.instrument,
+          m.recordedIn,
+          year,
+          masterOwner(m),
+          m.label,
+          m.releaseDate,
+          m.upc,
+          mmss(m.duration),
+        ].map(text),
+      );
     }
   }
   return { rows, skipped };
@@ -201,7 +352,8 @@ export function neighbouringRows(tracks: CatalogTrack[]) {
 
 export async function downloadNeighbouringPack(tracks: CatalogTrack[], name: string) {
   const { rows, skipped } = neighbouringRows(tracks);
-  if (skipped.length < tracks.length) save(await textSheet(rows, "Neighbouring Rights"), `${name} - Neighbouring Rights Pack.xlsx`);
+  if (skipped.length < tracks.length)
+    save(await textSheet(rows, "Neighbouring Rights"), `${name} - Neighbouring Rights Pack.xlsx`);
   return skipped;
 }
 
@@ -213,13 +365,26 @@ function save(blob: Blob, filename: string) {
 type Cell = string | number | Date;
 /** Number format for a filled cell: dates as MM/DD/YYYY, the percent column as 0%, everything else as plain text. */
 const cellFormat = (v: Cell, percentCols: number[], col: number) =>
-  v instanceof Date ? "mm/dd/yyyy" : percentCols.includes(col) ? "0%" : typeof v === "number" ? "0" : "@";
+  v instanceof Date
+    ? "mm/dd/yyyy"
+    : percentCols.includes(col)
+      ? "0%"
+      : typeof v === "number"
+        ? "0"
+        : "@";
 
 /**
  * Fills an official agency template. The templates' leftover example rows carry mixed fonts and formats
  * (tiny text, 0.00%, mm-dd-yy), so every data cell gets one clean, readable style instead of inheriting them.
  */
-async function fillTemplate(path: string, sheet: string, firstRow: number, clearTo: number, rows: Cell[][], percentCols: number[] = []) {
+async function fillTemplate(
+  path: string,
+  sheet: string,
+  firstRow: number,
+  clearTo: number,
+  rows: Cell[][],
+  percentCols: number[] = [],
+) {
   const { default: ExcelJS } = await import("exceljs");
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await (await fetch(path)).arrayBuffer());
@@ -228,11 +393,15 @@ async function fillTemplate(path: string, sheet: string, firstRow: number, clear
   for (let r = firstRow; r <= Math.max(clearTo, firstRow + rows.length); r++) {
     // Drop the template's fixed row heights so wrapped titles and names show in full.
     const row = ws.getRow(r) as { height?: number; customHeight?: boolean };
-    delete row.height; row.customHeight = false;
+    delete row.height;
+    row.customHeight = false;
     for (let c = 1; c <= width; c++) {
       const cell = ws.getCell(r, c);
       cell.value = null;
-      cell.style = { font: { name: "Calibri", size: 12, color: { argb: "FF0B0B0B" } }, alignment: { vertical: "top", horizontal: "left", wrapText: true } };
+      cell.style = {
+        font: { name: "Calibri", size: 12, color: { argb: "FF0B0B0B" } },
+        alignment: { vertical: "top", horizontal: "left", wrapText: true },
+      };
     }
   }
   rows.forEach((vals, i) => {
@@ -251,7 +420,9 @@ async function fillTemplate(path: string, sheet: string, firstRow: number, clear
   // Open on the first column and first data row (the MLC template was saved scrolled to column L).
   ws.views = [{ state: "normal", activeCell: `A${firstRow}`, zoomScale: 100 }];
   wb.views = (wb.views ?? []).map((v) => ({ ...v, activeTab: 0, firstSheet: 0 }));
-  return new Blob([await wb.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  return new Blob([await wb.xlsx.writeBuffer()], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 }
 
 export type Held = { track: CatalogTrack; missing: MissingItem[] };
@@ -261,7 +432,8 @@ export function exportGate(agency: Agency, tracks: CatalogTrack[]) {
   const held: Held[] = [];
   for (const track of tracks) {
     const r = registrationReadiness(track.metadata, agency);
-    if (r.ready) ready.push(track); else held.push({ track, missing: r.missing });
+    if (r.ready) ready.push(track);
+    else held.push({ track, missing: r.missing });
   }
   return { ready, held };
 }
@@ -271,39 +443,73 @@ export const MLC_MAX_ROWS = 300;
 /** Splits songs into MLC files of at most 300 rows, never splitting one song's rows across files. */
 export function mlcFiles(tracks: CatalogTrack[]): CatalogTrack[][] {
   const files: CatalogTrack[][] = [];
-  let cur: CatalogTrack[] = [], rows = 0;
+  let cur: CatalogTrack[] = [],
+    rows = 0;
   for (const t of tracks) {
     const n = Math.max(1, mlcRows([t]).length);
-    if (cur.length && rows + n > MLC_MAX_ROWS) { files.push(cur); cur = []; rows = 0; }
-    cur.push(t); rows += n;
+    if (cur.length && rows + n > MLC_MAX_ROWS) {
+      files.push(cur);
+      cur = [];
+      rows = 0;
+    }
+    cur.push(t);
+    rows += n;
   }
   if (cur.length) files.push(cur);
   return files;
 }
 
 /** Exports the ready songs and returns the ones held back so the UI can say what to fix. */
-export async function downloadAgencyExport(agency: Agency, tracks: CatalogTrack[], name: string): Promise<Held[]> {
+export async function downloadAgencyExport(
+  agency: Agency,
+  tracks: CatalogTrack[],
+  name: string,
+): Promise<Held[]> {
   const { ready, held } = exportGate(agency, tracks);
   if (!ready.length) return held;
   if (agency === "mlc") {
     const files = mlcFiles(ready);
     for (const [i, part] of files.entries()) {
       const suffix = files.length > 1 ? ` (${i + 1} of ${files.length})` : "";
-      save(await fillTemplate("/templates/MLCBulkWork_V1.2.xlsx", "Format", 2, 11, mlcRows(part)), `${name} - MLC Bulk Work Registration${suffix}.xlsx`);
+      save(
+        await fillTemplate("/templates/MLCBulkWork_V1.2.xlsx", "Format", 2, 11, mlcRows(part)),
+        `${name} - MLC Bulk Work Registration${suffix}.xlsx`,
+      );
       // Browsers can drop back-to-back downloads; a short pause lets each file through.
       if (i < files.length - 1) await new Promise((r) => setTimeout(r, 600));
     }
-  }
-  else if (agency === "soundexchange") save(await fillTemplate("/templates/ISRC_Ingest_Form.xlsx", "Form", 11, 11, soundExchangeRows(ready), [5]), `${name} - SoundExchange ISRC Ingest.xlsx`);
-  else save(await textSheet(proCheatSheet(ready), "BMI-ASCAP"), `${name} - BMI-ASCAP Registration Cheat Sheet.xlsx`);
+  } else if (agency === "soundexchange")
+    save(
+      await fillTemplate(
+        "/templates/ISRC_Ingest_Form.xlsx",
+        "Form",
+        11,
+        11,
+        soundExchangeRows(ready),
+        [5],
+      ),
+      `${name} - SoundExchange ISRC Ingest.xlsx`,
+    );
+  else
+    save(
+      await textSheet(proCheatSheet(ready), "BMI-ASCAP"),
+      `${name} - BMI-ASCAP Registration Cheat Sheet.xlsx`,
+    );
   return held;
 }
 
 /** When each song was last exported to each agency: `${trackId}:${agency}` → ISO date. Empty until the migration runs. */
 export async function listExports(): Promise<Map<string, string>> {
   const { supabase } = await import("@/integrations/supabase/client");
-  const { data } = await supabase.from("agency_exports" as never).select("track_id, agency, exported_at");
-  return new Map(((data ?? []) as { track_id: string; agency: string; exported_at: string }[]).map((r) => [`${r.track_id}:${r.agency}`, r.exported_at]));
+  const { data } = await supabase
+    .from("agency_exports" as never)
+    .select("track_id, agency, exported_at");
+  return new Map(
+    ((data ?? []) as { track_id: string; agency: string; exported_at: string }[]).map((r) => [
+      `${r.track_id}:${r.agency}`,
+      r.exported_at,
+    ]),
+  );
 }
 
 /**
@@ -313,7 +519,10 @@ export async function listExports(): Promise<Map<string, string>> {
  */
 export async function deleteExports(agency: Agency) {
   const { supabase } = await import("@/integrations/supabase/client");
-  const { error } = await supabase.from("agency_exports" as never).delete().eq("agency", agency);
+  const { error } = await supabase
+    .from("agency_exports" as never)
+    .delete()
+    .eq("agency", agency);
   if (error) throw error;
 }
 
@@ -322,5 +531,9 @@ export async function recordExports(agency: Agency, trackIds: string[]) {
   if (!trackIds.length) return;
   const { supabase } = await import("@/integrations/supabase/client");
   const now = new Date().toISOString();
-  await supabase.from("agency_exports" as never).upsert(trackIds.map((track_id) => ({ track_id, agency, exported_at: now })) as never, { onConflict: "track_id,agency" });
+  await supabase
+    .from("agency_exports" as never)
+    .upsert(trackIds.map((track_id) => ({ track_id, agency, exported_at: now })) as never, {
+      onConflict: "track_id,agency",
+    });
 }

@@ -68,7 +68,11 @@ export const INBOX_LABEL: Record<InboundMailbox, string> = {
 };
 
 /** The three addresses the marketing team sends and receives as (founder, 2026-11-19). info@ went to Support. */
-export const MARKETING_MAILBOXES = ["marketing", "partners", "collaborate"] as const satisfies readonly InboxMailbox[];
+export const MARKETING_MAILBOXES = [
+  "marketing",
+  "partners",
+  "collaborate",
+] as const satisfies readonly InboxMailbox[];
 
 /** The billing team's mailbox: billing@ and a super admin read and answer it. */
 export const BILLING_MAILBOXES = ["billing"] as const satisfies readonly InboxMailbox[];

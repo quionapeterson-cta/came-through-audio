@@ -14,7 +14,9 @@ const now = new Date("2026-11-08T00:00:00Z");
 
 describe("two years of inactivity", () => {
   it("deletes two years after the last activity", () => {
-    expect(inactivityDeleteOn("2025-06-01T00:00:00Z", now).toISOString()).toBe("2027-06-01T00:00:00.000Z");
+    expect(inactivityDeleteOn("2025-06-01T00:00:00Z", now).toISOString()).toBe(
+      "2027-06-01T00:00:00.000Z",
+    );
     expect(INACTIVITY_MONTHS).toBe(24);
   });
 
@@ -44,7 +46,9 @@ describe("reminders before deletion", () => {
     expect(dueInactivityReminder(row(d), new Date("2026-11-08T00:00:00Z"))).toBe("60");
     expect(dueInactivityReminder(row(d, ["60"]), new Date("2026-12-08T00:00:00Z"))).toBe("30");
     expect(dueInactivityReminder(row(d, ["60", "30"]), new Date("2026-12-31T00:00:00Z"))).toBe("7");
-    expect(dueInactivityReminder(row(d, ["60", "30", "7"]), new Date("2027-01-06T00:00:00Z"))).toBe("1");
+    expect(dueInactivityReminder(row(d, ["60", "30", "7"]), new Date("2027-01-06T00:00:00Z"))).toBe(
+      "1",
+    );
   });
 
   it("does not repeat a reminder, and stays quiet once the date has passed", () => {

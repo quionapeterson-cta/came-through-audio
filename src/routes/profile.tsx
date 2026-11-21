@@ -19,10 +19,28 @@ import { BadgeViewer, type BadgeAbout } from "@/components/BadgeViewer";
 import { EagleStatusBadge } from "@/components/EagleStatusBadge";
 import { eagleStatus } from "@/lib/eagle-status";
 import type { ShareInfo } from "@/components/BadgeCelebration";
-import { badgePrefs, loadOnboarding, loadProfile, loadSeatArtistDefaults, saveOnboarding, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import {
+  badgePrefs,
+  loadOnboarding,
+  loadProfile,
+  loadSeatArtistDefaults,
+  saveOnboarding,
+  syncFromCloud,
+  type ArtistProfile,
+  type Onboarding,
+} from "@/lib/artist-profile";
 import { isBadgeImage } from "@/lib/badges";
 import { listSeatState, seatArtistsFor } from "@/lib/seats";
-import { BadgeDetail, BadgeSettings, BadgeSettingsButton, BadgeShelf, BadgeWatcher, shelfArt, useBadgeStates, type BadgeState } from "@/components/Badges";
+import {
+  BadgeDetail,
+  BadgeSettings,
+  BadgeSettingsButton,
+  BadgeShelf,
+  BadgeWatcher,
+  shelfArt,
+  useBadgeStates,
+  type BadgeState,
+} from "@/components/Badges";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 import { TIER_LABEL, type Tier } from "@/lib/plans";
 import { openBilling } from "@/lib/checkout";
@@ -33,7 +51,12 @@ import { BrandKit } from "@/components/BrandKit";
 import { Disclaimer } from "@/components/Disclaimer";
 
 export const Route = createFileRoute("/profile")({
-  head: () => ({ meta: [{ title: "Profile — Came Through Audio" }, { name: "description", content: "Your artist profile, account and awards." }] }),
+  head: () => ({
+    meta: [
+      { title: "Profile — Came Through Audio" },
+      { name: "description", content: "Your artist profile, account and awards." },
+    ],
+  }),
   component: ProfilePage,
 });
 
@@ -51,25 +74,45 @@ function ProfilePage() {
   // Whose profile Edit opens: this account's, or an artist on one of its seats (founder, 2026-11-04).
   const [chooser, setChooser] = useState(false);
   const [editTarget, setEditTarget] = useState<{ userId: string; name: string } | null>(null);
-  const [seatArtists, setSeatArtists] = useState<{ userId: string; name: string; tier: Exclude<Tier, "free"> }[]>([]);
+  const [seatArtists, setSeatArtists] = useState<
+    { userId: string; name: string; tier: Exclude<Tier, "free"> }[]
+  >([]);
   // The seats panel on its own, opened straight after a seat purchase so the artist's email has somewhere to go.
   const [seatsOpen, setSeatsOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
-  const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo; about?: BadgeAbout; state?: BadgeState }>();
+  const [viewing, setViewing] = useState<{
+    src: string;
+    name?: string;
+    round?: boolean;
+    share?: ShareInfo;
+    about?: BadgeAbout;
+    state?: BadgeState;
+  }>();
   const [badge, setBadge] = useState<BadgeState>();
   const [badgeList, setBadgeList] = useState<BadgeState[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { states } = useBadgeStates(user?.id);
   // Small opens the shelf at half the old small size (founder, 2026-11-07); a stored "large" still wins on this device.
-  const [size, setSize] = useState<Size>(() => { try { return localStorage.getItem(SIZE_KEY) === "large" ? "large" : "small"; } catch { return "small"; } });
+  const [size, setSize] = useState<Size>(() => {
+    try {
+      return localStorage.getItem(SIZE_KEY) === "large" ? "large" : "small";
+    } catch {
+      return "small";
+    }
+  });
 
-  useEffect(() => { if (!loading && !user) navigate({ to: "/" }); }, [loading, user, navigate]);
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/" });
+  }, [loading, user, navigate]);
   useEffect(() => {
     if (!user) return;
     setOb(loadOnboarding(user.id));
     setProfile(loadProfile(user.id));
-    syncFromCloud(user.id).then((o) => { setOb(o); setProfile(loadProfile(user.id)); });
+    syncFromCloud(user.id).then((o) => {
+      setOb(o);
+      setProfile(loadProfile(user.id));
+    });
   }, [user]);
   // The artists this account pays a seat for, so Edit profile can switch to one of theirs.
   /**
@@ -80,26 +123,44 @@ function ProfilePage() {
   const seatPrompted = useRef(false);
   useEffect(() => {
     if (!user) return;
-    listSeatState().then((s) => {
-      setSeatArtists(seatArtistsFor(s.seats, user.id));
-      if (seatPrompted.current) return;
-      const uninvited = s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed");
-      if (!uninvited || new URLSearchParams(window.location.search).get("bought") !== "seat") return;
-      seatPrompted.current = true;
-      setSeatsOpen(true);
-    }).catch(() => setSeatArtists([]));
+    listSeatState()
+      .then((s) => {
+        setSeatArtists(seatArtistsFor(s.seats, user.id));
+        if (seatPrompted.current) return;
+        const uninvited = s.seats.some(
+          (seat) => seat.owner_id === user.id && seat.status === "unclaimed",
+        );
+        if (!uninvited || new URLSearchParams(window.location.search).get("bought") !== "seat")
+          return;
+        seatPrompted.current = true;
+        setSeatsOpen(true);
+      })
+      .catch(() => setSeatArtists([]));
   }, [user]);
 
   function chooseSize(s: Size) {
     setSize(s);
-    try { localStorage.setItem(SIZE_KEY, s); } catch { /* per-device preference only */ }
+    try {
+      localStorage.setItem(SIZE_KEY, s);
+    } catch {
+      /* per-device preference only */
+    }
   }
 
-  if (loading || !user) return <div className="flex min-h-screen items-center justify-center bg-ink text-ink-muted">Loading…</div>;
+  if (loading || !user)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ink text-ink-muted">
+        Loading…
+      </div>
+    );
 
   const name = names.display;
-  const legalName = ob?.legalName || (user.user_metadata?.["legal_name"] as string | undefined) || "";
-  const memberSince = new Date(user.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const legalName =
+    ob?.legalName || (user.user_metadata?.["legal_name"] as string | undefined) || "";
+  const memberSince = new Date(user.created_at).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
   const earnedCount = states.filter((s) => s.earned).length;
   const genres = [profile?.primaryGenre, profile?.secondaryGenre].filter(Boolean).join(" · ");
 
@@ -108,8 +169,15 @@ function ProfilePage() {
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
           <BrandLogo />
-          <Button asChild variant="ghost" className="text-ink-foreground hover:bg-ink-border hover:text-ink-foreground">
-            <Link to="/workspace"><ArrowLeft />Back to workspace</Link>
+          <Button
+            asChild
+            variant="ghost"
+            className="text-ink-foreground hover:bg-ink-border hover:text-ink-foreground"
+          >
+            <Link to="/workspace">
+              <ArrowLeft />
+              Back to workspace
+            </Link>
           </Button>
         </div>
       </header>
@@ -117,20 +185,50 @@ function ProfilePage() {
       <main className="mx-auto max-w-5xl space-y-8 px-6 py-10">
         {/* Hero */}
         <section className="flex flex-col items-center gap-6 rounded-2xl border border-border bg-card p-8 text-center sm:flex-row sm:text-left">
-          <button type="button" aria-label="View your profile picture" disabled={!ob?.avatar} onClick={() => ob?.avatar && setViewing({ src: ob.avatar, name, round: !isBadgeImage(ob.avatar), share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre } })}
-            className="shrink-0 rounded-full transition enabled:hover:ring-2 enabled:hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <button
+            type="button"
+            aria-label="View your profile picture"
+            disabled={!ob?.avatar}
+            onClick={() =>
+              ob?.avatar &&
+              setViewing({
+                src: ob.avatar,
+                name,
+                round: !isBadgeImage(ob.avatar),
+                share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre },
+              })
+            }
+            className="shrink-0 rounded-full transition enabled:hover:ring-2 enabled:hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
             <ArtistAvatar src={ob?.avatar} className="h-32 w-32 sm:h-36 sm:w-36" />
           </button>
           <div className="min-w-0 flex-1 space-y-2">
             {/* The full status disc sits with the name; it turns into its grayed-out locked form off Catalog Management. */}
             <h1 className="flex flex-wrap items-center gap-3 break-words text-4xl font-extrabold leading-tight tracking-tight">
               {name}
-              <EagleStatusBadge variant="disc" size={44} status={eagleStatus({ onManagement: tier === "management", startedAt: sub?.current_period_start ?? null })} />
+              <EagleStatusBadge
+                variant="disc"
+                size={44}
+                status={eagleStatus({
+                  onManagement: tier === "management",
+                  startedAt: sub?.current_period_start ?? null,
+                })}
+              />
             </h1>
-            <p className="text-muted-foreground">{[legalName, `Member since ${memberSince}`].filter(Boolean).join(" · ")}</p>
-            <span className="inline-block rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{TIER_LABEL[tier]}</span>
+            <p className="text-muted-foreground">
+              {[legalName, `Member since ${memberSince}`].filter(Boolean).join(" · ")}
+            </p>
+            <span className="inline-block rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+              {TIER_LABEL[tier]}
+            </span>
           </div>
-          <Button variant="outline" onClick={() => (seatArtists.length ? setChooser(true) : setEditing(true))}><Pencil />Edit profile</Button>
+          <Button
+            variant="outline"
+            onClick={() => (seatArtists.length ? setChooser(true) : setEditing(true))}
+          >
+            <Pencil />
+            Edit profile
+          </Button>
         </section>
 
         {/* Someone paying for the artist's seat: the way to keep the plan when that year ends (2026-11-08). */}
@@ -138,34 +236,93 @@ function ProfilePage() {
 
         <div className="grid gap-8 md:grid-cols-2">
           <Card title="Artist Profile">
-            <Rows rows={[
-              ["Artist name", name],
-              ["Legal name", legalName],
-              ["Label", profile?.label],
-              ["Genres", genres],
-              ["Release type", profile?.releaseType],
-              ["Composition ©", profile?.copyright],
-              ["Recording ℗", profile?.phonographic],
-            ]} />
+            <Rows
+              rows={[
+                ["Artist name", name],
+                ["Legal name", legalName],
+                ["Label", profile?.label],
+                ["Genres", genres],
+                ["Release type", profile?.releaseType],
+                ["Composition ©", profile?.copyright],
+                ["Recording ℗", profile?.phonographic],
+              ]}
+            />
             <People title="Writers" rows={profile?.writers} writer />
             <People title="Producers" rows={profile?.producers} />
             <People title="Publishers" rows={profile?.publishers} />
           </Card>
 
           <Card title="Account">
-            <Rows rows={[["Email", user.new_email ? `${user.email} (changing to ${user.new_email}: click the link we emailed there to finish)` : user.email], ["Plan", TIER_LABEL[tier]],
-              ...(founding ? [["Founding member", `#${founding.seat}: you get ${TIER_LABEL[founding.granted_tier]} for the price of ${TIER_LABEL[founding.paid_tier]}, as long as your plan stays active`] as [string, string]] : []),
-              ...(plan?.periodEnd ? [[plan.cancelling ? "Ends" : "Renews", longDate(plan.periodEnd)] as [string, string]] : []),
-              // Encourage upgrading, not cancelling (founder, 2026-10-27); the refund window stays in the Refund Policy.
-              ...(plan && paidTier !== "management" ? [["Upgrade", "Upgrade any time and only pay the difference. Your upgrade is prorated for the rest of your plan year."] as [string, string]] : []),
-              ["Member since", memberSince]]} />
+            <Rows
+              rows={[
+                [
+                  "Email",
+                  user.new_email
+                    ? `${user.email} (changing to ${user.new_email}: click the link we emailed there to finish)`
+                    : user.email,
+                ],
+                ["Plan", TIER_LABEL[tier]],
+                ...(founding
+                  ? [
+                      [
+                        "Founding member",
+                        `#${founding.seat}: you get ${TIER_LABEL[founding.granted_tier]} for the price of ${TIER_LABEL[founding.paid_tier]}, as long as your plan stays active`,
+                      ] as [string, string],
+                    ]
+                  : []),
+                ...(plan?.periodEnd
+                  ? [
+                      [plan.cancelling ? "Ends" : "Renews", longDate(plan.periodEnd)] as [
+                        string,
+                        string,
+                      ],
+                    ]
+                  : []),
+                // Encourage upgrading, not cancelling (founder, 2026-10-27); the refund window stays in the Refund Policy.
+                ...(plan && paidTier !== "management"
+                  ? [
+                      [
+                        "Upgrade",
+                        "Upgrade any time and only pay the difference. Your upgrade is prorated for the rest of your plan year.",
+                      ] as [string, string],
+                    ]
+                  : []),
+                ["Member since", memberSince],
+              ]}
+            />
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
-              {paidTier !== "management" && <Button asChild size="lg" className="w-full text-base font-bold"><Link to="/plans"><ArrowUpCircle />Upgrade plan</Link></Button>}
+              {paidTier !== "management" && (
+                <Button asChild size="lg" className="w-full text-base font-bold">
+                  <Link to="/plans">
+                    <ArrowUpCircle />
+                    Upgrade plan
+                  </Link>
+                </Button>
+              )}
               {plan && <ManageBilling />}
-              <RetentionControls tier={paidTier} sub={sub} lapse={lapse} pauses={pauses} onChanged={() => void reload()} />
-              <Button variant="outline" onClick={() => setEmailOpen(true)}>Change email</Button>
-              <Button variant="outline" onClick={() => setPasswordOpen(true)}>Change password</Button>
-              <Button variant="ghost" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</Button>
+              <RetentionControls
+                tier={paidTier}
+                sub={sub}
+                lapse={lapse}
+                pauses={pauses}
+                onChanged={() => void reload()}
+              />
+              <Button variant="outline" onClick={() => setEmailOpen(true)}>
+                Change email
+              </Button>
+              <Button variant="outline" onClick={() => setPasswordOpen(true)}>
+                Change password
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate({ to: "/" });
+                }}
+              >
+                <LogOut />
+                Log out
+              </Button>
             </div>
           </Card>
         </div>
@@ -174,72 +331,244 @@ function ProfilePage() {
           <BrandKit userId={user.id} tier={tier} artistName={names.artist || name} />
         </Card>
 
-        <Card id="badges" title="Awards & Badges" aside={<>
-          <span className="text-sm text-muted-foreground">{earnedCount} earned</span>
-          <BadgeSettingsButton onClick={() => setSettingsOpen(true)} />
-          <div role="radiogroup" aria-label="Badge size" className="flex rounded-lg border border-border p-0.5">
-            {([["large", LayoutGrid, "Large"], ["small", Rows3, "Small"]] as const).map(([s, Icon, label]) => (
-              <button key={s} type="button" role="radio" aria-checked={size === s} onClick={() => chooseSize(s)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold transition ${size === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                <Icon className="h-4 w-4" />{label}
-              </button>
-            ))}
-          </div>
-        </>}>
+        <Card
+          id="badges"
+          title="Awards & Badges"
+          aside={
+            <>
+              <span className="text-sm text-muted-foreground">{earnedCount} earned</span>
+              <BadgeSettingsButton onClick={() => setSettingsOpen(true)} />
+              <div
+                role="radiogroup"
+                aria-label="Badge size"
+                className="flex rounded-lg border border-border p-0.5"
+              >
+                {(
+                  [
+                    ["large", LayoutGrid, "Large"],
+                    ["small", Rows3, "Small"],
+                  ] as const
+                ).map(([s, Icon, label]) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="radio"
+                    aria-checked={size === s}
+                    onClick={() => chooseSize(s)}
+                    className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold transition ${size === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          }
+        >
           {/* An earned badge opens straight to sharing, with its description (founder, 2026-10-27); locked ones show progress. */}
-          <BadgeShelf userId={user.id} size={size} onOpen={(s, list) => {
-            if (s.earned && badgePrefs(ob).share) {
-              setViewing({ src: shelfArt(s), name: s.badge.title, state: s, about: { description: s.badge.description, times: s.earned.times, earnedAt: s.earned.earnedAt }, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre, eagle: tier === "management" } });
-              return;
-            }
-            setBadge(s); setBadgeList(list);
-          }} />
+          <BadgeShelf
+            userId={user.id}
+            size={size}
+            onOpen={(s, list) => {
+              if (s.earned && badgePrefs(ob).share) {
+                setViewing({
+                  src: shelfArt(s),
+                  name: s.badge.title,
+                  state: s,
+                  about: {
+                    description: s.badge.description,
+                    times: s.earned.times,
+                    earnedAt: s.earned.earnedAt,
+                  },
+                  share: {
+                    ctx: "profile",
+                    artist: names.artist,
+                    genre: profile?.primaryGenre,
+                    eagle: tier === "management",
+                  },
+                });
+                return;
+              }
+              setBadge(s);
+              setBadgeList(list);
+            }}
+          />
           <Disclaimer k="badges" />
         </Card>
       </main>
 
-      <BadgeDetail state={badge} list={badgeList} artist={names.artist} onClose={() => setBadge(undefined)} onMove={setBadge}
-        onUseAsAvatar={(src) => { if (!ob) return; const next = { ...ob, avatar: src }; saveOnboarding(user.id, next); setOb(next); toast.success("Your profile picture is updated."); }}
-        onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: artUrl(s.art ?? s.badge.src), name: s.badge.title, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre, eagle: tier === "management" } }); } : undefined} />
-      <BadgeSettings userId={user.id} open={settingsOpen} onOpenChange={setSettingsOpen} onSaved={setOb} />
+      <BadgeDetail
+        state={badge}
+        list={badgeList}
+        artist={names.artist}
+        onClose={() => setBadge(undefined)}
+        onMove={setBadge}
+        onUseAsAvatar={(src) => {
+          if (!ob) return;
+          const next = { ...ob, avatar: src };
+          saveOnboarding(user.id, next);
+          setOb(next);
+          toast.success("Your profile picture is updated.");
+        }}
+        onShare={
+          badgePrefs(ob).share
+            ? (s) => {
+                setBadge(undefined);
+                setViewing({
+                  src: artUrl(s.art ?? s.badge.src),
+                  name: s.badge.title,
+                  share: {
+                    ctx: "profile",
+                    artist: names.artist,
+                    genre: profile?.primaryGenre,
+                    eagle: tier === "management",
+                  },
+                });
+              }
+            : undefined
+        }
+      />
+      <BadgeSettings
+        userId={user.id}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        onSaved={setOb}
+      />
       <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
-      <BadgeViewer src={viewing?.src} name={viewing?.name} round={viewing?.round} share={viewing?.share} about={viewing?.about} onClose={() => setViewing(undefined)}
-        actions={viewing?.state && <>
-          <Button variant="secondary" size="sm" onClick={() => { if (!ob || !viewing) return; const next = { ...ob, avatar: viewing.src }; saveOnboarding(user.id, next); setOb(next); toast.success("Your profile picture is updated."); }}>Use as my profile picture</Button>
-          <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white" onClick={() => { const st = viewing.state!; setViewing(undefined); setBadge(st); }}>{(viewing.about?.times ?? 1) > 1 ? "See every time I earned it" : "Badge details"}</Button>
-        </>} />
+      <BadgeViewer
+        src={viewing?.src}
+        name={viewing?.name}
+        round={viewing?.round}
+        share={viewing?.share}
+        about={viewing?.about}
+        onClose={() => setViewing(undefined)}
+        actions={
+          viewing?.state && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (!ob || !viewing) return;
+                  const next = { ...ob, avatar: viewing.src };
+                  saveOnboarding(user.id, next);
+                  setOb(next);
+                  toast.success("Your profile picture is updated.");
+                }}
+              >
+                Use as my profile picture
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/10 hover:text-white"
+                onClick={() => {
+                  const st = viewing.state!;
+                  setViewing(undefined);
+                  setBadge(st);
+                }}
+              >
+                {(viewing.about?.times ?? 1) > 1 ? "See every time I earned it" : "Badge details"}
+              </Button>
+            </>
+          )
+        }
+      />
       <Dialog open={chooser} onOpenChange={setChooser}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Whose profile are you editing?</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Your own details, or the Embed Defaults and Catalog Defaults of an artist on your seats. Their login, catalog, splits and badges stay theirs.</p>
+          <DialogHeader>
+            <DialogTitle>Whose profile are you editing?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Your own details, or the Embed Defaults and Catalog Defaults of an artist on your seats.
+            Their login, catalog, splits and badges stay theirs.
+          </p>
           <ul className="space-y-2">
-            <li><Button variant="outline" className="w-full justify-between" onClick={() => { setChooser(false); setEditing(true); }}>My profile<span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[tier]}</span></Button></li>
+            <li>
+              <Button
+                variant="outline"
+                className="w-full justify-between"
+                onClick={() => {
+                  setChooser(false);
+                  setEditing(true);
+                }}
+              >
+                My profile
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {TIER_LABEL[tier]}
+                </span>
+              </Button>
+            </li>
             {seatArtists.map((a) => (
               <li key={a.userId}>
-                <Button variant="outline" className="w-full justify-between" onClick={() => {
-                  setChooser(false);
-                  // Pull their saved defaults first, so the form opens on what they already have.
-                  void loadSeatArtistDefaults(a.userId).then(() => setEditTarget(a));
-                }}>{a.name}<span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[a.tier]}</span></Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => {
+                    setChooser(false);
+                    // Pull their saved defaults first, so the form opens on what they already have.
+                    void loadSeatArtistDefaults(a.userId).then(() => setEditTarget(a));
+                  }}
+                >
+                  {a.name}
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {TIER_LABEL[a.tier]}
+                  </span>
+                </Button>
               </li>
             ))}
           </ul>
         </DialogContent>
       </Dialog>
-      <ArtistOnboarding userId={editTarget?.userId ?? user.id} seatArtist={editTarget ? { name: editTarget.name } : null}
+      <ArtistOnboarding
+        userId={editTarget?.userId ?? user.id}
+        seatArtist={editTarget ? { name: editTarget.name } : null}
         canAddArtist={!editTarget && tier !== "free"}
-        open={editing || !!editTarget} onOpenChange={(o) => { if (!o) { setEditing(false); setEditTarget(null); } }} firstRun={false}
-        onSaved={(o) => { if (editTarget) { setEditTarget(null); return; } setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
+        open={editing || !!editTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setEditing(false);
+            setEditTarget(null);
+          }
+        }}
+        firstRun={false}
+        onSaved={(o) => {
+          if (editTarget) {
+            setEditTarget(null);
+            return;
+          }
+          setOb(o);
+          setProfile(loadProfile(user.id));
+          setEditing(false);
+        }}
+      />
       <PasswordDialog email={user.email ?? ""} open={passwordOpen} onOpenChange={setPasswordOpen} />
       <EmailDialog email={user.email ?? ""} open={emailOpen} onOpenChange={setEmailOpen} />
-      <AddArtistDialog open={seatsOpen} onOpenChange={setSeatsOpen} canAddArtist={tier !== "free"} />
+      <AddArtistDialog
+        open={seatsOpen}
+        onOpenChange={setSeatsOpen}
+        canAddArtist={tier !== "free"}
+      />
     </div>
   );
 }
 
-function Card({ id, title, aside, children }: { id?: string; title: string; aside?: ReactNode; children: ReactNode }) {
+function Card({
+  id,
+  title,
+  aside,
+  children,
+}: {
+  id?: string;
+  title: string;
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <section id={id} className="scroll-mt-6 space-y-6 rounded-2xl border border-border bg-card p-6 sm:p-8">
+    <section
+      id={id}
+      className="scroll-mt-6 space-y-6 rounded-2xl border border-border bg-card p-6 sm:p-8"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xs font-bold uppercase tracking-widest text-primary">{title}</h2>
         {aside && <div className="flex flex-wrap items-center gap-4">{aside}</div>}
@@ -252,26 +581,42 @@ function Card({ id, title, aside, children }: { id?: string; title: string; asid
 function Rows({ rows }: { rows: [string, string | undefined][] }) {
   return (
     <dl className="grid grid-cols-[8.5rem_1fr] gap-x-4 gap-y-3 text-sm">
-      {rows.map(([k, v]) => <div key={k} className="contents">
-        <dt className="text-muted-foreground">{k}</dt>
-        <dd className={`min-w-0 break-words font-medium ${v ? "" : "text-muted-foreground"}`}>{v || "—"}</dd>
-      </div>)}
+      {rows.map(([k, v]) => (
+        <div key={k} className="contents">
+          <dt className="text-muted-foreground">{k}</dt>
+          <dd className={`min-w-0 break-words font-medium ${v ? "" : "text-muted-foreground"}`}>
+            {v || "—"}
+          </dd>
+        </div>
+      ))}
     </dl>
   );
 }
 
-function People({ title, rows, writer }: { title: string; rows?: Contributor[] | undefined; writer?: boolean }) {
+function People({
+  title,
+  rows,
+  writer,
+}: {
+  title: string;
+  rows?: Contributor[] | undefined;
+  writer?: boolean;
+}) {
   const list = (rows ?? []).filter(creditName);
   if (!list.length) return null;
   return (
     <div className="space-y-2 border-t border-border pt-5">
       <h3 className="text-sm font-semibold">{title}</h3>
       <ul className="space-y-2 text-sm">
-        {list.map((r, i) => <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3">
-          <span className="font-medium">{creditName(r)}</span>
-          {writer && <span className="text-xs text-muted-foreground">{writerRole(r.role)}</span>}
-          {!writer && r.hfa && <span className="text-xs text-muted-foreground">HFA P# {r.hfa}</span>}
-        </li>)}
+        {list.map((r, i) => (
+          <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <span className="font-medium">{creditName(r)}</span>
+            {writer && <span className="text-xs text-muted-foreground">{writerRole(r.role)}</span>}
+            {!writer && r.hfa && (
+              <span className="text-xs text-muted-foreground">HFA P# {r.hfa}</span>
+            )}
+          </li>
+        ))}
       </ul>
     </div>
   );
@@ -288,35 +633,88 @@ async function currentPasswordOk(email: string, password: string) {
 }
 
 function CurrentPassword({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return <div className="space-y-2"><Label htmlFor="current-password">Current password</Label><Input id="current-password" type="password" autoComplete="current-password" value={value} onChange={(e) => onChange(e.target.value)} /></div>;
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="current-password">Current password</Label>
+      <Input
+        id="current-password"
+        type="password"
+        autoComplete="current-password"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
 }
 
-function PasswordDialog({ email, open, onOpenChange }: { email: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+function PasswordDialog({
+  email,
+  open,
+  onOpenChange,
+}: {
+  email: string;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!passwordValid(password)) { toast.error("Choose a password that meets every rule."); return; }
-    if (password !== confirm) { toast.error("The passwords don't match."); return; }
+    if (!passwordValid(password)) {
+      toast.error("Choose a password that meets every rule.");
+      return;
+    }
+    if (password !== confirm) {
+      toast.error("The passwords don't match.");
+      return;
+    }
     setBusy(true);
-    if (!(await currentPasswordOk(email, current))) { setBusy(false); toast.error("That isn't your current password."); return; }
+    if (!(await currentPasswordOk(email, current))) {
+      setBusy(false);
+      toast.error("That isn't your current password.");
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Password updated.");
-    setCurrent(""); setPassword(""); setConfirm(""); onOpenChange(false);
+    setCurrent("");
+    setPassword("");
+    setConfirm("");
+    onOpenChange(false);
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card text-card-foreground">
-        <DialogHeader><DialogTitle className="text-xl font-bold">Change password</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">Change password</DialogTitle>
+        </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <CurrentPassword value={current} onChange={setCurrent} />
-          <PasswordField id="new-password" label="New password" value={password} onChange={setPassword} />
-          <div className="space-y-2"><Label htmlFor="confirm-password">Confirm new password</Label><Input id="confirm-password" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></div>
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? "Saving…" : "Update password"}</Button>
+          <PasswordField
+            id="new-password"
+            label="New password"
+            value={password}
+            onChange={setPassword}
+          />
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirm new password</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy ? "Saving…" : "Update password"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
@@ -324,39 +722,85 @@ function PasswordDialog({ email, open, onOpenChange }: { email: string; open: bo
 }
 
 /** The sign-in email. The new address must be confirmed from its own inbox before it takes over. */
-function EmailDialog({ email, open, onOpenChange }: { email: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+function EmailDialog({
+  email,
+  open,
+  onOpenChange,
+}: {
+  email: string;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit(e: FormEvent) {
     e.preventDefault();
     const address = next.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) { toast.error("Enter a valid email address."); return; }
-    if (address.toLowerCase() === email.toLowerCase()) { toast.error("That's already your email."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (address.toLowerCase() === email.toLowerCase()) {
+      toast.error("That's already your email.");
+      return;
+    }
     setBusy(true);
-    if (!(await currentPasswordOk(email, current))) { setBusy(false); toast.error("That isn't your current password."); return; }
-    const { error } = await supabase.auth.updateUser({ email: address }, { emailRedirectTo: `${window.location.origin}/profile` });
+    if (!(await currentPasswordOk(email, current))) {
+      setBusy(false);
+      toast.error("That isn't your current password.");
+      return;
+    }
+    const { error } = await supabase.auth.updateUser(
+      { email: address },
+      { emailRedirectTo: `${window.location.origin}/profile` },
+    );
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(`Almost done: click the link we emailed to ${address}. Your email changes once it's confirmed.`, { duration: 10000 });
-    setCurrent(""); setNext(""); onOpenChange(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(
+      `Almost done: click the link we emailed to ${address}. Your email changes once it's confirmed.`,
+      { duration: 10000 },
+    );
+    setCurrent("");
+    setNext("");
+    onOpenChange(false);
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card text-card-foreground">
-        <DialogHeader><DialogTitle className="text-xl font-bold">Change email</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">Change email</DialogTitle>
+        </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <p className="text-sm text-muted-foreground">You sign in with this email. Now: <span className="font-semibold text-foreground">{email}</span></p>
+          <p className="text-sm text-muted-foreground">
+            You sign in with this email. Now:{" "}
+            <span className="font-semibold text-foreground">{email}</span>
+          </p>
           <CurrentPassword value={current} onChange={setCurrent} />
-          <div className="space-y-2"><Label htmlFor="new-email">New email</Label><Input id="new-email" type="email" autoComplete="email" value={next} onChange={(e) => setNext(e.target.value)} /></div>
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? "Checking…" : "Send confirmation link"}</Button>
+          <div className="space-y-2">
+            <Label htmlFor="new-email">New email</Label>
+            <Input
+              id="new-email"
+              type="email"
+              autoComplete="email"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy ? "Checking…" : "Send confirmation link"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
 
-const longDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+const longDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
 /** Opens Stripe's billing page for this account: change the card, download invoices, switch plans. */
 function ManageBilling() {
@@ -366,8 +810,18 @@ function ManageBilling() {
     try {
       await openBilling();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Billing couldn't open. Contact support and we'll help right away.");
-    } finally { setBusy(false); }
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Billing couldn't open. Contact support and we'll help right away.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
-  return <Button variant="outline" disabled={busy} onClick={() => void open()}>{busy ? "Opening…" : "Manage billing"}</Button>;
+  return (
+    <Button variant="outline" disabled={busy} onClick={() => void open()}>
+      {busy ? "Opening…" : "Manage billing"}
+    </Button>
+  );
 }

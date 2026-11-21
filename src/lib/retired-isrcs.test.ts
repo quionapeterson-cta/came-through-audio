@@ -21,7 +21,9 @@ describe("the retired ISRC queue", () => {
   });
 
   it("never lists the live code twice, or the same old code twice", () => {
-    const r = retiredRow(row({ retiredIscrs: ["QZNMY2291725", "qznmy-2291725", "GXESV2623521", ""] }));
+    const r = retiredRow(
+      row({ retiredIscrs: ["QZNMY2291725", "qznmy-2291725", "GXESV2623521", ""] }),
+    );
     expect(r?.retired).toEqual(["QZNMY2291725"]);
     expect(isrcKey("gx-esv-2623521")).toBe("GXESV2623521");
   });
@@ -39,6 +41,8 @@ describe("the retired ISRC queue", () => {
   it("says a missing current code out loud instead of leaving a gap", () => {
     const r = retiredRow(row({ retiredIscrs: ["QZNMY2291725"] }, ""))!;
     expect(agencyRequestText(r)).toContain("(not entered yet)");
-    expect(agencyRequestText(r)).toContain("register the recording under the current ISRC as an entry of its own");
+    expect(agencyRequestText(r)).toContain(
+      "register the recording under the current ISRC as an entry of its own",
+    );
   });
 });

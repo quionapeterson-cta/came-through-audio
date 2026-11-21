@@ -9,43 +9,60 @@ import { getStripeErrorMessage } from "@/lib/stripe.server";
  * checkout (kind "vault") and started by the payment webhook. Every rule is re-checked on the server.
  */
 async function run<T>(what: string, fn: () => Promise<T>): Promise<T> {
-  try { return await fn(); } catch (e) {
+  try {
+    return await fn();
+  } catch (e) {
     const reason = getStripeErrorMessage(e);
     console.error(`${what} failed:`, reason, e);
     // Rule messages (once a year, window not open…) are written for the user; anything else names the reason.
     if (e instanceof Error && !("raw" in e)) throw e;
-    throw new Error(`${what} didn't go through (${reason.slice(0, 160)}). Try again, or contact support and we'll help right away.`);
+    throw new Error(
+      `${what} didn't go through (${reason.slice(0, 160)}). Try again, or contact support and we'll help right away.`,
+    );
   }
 }
 
 export const needMoreTime = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => run("Need more time", async () => {
-    const { admin, extend } = await import("@/lib/retention.server");
-    return extend(await admin(), context.userId, getPaymentsEnvironment());
-  }));
+  .handler(async ({ context }) =>
+    run("Need more time", async () => {
+      const { admin, extend } = await import("@/lib/retention.server");
+      return extend(await admin(), context.userId, getPaymentsEnvironment());
+    }),
+  );
 
 export const resumeNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => run("Resume", async () => {
-    const { admin, resume } = await import("@/lib/retention.server");
-    await resume(await admin(), context.userId, getPaymentsEnvironment());
-    return { ok: true };
-  }));
+  .handler(async ({ context }) =>
+    run("Resume", async () => {
+      const { admin, resume } = await import("@/lib/retention.server");
+      await resume(await admin(), context.userId, getPaymentsEnvironment());
+      return { ok: true };
+    }),
+  );
 
 /** Keep it on Free: the catalog stays read-only and is never emptied; a paid plan can start whenever they like. */
 export const keepCatalogOnFree = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => run("Keeping it on Free", async () => {
-    const { admin, keepOnFree } = await import("@/lib/retention.server");
-    return keepOnFree(await admin(), context.userId);
-  }));
+  .handler(async ({ context }) =>
+    run("Keeping it on Free", async () => {
+      const { admin, keepOnFree } = await import("@/lib/retention.server");
+      return keepOnFree(await admin(), context.userId);
+    }),
+  );
 
 export const setPlanCancelling = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ cancel: z.boolean() }).parse(d))
-  .handler(async ({ data, context }) => run(data.cancel ? "Cancelling" : "Keeping your plan", async () => {
-    const { admin, setCancelling } = await import("@/lib/retention.server");
-    const result = await setCancelling(await admin(), context.userId, getPaymentsEnvironment(), data.cancel);
-    return { ok: true, pauseEnded: result.pauseEnded, immediate: result.immediate };
-  }));
+  .handler(async ({ data, context }) =>
+    run(data.cancel ? "Cancelling" : "Keeping your plan", async () => {
+      const { admin, setCancelling } = await import("@/lib/retention.server");
+      const result = await setCancelling(
+        await admin(),
+        context.userId,
+        getPaymentsEnvironment(),
+        data.cancel,
+      );
+      return { ok: true, pauseEnded: result.pauseEnded, immediate: result.immediate };
+    }),
+  );

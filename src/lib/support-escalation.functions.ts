@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveAccess } from "./departments";
 import { formatStaffDisplayName } from "./staff-display";
@@ -25,10 +26,7 @@ const TAGS = ESCALATION_TAGS;
 export { TAG_LABEL };
 
 type Ctx = {
-  supabase: {
-    from: (table: string) => any;
-    rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown }>;
-  };
+  supabase: Pick<SupabaseClient, "from" | "rpc">;
   userId: string;
   claims?: unknown;
 };
@@ -83,13 +81,20 @@ export const escalateTicket = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { access, name } = await accessOf(context as unknown as Ctx);
-    if (!mayEscalate(access)) throw new Error("Only Support, the receiving department's lead, or the founder can escalate a thread.");
+    if (!mayEscalate(access))
+      throw new Error(
+        "Only Support, the receiving department's lead, or the founder can escalate a thread.",
+      );
     const tags: EscalationTag[] = [
       ...(data.marketing ? (["marketing"] as const) : []),
       ...(data.founder ? (["founder"] as const) : []),
     ];
     if (!tags.length) throw new Error("Choose Marketing, The Founder, or both.");
-    if (data.founder && access?.role !== "super_admin" && !access?.departments.includes("support")) {
+    if (
+      data.founder &&
+      access?.role !== "super_admin" &&
+      !access?.departments.includes("support")
+    ) {
       // Marketing may hand a thread to Marketing; handing it to the founder is the Support desk's or the founder's call.
       throw new Error("Only Support or The Founder can escalate to The Founder.");
     }
@@ -128,18 +133,22 @@ export const escalateTicket = createServerFn({ method: "POST" })
     } as never);
 
     // 3. One row per destination: the notification the receiving team sees.
-    const { error: escalationError } = await supabaseAdmin.from("support_ticket_escalations" as never).insert(
-      tags.map((tag) => ({
-        ticket_id: data.ticketId,
-        tag,
-        note: data.note,
-        by_id: context.userId,
-        by_name: name,
-      })) as never,
-    );
+    const { error: escalationError } = await supabaseAdmin
+      .from("support_ticket_escalations" as never)
+      .insert(
+        tags.map((tag) => ({
+          ticket_id: data.ticketId,
+          tag,
+          note: data.note,
+          by_id: context.userId,
+          by_name: name,
+        })) as never,
+      );
     if (escalationError) {
       console.error("Escalation: the note was saved but the tag wasn't:", escalationError.message);
-      throw new Error("The note is on the thread, but the escalation didn't go through. Try again.");
+      throw new Error(
+        "The note is on the thread, but the escalation didn't go through. Try again.",
+      );
     }
 
     await supabaseAdmin
@@ -167,14 +176,16 @@ export const listTicketEscalations = createServerFn({ method: "GET" })
       .eq("ticket_id", data.ticketId)
       .order("created_at", { ascending: false })
       .limit(50);
-    return ((rows ?? []) as unknown as {
-      id: string;
-      tag: EscalationTag;
-      note: string;
-      by_name: string;
-      created_at: string;
-      read_at: string | null;
-    }[]).map((row) => ({
+    return (
+      (rows ?? []) as unknown as {
+        id: string;
+        tag: EscalationTag;
+        note: string;
+        by_name: string;
+        created_at: string;
+        read_at: string | null;
+      }[]
+    ).map((row) => ({
       id: row.id,
       tag: row.tag,
       note: row.note,
@@ -225,16 +236,21 @@ async function noticesForTags(tags: readonly EscalationTag[]): Promise<Escalatio
   if (!notices.length) return [];
 
   const ids = [...new Set(notices.map((n) => n.ticket_id))];
-  const { data: ticketRows } = await supabaseAdmin.from("support_tickets").select("*").in("id", ids);
+  const { data: ticketRows } = await supabaseAdmin
+    .from("support_tickets")
+    .select("*")
+    .in("id", ids);
   const tickets = new Map(
-    ((ticketRows ?? []) as unknown as {
-      id: string;
-      subject: string;
-      name: string;
-      email: string;
-      status: string;
-      channel: string | null;
-    }[]).map((t) => [t.id, t]),
+    (
+      (ticketRows ?? []) as unknown as {
+        id: string;
+        subject: string;
+        name: string;
+        email: string;
+        status: string;
+        channel: string | null;
+      }[]
+    ).map((t) => [t.id, t]),
   );
 
   return notices
@@ -255,7 +271,9 @@ async function noticesForTags(tags: readonly EscalationTag[]): Promise<Escalatio
         readAt: n.read_at,
       };
     })
-    .sort((a, b) => Number(!!a.readAt) - Number(!!b.readAt) || b.createdAt.localeCompare(a.createdAt));
+    .sort(
+      (a, b) => Number(!!a.readAt) - Number(!!b.readAt) || b.createdAt.localeCompare(a.createdAt),
+    );
 }
 
 /** Only the founder reads this list. It is her own tab, not a view a department can widen. */

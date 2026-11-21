@@ -5,17 +5,27 @@ function memoryStorage(): Storage {
   const map = new Map<string, string>();
   return {
     getItem: (k: string) => map.get(k) ?? null,
-    setItem: (k: string, v: string) => { map.set(k, v); },
-    removeItem: (k: string) => { map.delete(k); },
+    setItem: (k: string, v: string) => {
+      map.set(k, v);
+    },
+    removeItem: (k: string) => {
+      map.delete(k);
+    },
     clear: () => map.clear(),
     key: (i: number) => [...map.keys()][i] ?? null,
-    get length() { return map.size; },
+    get length() {
+      return map.size;
+    },
   } as Storage;
 }
 
 describe("the welcome confetti", () => {
-  beforeEach(() => { vi.stubGlobal("localStorage", memoryStorage()); });
-  afterEach(() => { vi.unstubAllGlobals(); });
+  beforeEach(() => {
+    vi.stubGlobal("localStorage", memoryStorage());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   it("only counts a gap of 30 days or more as a return", () => {
     const day = 86400000;
@@ -23,7 +33,9 @@ describe("the welcome confetti", () => {
     expect(isReturning(null)).toBe(false);
     expect(isReturning("not a date")).toBe(false);
     expect(isReturning(new Date(Date.now() - 1 * day).toISOString())).toBe(false);
-    expect(isReturning(new Date(Date.now() - (RETURN_AFTER_DAYS - 1) * day).toISOString())).toBe(false);
+    expect(isReturning(new Date(Date.now() - (RETURN_AFTER_DAYS - 1) * day).toISOString())).toBe(
+      false,
+    );
     expect(isReturning(new Date(Date.now() - RETURN_AFTER_DAYS * day).toISOString())).toBe(true);
   });
 
@@ -49,8 +61,12 @@ describe("the welcome confetti", () => {
 
   it("stays quiet when the browser blocks storage, instead of bursting on every load", () => {
     vi.stubGlobal("localStorage", {
-      getItem: () => { throw new Error("blocked"); },
-      setItem: () => { throw new Error("blocked"); },
+      getItem: () => {
+        throw new Error("blocked");
+      },
+      setItem: () => {
+        throw new Error("blocked");
+      },
     });
     expect(celebrateReturn()).toBe(false);
   });

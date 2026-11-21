@@ -7,8 +7,15 @@ import { createClient } from "@supabase/supabase-js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-const have = new Set((await readFile(process.argv[2] ?? "/dev/null", "utf8").catch(() => "")).split("\n").map((l) => l.trim()).filter(Boolean));
+const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
+const have = new Set(
+  (await readFile(process.argv[2] ?? "/dev/null", "utf8").catch(() => ""))
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean),
+);
 
 /** Every file under a folder, walking sub-folders (Storage lists one level at a time). */
 async function walk(bucket, prefix = "") {
@@ -18,7 +25,8 @@ async function walk(bucket, prefix = "") {
     if (error) throw new Error(`${bucket}/${prefix}: ${error.message}`);
     for (const item of data) {
       const path = prefix ? `${prefix}/${item.name}` : item.name;
-      if (item.id === null) out.push(...(await walk(bucket, path))); // a folder
+      if (item.id === null)
+        out.push(...(await walk(bucket, path))); // a folder
       else out.push(path);
     }
     if (data.length < 1000) return out;
@@ -27,18 +35,29 @@ async function walk(bucket, prefix = "") {
 
 const { data: buckets, error } = await sb.storage.listBuckets();
 if (error) throw error;
-let copied = 0, skipped = 0, failed = 0;
+let copied = 0,
+  skipped = 0,
+  failed = 0;
 for (const b of buckets) {
   for (const path of await walk(b.id)) {
     const key = `storage/${b.id}/${path}`;
-    if (have.has(key)) { skipped++; continue; }
+    if (have.has(key)) {
+      skipped++;
+      continue;
+    }
     const { data, error: dl } = await sb.storage.from(b.id).download(path);
-    if (dl || !data) { console.error(`Couldn't download ${key}: ${dl?.message}`); failed++; continue; }
+    if (dl || !data) {
+      console.error(`Couldn't download ${key}: ${dl?.message}`);
+      failed++;
+      continue;
+    }
     const file = join("storage-backup", b.id, path);
     await mkdir(dirname(file), { recursive: true });
     await writeFile(file, Buffer.from(await data.arrayBuffer()));
     copied++;
   }
 }
-console.log(`Buckets: ${buckets.map((b) => b.id).join(", ")} · new files ${copied} · already backed up ${skipped} · failed ${failed}`);
+console.log(
+  `Buckets: ${buckets.map((b) => b.id).join(", ")} · new files ${copied} · already backed up ${skipped} · failed ${failed}`,
+);
 if (failed) process.exitCode = 1;

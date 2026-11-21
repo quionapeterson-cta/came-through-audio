@@ -24,7 +24,10 @@ export const CHECKOUT_UNAVAILABLE =
  * (founder, 2026-11-12). An unset setting counts as a disagreement: that was the live bug, and it is what keeps the
  * published link from taking real money until the switch is deliberate.
  */
-export function checkoutEnvironmentError(app: "sandbox" | "live", counted: "sandbox" | "live" | null): string | null {
+export function checkoutEnvironmentError(
+  app: "sandbox" | "live",
+  counted: "sandbox" | "live" | null,
+): string | null {
   if (app === counted) return null;
   if (app === "live") return CHECKOUT_CLOSED;
   return "This preview takes test payments while the site is counting live ones, so nothing was charged. Buy it on the published site: it appears on this account the moment Stripe confirms the payment.";

@@ -86,7 +86,12 @@ describe("blocks as text", () => {
         { id: newId(), kind: "date", label: "Effective date", value: "2026-11-16", format: "long" },
         { id: newId(), kind: "clause", heading: "Term", body: "One year, renewing.", help: "" },
         { id: newId(), kind: "seal", tier: "gold", label: "CTA" },
-        { id: newId(), kind: "signatures", heading: "Signed by", parties: [{ id: newId(), label: "Company" }] },
+        {
+          id: newId(),
+          kind: "signatures",
+          heading: "Signed by",
+          parties: [{ id: newId(), label: "Company" }],
+        },
       ],
       "Services Agreement",
     );
@@ -172,9 +177,9 @@ describe("print legal name block", () => {
   });
 
   it("appears in the plain text and passes the block check", () => {
-    expect(blocksToText([{ id: newId(), kind: "printName", label: "Parent/Guardian Print Legal Name" }])).toContain(
-      "Parent/Guardian Print Legal Name: ____________________",
-    );
+    expect(
+      blocksToText([{ id: newId(), kind: "printName", label: "Parent/Guardian Print Legal Name" }]),
+    ).toContain("Parent/Guardian Print Legal Name: ____________________");
     expect(preflight(template()).find((c) => c.id === "blocks")?.ok).toBe(true);
   });
 });
@@ -185,15 +190,50 @@ describe("HTML preview values", () => {
       name: "Values",
       tier: "standard",
       blocks: [
-        { id: newId(), kind: "meta", heading: "{{ARTIST_NAME}} details", rows: [{ id: newId(), label: "Name", value: "{{LEGAL_NAME}}" }] },
-        { id: newId(), kind: "clause", heading: "{{ARTIST_NAME}} term", body: "{{ARTIST_NAME}} signs as {{PRINT_LEGAL_NAME}}.", help: "{{DATE}}" },
-        { id: newId(), kind: "signatures", heading: "{{ARTIST_NAME}} signatures", parties: [{ id: newId(), label: "{{LEGAL_NAME}} · artist" }] },
+        {
+          id: newId(),
+          kind: "meta",
+          heading: "{{ARTIST_NAME}} details",
+          rows: [{ id: newId(), label: "Name", value: "{{LEGAL_NAME}}" }],
+        },
+        {
+          id: newId(),
+          kind: "clause",
+          heading: "{{ARTIST_NAME}} term",
+          body: "{{ARTIST_NAME}} signs as {{PRINT_LEGAL_NAME}}.",
+          help: "{{DATE}}",
+        },
+        {
+          id: newId(),
+          kind: "signatures",
+          heading: "{{ARTIST_NAME}} signatures",
+          parties: [{ id: newId(), label: "{{LEGAL_NAME}} · artist" }],
+        },
         { id: newId(), kind: "section", title: "{{ARTIST_NAME}} section", subtitle: "{{DATE}}" },
-        { id: newId(), kind: "fields", heading: "{{ARTIST_NAME}} fields", role: "recipient", fields: [{ id: newId(), label: "{{DATE}}", type: "text", role: "recipient" }] },
-        { id: newId(), kind: "checkboxes", heading: "{{ARTIST_NAME}} options", role: "recipient", mode: "single", options: [{ id: newId(), label: "{{DATE}}" }] },
+        {
+          id: newId(),
+          kind: "fields",
+          heading: "{{ARTIST_NAME}} fields",
+          role: "recipient",
+          fields: [{ id: newId(), label: "{{DATE}}", type: "text", role: "recipient" }],
+        },
+        {
+          id: newId(),
+          kind: "checkboxes",
+          heading: "{{ARTIST_NAME}} options",
+          role: "recipient",
+          mode: "single",
+          options: [{ id: newId(), label: "{{DATE}}" }],
+        },
         { id: newId(), kind: "date", label: "{{DATE}}", value: "2026-11-21", format: "long" },
         { id: newId(), kind: "seal", tier: "gold", label: "{{CERTIFICATION_TIER}}" },
-        { id: newId(), kind: "signature", heading: "{{ARTIST_NAME}} signature", role: "recipient", showDate: true },
+        {
+          id: newId(),
+          kind: "signature",
+          heading: "{{ARTIST_NAME}} signature",
+          role: "recipient",
+          showDate: true,
+        },
         { id: newId(), kind: "printName", label: "{{ARTIST_NAME}} printed name" },
       ],
     };
@@ -230,7 +270,13 @@ describe("universal token scanner", () => {
       tier: "standard",
       blocks: [
         { id: newId(), kind: "header", background: "light", showTagline: true },
-        { id: newId(), kind: "clause", heading: "Scope", body: "{{SELECTED_SERVICE}} for {{PRINT_LEGAL_NAME}}", help: "" },
+        {
+          id: newId(),
+          kind: "clause",
+          heading: "Scope",
+          body: "{{SELECTED_SERVICE}} for {{PRINT_LEGAL_NAME}}",
+          help: "",
+        },
         { id: newId(), kind: "printName", label: "Print Legal Name" },
         { id: newId(), kind: "clause", heading: "Repeat", body: "{{SELECTED_SERVICE}}", help: "" },
       ],
@@ -248,7 +294,15 @@ describe("universal token scanner", () => {
     const template: PdfTemplate = {
       name: "Services",
       tier: "standard",
-      blocks: [{ id: newId(), kind: "clause", heading: "Scope", body: "{{A_ONE}} and {{B_TWO}}", help: "" }],
+      blocks: [
+        {
+          id: newId(),
+          kind: "clause",
+          heading: "Scope",
+          body: "{{A_ONE}} and {{B_TWO}}",
+          help: "",
+        },
+      ],
     };
     expect(missingTokens(template, { A_ONE: "one" })).toEqual(["B_TWO"]);
     expect(missingTokens(template, { A_ONE: "one", B_TWO: "two" })).toEqual([]);
@@ -280,7 +334,10 @@ describe("contract title in the preview", () => {
   ];
 
   it("blanks a leading heading that repeats the title the preview already prints", () => {
-    const shown = withoutRepeatedLeadingTitle(blocks("Master Services Agreement"), "Master Services Agreement");
+    const shown = withoutRepeatedLeadingTitle(
+      blocks("Master Services Agreement"),
+      "Master Services Agreement",
+    );
     expect(shown[1]).toMatchObject({ heading: "" });
     expect(shown[1]).toMatchObject({ body: "Terms." });
   });
@@ -297,7 +354,13 @@ describe("default signature block", () => {
     tier: "standard",
     blocks: [
       { id: newId(), kind: "header", background: "light", showTagline: true },
-      { id: newId(), kind: "signatures", heading: "SIGNATURES", parties: [{ id: newId(), label: "{{ARTIST_NAME}} · artist" }], enabled },
+      {
+        id: newId(),
+        kind: "signatures",
+        heading: "SIGNATURES",
+        parties: [{ id: newId(), label: "{{ARTIST_NAME}} · artist" }],
+        enabled,
+      },
       { id: newId(), kind: "signature", heading: "Signature", role: "recipient", showDate: true },
     ],
   });
@@ -325,7 +388,10 @@ describe("block order", () => {
       { id: newId(), kind: "printName" as const, label: "Print Legal Name" },
       { id: newId(), kind: "clause" as const, heading: "Last", body: "Two.", help: "" },
     ];
-    const html = templateToHtml({ name: "Ordered", tier: "standard", blocks }, { PRINT_LEGAL_NAME: "Ada" });
+    const html = templateToHtml(
+      { name: "Ordered", tier: "standard", blocks },
+      { PRINT_LEGAL_NAME: "Ada" },
+    );
     expect(html.indexOf("First")).toBeLessThan(html.indexOf("Print Legal Name"));
     expect(html.indexOf("Print Legal Name")).toBeLessThan(html.indexOf("Last"));
   });

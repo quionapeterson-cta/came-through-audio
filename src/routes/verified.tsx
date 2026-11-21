@@ -18,14 +18,23 @@ export const Route = createFileRoute("/verified")({
   head: () => ({
     meta: [
       { title: "Email Verified — Came Through Audio" },
-      { name: "description", content: "Your Came Through Audio email is verified. Log in to open your workspace." },
+      {
+        name: "description",
+        content: "Your Came Through Audio email is verified. Log in to open your workspace.",
+      },
       { property: "og:title", content: "Email Verified — Came Through Audio" },
-      { property: "og:description", content: "Your account is ready. Log in to start protecting your music." },
+      {
+        property: "og:description",
+        content: "Your account is ready. Log in to start protecting your music.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({ next: typeof s["next"] === "string" ? (s["next"] as string) : undefined } as { next?: string | undefined }),
+  validateSearch: (s: Record<string, unknown>) =>
+    ({ next: typeof s["next"] === "string" ? (s["next"] as string) : undefined }) as {
+      next?: string | undefined;
+    },
   component: Verified,
 });
 
@@ -33,7 +42,7 @@ function Verified() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
   // takeReturn() clears the saved path, so read it once rather than on every render.
-  const [dest] = useState(() => next ? safeNext(next) : safeNext(takeReturn() ?? "/workspace"));
+  const [dest] = useState(() => (next ? safeNext(next) : safeNext(takeReturn() ?? "/workspace")));
   const [signedIn, setSignedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,20 +54,27 @@ function Verified() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const go = () => { window.location.href = dest; };
+  const go = () => {
+    window.location.href = dest;
+  };
 
   async function login(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     go();
   }
 
   return (
     <div className="min-h-screen bg-ink text-ink-foreground">
-      <header className="mx-auto max-w-7xl px-6 py-4"><BrandLogo /></header>
+      <header className="mx-auto max-w-7xl px-6 py-4">
+        <BrandLogo />
+      </header>
       <main className="mx-auto flex max-w-md flex-col items-center px-6 py-12">
         <div className="w-full rounded-2xl bg-background p-8 text-foreground shadow-2xl">
           <div className="flex flex-col items-center text-center">
@@ -67,20 +83,42 @@ function Verified() {
             <p className="mt-2 text-muted-foreground">Your Came Through Audio account is ready.</p>
           </div>
           {signedIn ? (
-            <Button onClick={go} className="mt-6 h-12 w-full text-base font-semibold">Enter my workspace</Button>
+            <Button onClick={go} className="mt-6 h-12 w-full text-base font-semibold">
+              Enter my workspace
+            </Button>
           ) : (
             <form onSubmit={login} className="mt-6 space-y-4">
               <p className="text-center text-sm font-semibold">Log in to continue</p>
               <div className="space-y-1.5">
                 <Label htmlFor="v-email">Email</Label>
-                <Input id="v-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Input
+                  id="v-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="v-pass">Password</Label>
-                <Input id="v-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <Input
+                  id="v-pass"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
               </div>
-              <Button type="submit" disabled={busy} className="h-12 w-full text-base font-semibold">{busy ? "Please wait…" : "Log in"}</Button>
-              <button type="button" onClick={() => navigate({ to: "/" })} className="block w-full text-center text-sm text-muted-foreground">Back to home</button>
+              <Button type="submit" disabled={busy} className="h-12 w-full text-base font-semibold">
+                {busy ? "Please wait…" : "Log in"}
+              </Button>
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/" })}
+                className="block w-full text-center text-sm text-muted-foreground"
+              >
+                Back to home
+              </button>
             </form>
           )}
         </div>

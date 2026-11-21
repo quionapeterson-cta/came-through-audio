@@ -66,11 +66,25 @@ function Rocket() {
         </linearGradient>
       </defs>
       {/* Flame, drawn first so it sits behind the hull. */}
-      <path className="cta-sky-flame" d="M32 92c7 0 12 8 12 14 0 7-6 12-12 12s-12-5-12-12c0-6 5-14 12-14Z" fill="url(#cta-rocket-flame)" />
-      <path d="M32 4c10 12 14 28 14 48v34a6 6 0 0 1-6 6H24a6 6 0 0 1-6-6V52C18 32 22 16 32 4Z" fill="url(#cta-rocket-body)" stroke="#0b0b0b" strokeWidth="2" />
+      <path
+        className="cta-sky-flame"
+        d="M32 92c7 0 12 8 12 14 0 7-6 12-12 12s-12-5-12-12c0-6 5-14 12-14Z"
+        fill="url(#cta-rocket-flame)"
+      />
+      <path
+        d="M32 4c10 12 14 28 14 48v34a6 6 0 0 1-6 6H24a6 6 0 0 1-6-6V52C18 32 22 16 32 4Z"
+        fill="url(#cta-rocket-body)"
+        stroke="#0b0b0b"
+        strokeWidth="2"
+      />
       <circle cx="32" cy="42" r="8" fill="#004AAD" stroke="#0b0b0b" strokeWidth="2" />
       <circle cx="29.5" cy="39.5" r="2.4" fill="#ffffff" opacity=".7" />
-      <path d="M18 62c-7 6-9 16-9 26l9-7V62Zm28 0c7 6 9 16 9 26l-9-7V62Z" fill="#4D8CFF" stroke="#0b0b0b" strokeWidth="2" />
+      <path
+        d="M18 62c-7 6-9 16-9 26l9-7V62Zm28 0c7 6 9 16 9 26l-9-7V62Z"
+        fill="#4D8CFF"
+        stroke="#0b0b0b"
+        strokeWidth="2"
+      />
       <path d="M26 92h12l-6 12-6-12Z" fill="#FFD700" stroke="#0b0b0b" strokeWidth="2" />
     </svg>
   );
@@ -110,20 +124,34 @@ const KEYFRAMES = `
 function SkyTitle({ message, names }: { message: string; names?: string[] | undefined }) {
   if (!names?.length) {
     return (
-      <h2 className="cta-sky-line max-w-3xl text-balance text-[clamp(1.5rem,5vw,3.25rem)] font-extrabold leading-[1.15] tracking-tight text-white"
-        style={{ fontFamily: TITLE_FONT, animation: "cta-sky-line .7s ease-out .3s both" }}>
+      <h2
+        className="cta-sky-line max-w-3xl text-balance text-[clamp(1.5rem,5vw,3.25rem)] font-extrabold leading-[1.15] tracking-tight text-white"
+        style={{ fontFamily: TITLE_FONT, animation: "cta-sky-line .7s ease-out .3s both" }}
+      >
         {message}
       </h2>
     );
   }
   return (
-    <h2 className="flex max-w-3xl flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-[clamp(1.5rem,5vw,3.25rem)] font-extrabold leading-[1.15] tracking-tight text-white"
-      style={{ fontFamily: TITLE_FONT }}>
+    <h2
+      className="flex max-w-3xl flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-[clamp(1.5rem,5vw,3.25rem)] font-extrabold leading-[1.15] tracking-tight text-white"
+      style={{ fontFamily: TITLE_FONT }}
+    >
       {names.map((name, i) => (
         <span key={`${name}-${i}`} className="contents">
-          <span className="cta-sky-line inline-block whitespace-nowrap" style={{ animation: `cta-sky-line .5s ease-out ${0.3 + i * 0.45}s both` }}>{name}</span>
+          <span
+            className="cta-sky-line inline-block whitespace-nowrap"
+            style={{ animation: `cta-sky-line .5s ease-out ${0.3 + i * 0.45}s both` }}
+          >
+            {name}
+          </span>
           {i < names.length - 1 && (
-            <span className="cta-sky-line inline-block text-[#9fbcff]" style={{ animation: `cta-sky-line .4s ease-out ${0.5 + i * 0.45}s both` }}>X</span>
+            <span
+              className="cta-sky-line inline-block text-[#9fbcff]"
+              style={{ animation: `cta-sky-line .4s ease-out ${0.5 + i * 0.45}s both` }}
+            >
+              X
+            </span>
           )}
         </span>
       ))}
@@ -131,7 +159,14 @@ function SkyTitle({ message, names }: { message: string; names?: string[] | unde
   );
 }
 
-export function StarSky({ message, sub, names, rocket = false, holdMs = 8000, onDone }: {
+export function StarSky({
+  message,
+  sub,
+  names,
+  rocket = false,
+  holdMs = 8000,
+  onDone,
+}: {
   /** The line the sky says. Also the dialog's label, so it is read even when `names` draws the heading. */
   message: string;
   /** One sentence underneath it, in plain words. */
@@ -157,40 +192,98 @@ export function StarSky({ message, sub, names, rocket = false, holdMs = 8000, on
   useEffect(() => {
     button.current?.focus();
     const timer = window.setTimeout(close, holdMs);
-    const key = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
     window.addEventListener("keydown", key);
-    return () => { window.clearTimeout(timer); window.removeEventListener("keydown", key); };
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("keydown", key);
+    };
   }, [holdMs, close]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={message} onClick={close}
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={message}
+      onClick={close}
       className={`fixed inset-0 z-[95] overflow-hidden bg-[#05070f] text-white transition-opacity duration-300 ${leaving ? "pointer-events-none opacity-0" : "opacity-100"}`}
-      style={{ animation: "cta-sky-in .45s ease-out" }}>
+      style={{ animation: "cta-sky-in .45s ease-out" }}
+    >
       <style>{KEYFRAMES}</style>
       {/* The night itself: a deep cobalt glow where the rocket leaves. */}
-      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_120%,#123a7a_0%,#0a1630_45%,#05070f_100%)]" />
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_120%,#123a7a_0%,#0a1630_45%,#05070f_100%)]"
+      />
       {stars.map((s) => (
-        <span key={s.id} aria-hidden className={`cta-sky-star absolute rounded-full bg-white ${s.bright ? "shadow-[0_0_8px_2px_rgba(255,255,255,.6)]" : ""}`}
-          style={{ left: `${s.left}%`, top: `${s.top}%`, width: `${s.size}px`, height: `${s.size}px`, animation: `cta-sky-twinkle ${s.duration}s ease-in-out ${s.delay}s infinite` }} />
+        <span
+          key={s.id}
+          aria-hidden
+          className={`cta-sky-star absolute rounded-full bg-white ${s.bright ? "shadow-[0_0_8px_2px_rgba(255,255,255,.6)]" : ""}`}
+          style={{
+            left: `${s.left}%`,
+            top: `${s.top}%`,
+            width: `${s.size}px`,
+            height: `${s.size}px`,
+            animation: `cta-sky-twinkle ${s.duration}s ease-in-out ${s.delay}s infinite`,
+          }}
+        />
       ))}
       {/* Three shooting stars: short, quick streaks a few seconds apart, never crossing the line while it is read. */}
       {[0, 1, 2].map((i) => (
-        <span key={i} aria-hidden className="cta-sky-shoot absolute h-[2px] w-40 rounded-full bg-gradient-to-r from-transparent via-[#9fbcff] to-white shadow-[0_0_10px_rgba(159,188,255,.9)]"
-          style={{ left: `${6 + i * 20}%`, top: `${8 + i * 11}%`, animation: `cta-sky-shoot 4.4s cubic-bezier(.3,.5,.5,1) ${0.9 + i * 1.5}s infinite`, opacity: 0 }} />
+        <span
+          key={i}
+          aria-hidden
+          className="cta-sky-shoot absolute h-[2px] w-40 rounded-full bg-gradient-to-r from-transparent via-[#9fbcff] to-white shadow-[0_0_10px_rgba(159,188,255,.9)]"
+          style={{
+            left: `${6 + i * 20}%`,
+            top: `${8 + i * 11}%`,
+            animation: `cta-sky-shoot 4.4s cubic-bezier(.3,.5,.5,1) ${0.9 + i * 1.5}s infinite`,
+            opacity: 0,
+          }}
+        />
       ))}
       {rocket && (
-        <div aria-hidden className="cta-sky-rocket absolute bottom-0 left-1/2 -translate-x-1/2" style={{ animation: "cta-sky-launch 3.3s cubic-bezier(.62,.04,.9,.42) .55s forwards", opacity: 0 }}>
+        <div
+          aria-hidden
+          className="cta-sky-rocket absolute bottom-0 left-1/2 -translate-x-1/2"
+          style={{
+            animation: "cta-sky-launch 3.3s cubic-bezier(.62,.04,.9,.42) .55s forwards",
+            opacity: 0,
+          }}
+        >
           <Rocket />
         </div>
       )}
 
       <div className="relative flex h-full flex-col items-center justify-center gap-5 px-6 text-center">
-        <p className="cta-sky-line text-xs font-bold uppercase tracking-[0.35em] text-[#9fbcff]" style={{ animation: "cta-sky-line .6s ease-out .1s both" }}>Came Through Audio</p>
+        <p
+          className="cta-sky-line text-xs font-bold uppercase tracking-[0.35em] text-[#9fbcff]"
+          style={{ animation: "cta-sky-line .6s ease-out .1s both" }}
+        >
+          Came Through Audio
+        </p>
         <SkyTitle message={message} names={names} />
-        {sub && <p className="cta-sky-line max-w-md text-base text-white/75 sm:text-lg" style={{ animation: "cta-sky-line .8s ease-out 1.05s both" }}>{sub}</p>}
-        <button ref={button} type="button" onClick={(e) => { e.stopPropagation(); close(); }}
+        {sub && (
+          <p
+            className="cta-sky-line max-w-md text-base text-white/75 sm:text-lg"
+            style={{ animation: "cta-sky-line .8s ease-out 1.05s both" }}
+          >
+            {sub}
+          </p>
+        )}
+        <button
+          ref={button}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            close();
+          }}
           className="cta-sky-line mt-4 rounded-full border border-white/40 px-6 py-2.5 text-sm font-semibold text-white transition hover:border-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-          style={{ animation: "cta-sky-line .7s ease-out 1.75s both" }}>
+          style={{ animation: "cta-sky-line .7s ease-out 1.75s both" }}
+        >
           Keep going
         </button>
       </div>

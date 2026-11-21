@@ -41,16 +41,20 @@ const RECEIPT_DAYS = 30;
 
 /** The later of the last sign-in and the account's creation: what "activity" means for this job. */
 const lastActiveOf = (user: { last_sign_in_at?: string | null; created_at: string }) =>
-  user.last_sign_in_at && new Date(user.last_sign_in_at) > new Date(user.created_at) ? user.last_sign_in_at : user.created_at;
+  user.last_sign_in_at && new Date(user.last_sign_in_at) > new Date(user.created_at)
+    ? user.last_sign_in_at
+    : user.created_at;
 
 /**
  * A live paid plan is the only thing that stops a deadline (founder, 2026-11-08): staff accounts, seat owners and seat
  * artists are scheduled like everyone else, so nothing here asks who someone works for or what seat they hold.
  */
 async function paidAccount(client: Admin, userId: string): Promise<boolean> {
-  const { data } = await client.from("subscriptions")
+  const { data } = await client
+    .from("subscriptions")
     .select("status, current_period_end")
-    .eq("user_id", userId).eq("environment", getPaymentsEnvironment())
+    .eq("user_id", userId)
+    .eq("environment", getPaymentsEnvironment())
     .not("stripe_subscription_id", "is", null)
     .in("status", ["active", "trialing", "past_due", "canceled"]);
   const rows = (data ?? []) as unknown as { status: string; current_period_end: string | null }[];
@@ -68,7 +72,10 @@ async function removeBucketFiles(client: Admin, bucketName: string, userId: stri
   if (topError) throw new Error(topError.message);
   const paths: string[] = [];
   for (const entry of top ?? []) {
-    if (entry.id) { paths.push(`${userId}/${entry.name}`); continue; }
+    if (entry.id) {
+      paths.push(`${userId}/${entry.name}`);
+      continue;
+    }
     const { data: inner, error: innerError } = await bucket.list(`${userId}/${entry.name}`);
     if (innerError) throw new Error(innerError.message);
     for (const file of inner ?? []) if (file.id) paths.push(`${userId}/${entry.name}/${file.name}`);
@@ -79,7 +86,8 @@ async function removeBucketFiles(client: Admin, bucketName: string, userId: stri
 }
 
 /** The masters, artwork and anything else stored for the account's catalog. */
-const removeUserFiles = (client: Admin, userId: string) => removeBucketFiles(client, BUCKET, userId);
+const removeUserFiles = (client: Admin, userId: string) =>
+  removeBucketFiles(client, BUCKET, userId);
 
 /**
  * Clears a certificate's pointer to a proof video as well as the video itself (founder, 2026-11-09): once the copy is
@@ -87,7 +95,8 @@ const removeUserFiles = (client: Admin, userId: string) => removeBucketFiles(cli
  * certificate, its fingerprints and its manifest stay exactly as they were issued.
  */
 async function clearProofVideoLinks(client: Admin, userId: string) {
-  const { error } = await client.from("ai_protection_certificates" as never)
+  const { error } = await client
+    .from("ai_protection_certificates" as never)
     .update({ session_video_url: "", notes_proof_url: "" } as never)
     .eq("user_id", userId);
   if (error) throw new Error(error.message);
@@ -99,8 +108,11 @@ async function removeCatalogEntries(client: Admin, userId: string) {
   if (error) throw new Error(error.message);
   const ids = ((songs ?? []) as unknown as { id: string }[]).map((s) => s.id);
   if (!ids.length) return;
-  const { error: healthError } = await client.from("health_song_status" as never)
-    .delete().eq("user_id", userId).in("song_ref" as never, ids as never);
+  const { error: healthError } = await client
+    .from("health_song_status" as never)
+    .delete()
+    .eq("user_id", userId)
+    .in("song_ref" as never, ids as never);
   if (healthError) throw new Error(healthError.message);
   const { error: delError } = await client.from("catalogs").delete().eq("user_id", userId);
   if (delError) throw new Error(delError.message);
@@ -113,7 +125,10 @@ async function removeCatalogEntries(client: Admin, userId: string) {
  */
 async function removeAccountPaperwork(client: Admin, userId: string) {
   await removeBucketFiles(client, PROOF_BUCKET, userId);
-  const { data: songs, error: songError } = await client.from("catalogs").select("id").eq("user_id", userId);
+  const { data: songs, error: songError } = await client
+    .from("catalogs")
+    .select("id")
+    .eq("user_id", userId);
   if (songError) throw new Error(songError.message);
   const ids = ((songs ?? []) as unknown as { id: string }[]).map((s) => s.id);
   if (ids.length) {
@@ -141,7 +156,8 @@ export async function runInactiveAccounts(now = new Date()) {
   };
 
   // Rows whose deadline has already run are read too: they are what keeps a cleared account out of the queue below.
-  const { data, error } = await client.from("account_inactivity" as never)
+  const { data, error } = await client
+    .from("account_inactivity" as never)
     .select("user_id, last_active_at, delete_on, reminders, deleted_at");
   if (error) throw error;
   const rows = (data ?? []) as unknown as InactivityRow[];
@@ -149,7 +165,10 @@ export async function runInactiveAccounts(now = new Date()) {
   for (const row of rows) {
     const { data: found } = await client.auth.admin.getUserById(row.user_id);
     if (!found.user) {
-      await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
+      await client
+        .from("account_inactivity" as never)
+        .delete()
+        .eq("user_id", row.user_id);
       continue;
     }
     const signedIn = hasBeenActiveSince(row, lastActiveOf(found.user));
@@ -159,12 +178,18 @@ export async function runInactiveAccounts(now = new Date()) {
     // so a later stretch of dormancy can schedule the account afresh.
     if (row.deleted_at) {
       if (!signedIn) continue;
-      await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
+      await client
+        .from("account_inactivity" as never)
+        .delete()
+        .eq("user_id", row.user_id);
       continue;
     }
 
     if (await paidAccount(client, row.user_id)) {
-      await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
+      await client
+        .from("account_inactivity" as never)
+        .delete()
+        .eq("user_id", row.user_id);
       result.inactivityCancelled += 1;
       continue;
     }
@@ -192,9 +217,15 @@ export async function runInactiveAccounts(now = new Date()) {
         }
         // Nothing else is scheduled: the account, its paperwork and everything that is not storage stay on Free. The row
         // stays as a spent mark, so the same last sign-in can never start a second round of notices.
-        const { error: doneError } = await client.from("account_inactivity" as never)
-          .update({ deleted_at: NOW(), updated_at: NOW() } as never).eq("user_id", row.user_id);
-        if (doneError) console.error(`Inactivity: couldn't close the schedule for ${row.user_id}`, doneError.message);
+        const { error: doneError } = await client
+          .from("account_inactivity" as never)
+          .update({ deleted_at: NOW(), updated_at: NOW() } as never)
+          .eq("user_id", row.user_id);
+        if (doneError)
+          console.error(
+            `Inactivity: couldn't close the schedule for ${row.user_id}`,
+            doneError.message,
+          );
         else result.inactivityCleared += 1;
         continue;
       }
@@ -205,12 +236,20 @@ export async function runInactiveAccounts(now = new Date()) {
         continue;
       }
       const { error: delError } = await client.auth.admin.deleteUser(row.user_id);
-      if (delError) { console.error(`Inactivity: couldn't delete ${row.user_id}`, delError.message); continue; }
+      if (delError) {
+        console.error(`Inactivity: couldn't delete ${row.user_id}`, delError.message);
+        continue;
+      }
       // The auth row (and with it the schedule) is gone; the address is kept only long enough for the day-after email.
       if (email) {
-        const { error: receiptError } = await client.from("account_deletions" as never)
+        const { error: receiptError } = await client
+          .from("account_deletions" as never)
           .insert({ user_id: row.user_id, email, deleted_at: NOW() } as never);
-        if (receiptError) console.error(`Inactivity: couldn't record the deletion of ${row.user_id}`, receiptError.message);
+        if (receiptError)
+          console.error(
+            `Inactivity: couldn't record the deletion of ${row.user_id}`,
+            receiptError.message,
+          );
       }
       result.inactivityDeleted += 1;
       continue;
@@ -224,28 +263,49 @@ export async function runInactiveAccounts(now = new Date()) {
       `inactivity-${due}-${row.user_id}-${row.delete_on.slice(0, 10)}`,
     );
     if (sent) {
-      await client.from("account_inactivity" as never)
-        .update({ reminders: [...new Set([...row.reminders, due])], updated_at: NOW() } as never).eq("user_id", row.user_id);
+      await client
+        .from("account_inactivity" as never)
+        .update({ reminders: [...new Set([...row.reminders, due])], updated_at: NOW() } as never)
+        .eq("user_id", row.user_id);
       result.inactivityReminded += 1;
     }
   }
 
   // Day 731: the account is gone, so the only address left is the one saved with the receipt.
   const dayAgo = new Date(now.getTime() - DAY).toISOString();
-  const { data: receipts } = await client.from("account_deletions" as never)
-    .select("user_id, email, deleted_at").lte("deleted_at", dayAgo);
-  for (const r of (receipts ?? []) as unknown as { user_id: string; email: string; deleted_at: string }[]) {
-    const sent = await sendInactivityEmail(r.email, { kind: "deleted", deletedOn: r.deleted_at }, `inactivity-deleted-${r.user_id}`);
+  const { data: receipts } = await client
+    .from("account_deletions" as never)
+    .select("user_id, email, deleted_at")
+    .lte("deleted_at", dayAgo);
+  for (const r of (receipts ?? []) as unknown as {
+    user_id: string;
+    email: string;
+    deleted_at: string;
+  }[]) {
+    const sent = await sendInactivityEmail(
+      r.email,
+      { kind: "deleted", deletedOn: r.deleted_at },
+      `inactivity-deleted-${r.user_id}`,
+    );
     if (!sent) continue;
-    await client.from("account_deletions" as never).delete().eq("user_id", r.user_id);
+    await client
+      .from("account_deletions" as never)
+      .delete()
+      .eq("user_id", r.user_id);
     result.inactivityNotified += 1;
   }
   // An address we couldn't reach is not kept forever: a receipt older than 30 days goes unsent.
   const stale = new Date(now.getTime() - RECEIPT_DAYS * DAY).toISOString();
-  const { error: staleError, count } = await client.from("account_deletions" as never)
-    .delete({ count: "exact" }).lt("deleted_at", stale);
-  if (staleError) console.error("Inactivity: couldn't clear old deletion receipts", staleError.message);
-  else if (count) console.error(`Inactivity: dropped ${count} unsent deletion receipt(s) older than ${RECEIPT_DAYS} days`);
+  const { error: staleError, count } = await client
+    .from("account_deletions" as never)
+    .delete({ count: "exact" })
+    .lt("deleted_at", stale);
+  if (staleError)
+    console.error("Inactivity: couldn't clear old deletion receipts", staleError.message);
+  else if (count)
+    console.error(
+      `Inactivity: dropped ${count} unsent deletion receipt(s) older than ${RECEIPT_DAYS} days`,
+    );
 
   const known = new Set(rows.map((r) => r.user_id));
   const { data: candidates } = await client.rpc("inactivity_candidates" as never);

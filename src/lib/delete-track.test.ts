@@ -16,7 +16,10 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: () => ({
       delete: () => ({
         eq: (_column: string, id: string) => ({
-          select: async () => ({ data: calls.removed.map((r) => ({ ...(r === id ? { id } : {}) })), error: null }),
+          select: async () => ({
+            data: calls.removed.map((r) => ({ ...(r === id ? { id } : {}) })),
+            error: null,
+          }),
         }),
       }),
     }),

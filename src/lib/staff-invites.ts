@@ -27,7 +27,8 @@ export type InviteTarget = { email: string; memberAccount: boolean; onTeam: bool
 
 /** Why this invite can't be sent, or null. Checked on the server, never only in the form. */
 export function inviteBlocker(target: InviteTarget): string | null {
-  if (target.onTeam) return "That email is already on the team. Edit their access in the list instead.";
+  if (target.onTeam)
+    return "That email is already on the team. Edit their access in the list instead.";
   if (target.memberAccount) {
     return "That email already has a member account. Staff need a separate email: ask for their work address, then invite that one. Their member account is left alone.";
   }

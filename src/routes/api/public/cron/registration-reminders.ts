@@ -13,9 +13,18 @@ export const Route = createFileRoute("/api/public/cron/registration-reminders")(
         if (!secret || auth !== `Bearer ${secret}`) {
           return new Response("Unauthorized", { status: 401 });
         }
-        const [{ sendDueRegistrationReminders }, { sendReleaseDayEmails }] = await Promise.all([import("@/lib/registration.server"), import("@/lib/release-day.server")]);
+        const [{ sendDueRegistrationReminders }, { sendReleaseDayEmails }] = await Promise.all([
+          import("@/lib/registration.server"),
+          import("@/lib/release-day.server"),
+        ]);
         // Also the release-day note for songs whose release date is today (pre-distribution, 2026-10-25).
-        const [reminders, releaseDay] = await Promise.all([sendDueRegistrationReminders(), sendReleaseDayEmails().catch((e) => { console.error("Release-day emails failed:", e); return { released: 0, sent: 0 }; })]);
+        const [reminders, releaseDay] = await Promise.all([
+          sendDueRegistrationReminders(),
+          sendReleaseDayEmails().catch((e) => {
+            console.error("Release-day emails failed:", e);
+            return { released: 0, sent: 0 };
+          }),
+        ]);
         return Response.json({ ...reminders, releaseDay });
       },
     },

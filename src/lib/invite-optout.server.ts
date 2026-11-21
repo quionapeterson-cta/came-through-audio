@@ -4,7 +4,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 export function optOutToken(email: string) {
   const secret = process.env["SESSION_SECRET"];
   if (!secret) throw new Error("Invite opt-out signing is not configured.");
-  return createHmac("sha256", secret).update(`invite-stop|${email.trim().toLowerCase()}`).digest("hex").slice(0, 32);
+  return createHmac("sha256", secret)
+    .update(`invite-stop|${email.trim().toLowerCase()}`)
+    .digest("hex")
+    .slice(0, 32);
 }
 
 export function validOptOutToken(email: string, token: string) {

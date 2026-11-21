@@ -5,10 +5,22 @@ import { BILLING_DEPARTMENTS, resolveAccess } from "@/lib/departments";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import { createBillingStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { PRICE_TIER, TIER_LABEL, refundDaysLeft } from "@/lib/plans";
-import { formatUsd, proratedRefundCents, purchaseKindLabel, refundVerdict, type RefundReason } from "@/lib/billing-console";
 import {
-  DUPLICATE_CHECK_IDS, duplicateRefundBlock, groupPossibleDuplicates, paymentState, readCharge,
-  type ChargeFacts, type ChargeReading, type DuplicateGroup,
+  formatUsd,
+  proratedRefundCents,
+  purchaseKindLabel,
+  refundVerdict,
+  type RefundReason,
+} from "@/lib/billing-console";
+import {
+  DUPLICATE_CHECK_IDS,
+  duplicateRefundBlock,
+  groupPossibleDuplicates,
+  paymentState,
+  readCharge,
+  type ChargeFacts,
+  type ChargeReading,
+  type DuplicateGroup,
 } from "@/lib/duplicate-charges";
 
 /**
@@ -82,8 +94,21 @@ export type BillingMember = {
   purchases: BillingPurchase[];
 };
 
-export type PaymentInfo = { paidCents: number; refundedCents: number; currency: string; windowDaysLeft: number; paymentIntent: string | null };
-export type PlanChargeInfo = { chargeId: string; paidCents: number; refundedCents: number; currency: string; windowDaysLeft: number; proratedCents: number };
+export type PaymentInfo = {
+  paidCents: number;
+  refundedCents: number;
+  currency: string;
+  windowDaysLeft: number;
+  paymentIntent: string | null;
+};
+export type PlanChargeInfo = {
+  chargeId: string;
+  paidCents: number;
+  refundedCents: number;
+  currency: string;
+  windowDaysLeft: number;
+  proratedCents: number;
+};
 
 export type BillingAction = {
   createdAt: string;
@@ -99,19 +124,28 @@ export type BillingAction = {
 
 /** Finance and super admins only. The department check mirrors `public.can_see_billing`. */
 async function requireBilling(context: Ctx): Promise<{ isSuper: boolean; actorEmail: string }> {
-  const { data } = await context.supabase.from("user_roles").select("role, departments").eq("user_id", context.userId);
+  const { data } = await context.supabase
+    .from("user_roles")
+    .select("role, departments")
+    .eq("user_id", context.userId);
   const access = resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]);
   if (!access) throw new Error("Billing is for the Billing and Finance teams and super admins.");
   const isSuper = access.role === "super_admin";
   const inBilling = BILLING_DEPARTMENTS.some((d) => access.departments.includes(d));
-  if (!isSuper && !inBilling) throw new Error("Billing is for the Billing and Finance teams and super admins.");
+  if (!isSuper && !inBilling)
+    throw new Error("Billing is for the Billing and Finance teams and super admins.");
   return { isSuper, actorEmail: context.claims?.email ?? "" };
 }
 
 /** Everything a refund already took, so a second one can't overdraw the payment. */
-async function refundedOn(stripe: ReturnType<typeof createBillingStripeClient>, paymentIntent: string): Promise<number> {
+async function refundedOn(
+  stripe: ReturnType<typeof createBillingStripeClient>,
+  paymentIntent: string,
+): Promise<number> {
   const list = await stripe.refunds.list({ payment_intent: paymentIntent, limit: 100 });
-  return list.data.filter((r) => r.status !== "failed" && r.status !== "canceled").reduce((sum, r) => sum + r.amount, 0);
+  return list.data
+    .filter((r) => r.status !== "failed" && r.status !== "canceled")
+    .reduce((sum, r) => sum + r.amount, 0);
 }
 
 /**
@@ -122,12 +156,17 @@ async function paymentFor(stripe: ReturnType<typeof createBillingStripeClient>, 
   const stored = p.details?.["payment_intent"];
   if (stored) {
     const intent = await stripe.paymentIntents.retrieve(stored);
-    return { pi: stored, paidCents: intent.amount_received || intent.amount, currency: intent.currency };
+    return {
+      pi: stored,
+      paidCents: intent.amount_received || intent.amount,
+      currency: intent.currency,
+    };
   }
-  if (!p.stripe_session_id || p.stripe_session_id.startsWith("sub:")) return { pi: null, paidCents: 0, currency: "usd" };
+  if (!p.stripe_session_id || p.stripe_session_id.startsWith("sub:"))
+    return { pi: null, paidCents: 0, currency: "usd" };
   const session = await stripe.checkout.sessions.retrieve(p.stripe_session_id);
   const value = session.payment_intent;
-  const pi = typeof value === "string" ? value : value?.id ?? null;
+  const pi = typeof value === "string" ? value : (value?.id ?? null);
   return { pi, paidCents: session.amount_total ?? 0, currency: session.currency ?? "usd" };
 }
 
@@ -178,20 +217,45 @@ export const lookupBillingMember = createServerFn({ method: "POST" })
     await requireBilling(context as unknown as Ctx);
     const env = getPaymentsEnvironment();
     const d = await db();
-    const { data: found } = await d.rpc("billing_find_user" as never, { _email: data.email } as never);
+    const { data: found } = await d.rpc(
+      "billing_find_user" as never,
+      { _email: data.email } as never,
+    );
     const userId = typeof found === "string" ? found : null;
-    if (!userId) throw new Error("No account with that email. Check the spelling, or search the address they paid with.");
+    if (!userId)
+      throw new Error(
+        "No account with that email. Check the spelling, or search the address they paid with.",
+      );
     const [{ data: profile }, { data: subs }, { data: purchases }, account] = await Promise.all([
       d.from("profiles").select("stage_name, legal_name").eq("id", userId).maybeSingle(),
-      d.from("subscriptions").select("price_id, status, current_period_end, cancel_at_period_end, stripe_subscription_id, stripe_customer_id, created_at")
-        .eq("user_id", userId).eq("environment", env).not("stripe_subscription_id", "is", null).order("created_at", { ascending: false }),
-      d.from("purchases").select("id, kind, details, environment, stripe_session_id, created_at")
-        .eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }).limit(30),
+      d
+        .from("subscriptions")
+        .select(
+          "price_id, status, current_period_end, cancel_at_period_end, stripe_subscription_id, stripe_customer_id, created_at",
+        )
+        .eq("user_id", userId)
+        .eq("environment", env)
+        .not("stripe_subscription_id", "is", null)
+        .order("created_at", { ascending: false }),
+      d
+        .from("purchases")
+        .select("id, kind, details, environment, stripe_session_id, created_at")
+        .eq("user_id", userId)
+        .eq("environment", env)
+        .order("created_at", { ascending: false })
+        .limit(30),
       d.auth.admin.getUserById(userId),
     ]);
     const prof = profile as { stage_name: string | null; legal_name: string | null } | null;
     // The admin lookup's response type varies by SDK build; read the two fields we need without depending on it.
-    const authUser = (account as unknown as { data?: { user?: { email?: string | null; email_confirmed_at?: string | null } | null } | null }).data?.user ?? null;
+    const authUser =
+      (
+        account as unknown as {
+          data?: {
+            user?: { email?: string | null; email_confirmed_at?: string | null } | null;
+          } | null;
+        }
+      ).data?.user ?? null;
     const subRows = (subs ?? []) as SubRow[];
     const buyRows = (purchases ?? []) as PurchaseRow[];
     return {
@@ -230,12 +294,20 @@ export const purchasePaymentInfo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<PaymentInfo> => {
     await requireBilling(context as unknown as Ctx);
     const d = await db();
-    const { data: row } = await d.from("purchases").select("id, user_id, kind, environment, details, stripe_session_id, created_at").eq("id", data.purchaseId).maybeSingle();
+    const { data: row } = await d
+      .from("purchases")
+      .select("id, user_id, kind, environment, details, stripe_session_id, created_at")
+      .eq("id", data.purchaseId)
+      .maybeSingle();
     const p = row as PurchaseRow | null;
     if (!p) throw new Error("That purchase no longer exists.");
     const env = getPaymentsEnvironment();
-    if (p.environment !== env) throw new Error("That purchase belongs to the other Stripe mode, so it can't be refunded from here.");
-    if (!p.stripe_session_id) throw new Error("This purchase has no Stripe payment behind it to refund.");
+    if (p.environment !== env)
+      throw new Error(
+        "That purchase belongs to the other Stripe mode, so it can't be refunded from here.",
+      );
+    if (!p.stripe_session_id)
+      throw new Error("This purchase has no Stripe payment behind it to refund.");
     try {
       const stripe = createBillingStripeClient(env);
       const { pi, paidCents, currency } = await paymentFor(stripe, p);
@@ -264,82 +336,176 @@ const refundFields = {
 export const refundPurchase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ purchaseId: z.string().uuid(), ...refundFields }).parse(d))
-  .handler(async ({ data, context }): Promise<{ refundId: string; amountCents: number; status: string | null }> => {
-    const ctx = context as unknown as Ctx;
-    const { actorEmail } = await requireBilling(ctx);
-    const env = getPaymentsEnvironment();
-    const d = await db();
-    const { data: row } = await d.from("purchases").select("id, user_id, kind, environment, details, stripe_session_id, created_at").eq("id", data.purchaseId).maybeSingle();
-    const p = row as PurchaseRow | null;
-    if (!p) throw new Error("That purchase no longer exists.");
-    if (p.environment !== env) throw new Error("That purchase belongs to the other Stripe mode, so it can't be refunded from here.");
-    if (!p.stripe_session_id) throw new Error("This purchase has no Stripe payment behind it to refund.");
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ refundId: string; amountCents: number; status: string | null }> => {
+      const ctx = context as unknown as Ctx;
+      const { actorEmail } = await requireBilling(ctx);
+      const env = getPaymentsEnvironment();
+      const d = await db();
+      const { data: row } = await d
+        .from("purchases")
+        .select("id, user_id, kind, environment, details, stripe_session_id, created_at")
+        .eq("id", data.purchaseId)
+        .maybeSingle();
+      const p = row as PurchaseRow | null;
+      if (!p) throw new Error("That purchase no longer exists.");
+      if (p.environment !== env)
+        throw new Error(
+          "That purchase belongs to the other Stripe mode, so it can't be refunded from here.",
+        );
+      if (!p.stripe_session_id)
+        throw new Error("This purchase has no Stripe payment behind it to refund.");
 
-    const stripe = createBillingStripeClient(env);
-    let pi: string | null = null;
-    let paidCents = 0;
-    let refundedCents = 0;
-    try {
-      const payment = await paymentFor(stripe, p);
-      pi = payment.pi;
-      paidCents = payment.paidCents;
-      refundedCents = payment.pi ? await refundedOn(stripe, payment.pi) : 0;
-    } catch (e) {
-      throw new Error(`Stripe couldn't read that payment: ${getStripeErrorMessage(e)}`);
-    }
-    if (!pi) throw new Error("This payment has no Stripe payment intent, so it can't be refunded automatically.");
-
-    // A "duplicate" refund is a claim about the payment itself (founder, 2026-11-05), so Stripe has to agree the money
-    // actually moved before any of it goes back. Otherwise a hold gets "refunded" and the member is paid for a charge
-    // that never happened.
-    if (data.reason === "duplicate") {
-      let state: ReturnType<typeof paymentState> = "failed";
+      const stripe = createBillingStripeClient(env);
+      let pi: string | null = null;
+      let paidCents = 0;
+      let refundedCents = 0;
       try {
-        state = paymentState((await stripe.paymentIntents.retrieve(pi)).status);
+        const payment = await paymentFor(stripe, p);
+        pi = payment.pi;
+        paidCents = payment.paidCents;
+        refundedCents = payment.pi ? await refundedOn(stripe, payment.pi) : 0;
       } catch (e) {
-        throw new Error(`Stripe couldn't confirm whether that payment settled: ${getStripeErrorMessage(e)}`);
+        throw new Error(`Stripe couldn't read that payment: ${getStripeErrorMessage(e)}`);
       }
-      const block = duplicateRefundBlock({
-        checks: data.duplicateChecks ?? [],
-        settled: state === "succeeded",
-        held: state === "requires_capture" || state === "processing",
-        refunded: refundedCents >= paidCents,
+      if (!pi)
+        throw new Error(
+          "This payment has no Stripe payment intent, so it can't be refunded automatically.",
+        );
+
+      // A "duplicate" refund is a claim about the payment itself (founder, 2026-11-05), so Stripe has to agree the money
+      // actually moved before any of it goes back. Otherwise a hold gets "refunded" and the member is paid for a charge
+      // that never happened.
+      if (data.reason === "duplicate") {
+        let state: ReturnType<typeof paymentState> = "failed";
+        try {
+          state = paymentState((await stripe.paymentIntents.retrieve(pi)).status);
+        } catch (e) {
+          throw new Error(
+            `Stripe couldn't confirm whether that payment settled: ${getStripeErrorMessage(e)}`,
+          );
+        }
+        const block = duplicateRefundBlock({
+          checks: data.duplicateChecks ?? [],
+          settled: state === "succeeded",
+          held: state === "requires_capture" || state === "processing",
+          refunded: refundedCents >= paidCents,
+        });
+        if (block) {
+          await record({
+            actorId: ctx.userId,
+            actorEmail,
+            targetUserId: p.user_id,
+            targetEmail: "",
+            action: "refund",
+            target: p.id,
+            stripeObject: pi,
+            amountCents: data.amountCents,
+            currency: null,
+            reason: data.reason,
+            status: "failed",
+            error: block,
+            environment: env,
+            requestId: data.requestId,
+          });
+          throw new Error(block);
+        }
+      }
+
+      const verdict = refundVerdict({
+        paidCents,
+        refundedCents,
+        amountCents: data.amountCents,
+        paidAt: p.created_at ?? new Date().toISOString(),
       });
-      if (block) {
-        await record({ actorId: ctx.userId, actorEmail, targetUserId: p.user_id, targetEmail: "", action: "refund", target: p.id, stripeObject: pi, amountCents: data.amountCents, currency: null, reason: data.reason, status: "failed", error: block, environment: env, requestId: data.requestId });
-        throw new Error(block);
+      const why = `${data.reason}${data.note?.trim() ? `: ${data.note.trim()}` : ""}`;
+      if (verdict.ok && verdict.discretionary && !data.note?.trim()) {
+        throw new Error(
+          "Past the 30-day window a refund needs a note saying why. It's allowed — a dispute costs more — but the reason has to be on the record.",
+        );
       }
-    }
+      if (!verdict.ok) {
+        await record({
+          actorId: ctx.userId,
+          actorEmail,
+          targetUserId: p.user_id,
+          targetEmail: "",
+          action: "refund",
+          target: p.id,
+          stripeObject: pi,
+          amountCents: data.amountCents,
+          currency: null,
+          reason: why,
+          status: "failed",
+          error: verdict.reason,
+          environment: env,
+          requestId: data.requestId,
+        });
+        throw new Error(verdict.reason);
+      }
 
-    const verdict = refundVerdict({ paidCents, refundedCents, amountCents: data.amountCents, paidAt: p.created_at ?? new Date().toISOString() });
-    const why = `${data.reason}${data.note?.trim() ? `: ${data.note.trim()}` : ""}`;
-    if (verdict.ok && verdict.discretionary && !data.note?.trim()) {
-      throw new Error("Past the 30-day window a refund needs a note saying why. It's allowed — a dispute costs more — but the reason has to be on the record.");
-    }
-    if (!verdict.ok) {
-      await record({ actorId: ctx.userId, actorEmail, targetUserId: p.user_id, targetEmail: "", action: "refund", target: p.id, stripeObject: pi, amountCents: data.amountCents, currency: null, reason: why, status: "failed", error: verdict.reason, environment: env, requestId: data.requestId });
-      throw new Error(verdict.reason);
-    }
-
-    try {
-      const refund = await stripe.refunds.create(
-        { payment_intent: pi, amount: data.amountCents, reason: data.reason as RefundReason, metadata: { app: "cta_billing_console", purchase_id: p.id, actor_id: ctx.userId } },
-        { idempotencyKey: `cta-refund-${data.requestId}` },
-      );
-      await record({ actorId: ctx.userId, actorEmail, targetUserId: p.user_id, targetEmail: "", action: "refund", target: p.id, stripeObject: pi, amountCents: refund.amount, currency: refund.currency.toUpperCase(), reason: why, status: "done", error: null, environment: env, requestId: data.requestId });
-      return { refundId: refund.id, amountCents: refund.amount, status: refund.status };
-    } catch (e) {
-      const reason = getStripeErrorMessage(e);
-      await record({ actorId: ctx.userId, actorEmail, targetUserId: p.user_id, targetEmail: "", action: "refund", target: p.id, stripeObject: pi, amountCents: data.amountCents, currency: null, reason: why, status: "failed", error: reason, environment: env, requestId: data.requestId });
-      throw new Error(`Stripe refused the refund: ${reason}`);
-    }
-  });
+      try {
+        const refund = await stripe.refunds.create(
+          {
+            payment_intent: pi,
+            amount: data.amountCents,
+            reason: data.reason as RefundReason,
+            metadata: { app: "cta_billing_console", purchase_id: p.id, actor_id: ctx.userId },
+          },
+          { idempotencyKey: `cta-refund-${data.requestId}` },
+        );
+        await record({
+          actorId: ctx.userId,
+          actorEmail,
+          targetUserId: p.user_id,
+          targetEmail: "",
+          action: "refund",
+          target: p.id,
+          stripeObject: pi,
+          amountCents: refund.amount,
+          currency: refund.currency.toUpperCase(),
+          reason: why,
+          status: "done",
+          error: null,
+          environment: env,
+          requestId: data.requestId,
+        });
+        return { refundId: refund.id, amountCents: refund.amount, status: refund.status };
+      } catch (e) {
+        const reason = getStripeErrorMessage(e);
+        await record({
+          actorId: ctx.userId,
+          actorEmail,
+          targetUserId: p.user_id,
+          targetEmail: "",
+          action: "refund",
+          target: p.id,
+          stripeObject: pi,
+          amountCents: data.amountCents,
+          currency: null,
+          reason: why,
+          status: "failed",
+          error: reason,
+          environment: env,
+          requestId: data.requestId,
+        });
+        throw new Error(`Stripe refused the refund: ${reason}`);
+      }
+    },
+  );
 
 /** The newest paid charge on a plan, which is what a plan refund actually refunds. */
 async function latestChargeFor(customerId: string, env: "sandbox" | "live") {
   const stripe = createBillingStripeClient(env);
   const charges = await stripe.charges.list({ customer: customerId, limit: 10 });
-  return { stripe, charge: charges.data.find((c) => c.paid && !c.refunded && c.amount - c.amount_refunded > 0) ?? null };
+  return {
+    stripe,
+    charge:
+      charges.data.find((c) => c.paid && !c.refunded && c.amount - c.amount_refunded > 0) ?? null,
+  };
 }
 
 export const latestPlanCharge = createServerFn({ method: "POST" })
@@ -349,9 +515,15 @@ export const latestPlanCharge = createServerFn({ method: "POST" })
     await requireBilling(context as unknown as Ctx);
     const env = getPaymentsEnvironment();
     const d = await db();
-    const { data: row } = await d.from("subscriptions").select("stripe_customer_id").eq("stripe_subscription_id", data.subscriptionId).eq("environment", env).maybeSingle();
+    const { data: row } = await d
+      .from("subscriptions")
+      .select("stripe_customer_id")
+      .eq("stripe_subscription_id", data.subscriptionId)
+      .eq("environment", env)
+      .maybeSingle();
     const sub = row as { stripe_customer_id: string | null } | null;
-    if (!sub?.stripe_customer_id) throw new Error("That plan has no Stripe customer, so there's no card charge to refund.");
+    if (!sub?.stripe_customer_id)
+      throw new Error("That plan has no Stripe customer, so there's no card charge to refund.");
     const { charge } = await latestChargeFor(sub.stripe_customer_id, env);
     if (!charge) throw new Error("No refundable charge on that plan.");
     const paidAt = new Date(charge.created * 1000).toISOString();
@@ -361,7 +533,10 @@ export const latestPlanCharge = createServerFn({ method: "POST" })
       refundedCents: charge.amount_refunded,
       currency: charge.currency.toUpperCase(),
       windowDaysLeft: refundDaysLeft(paidAt),
-      proratedCents: proratedRefundCents({ paidCents: charge.amount - charge.amount_refunded, paidAt }),
+      proratedCents: proratedRefundCents({
+        paidCents: charge.amount - charge.amount_refunded,
+        paidAt,
+      }),
     };
   });
 
@@ -369,86 +544,218 @@ export const latestPlanCharge = createServerFn({ method: "POST" })
 export const refundLatestPlanCharge = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ subscriptionId: z.string().min(3), ...refundFields }).parse(d))
-  .handler(async ({ data, context }): Promise<{ refundId: string; amountCents: number; status: string | null }> => {
-    const ctx = context as unknown as Ctx;
-    const { actorEmail } = await requireBilling(ctx);
-    const env = getPaymentsEnvironment();
-    const d = await db();
-    const { data: row } = await d.from("subscriptions").select("stripe_customer_id").eq("stripe_subscription_id", data.subscriptionId).eq("environment", env).maybeSingle();
-    const sub = row as { stripe_customer_id: string | null } | null;
-    if (!sub?.stripe_customer_id) throw new Error("That plan has no Stripe customer, so there's no card charge to refund.");
-    const { stripe, charge } = await latestChargeFor(sub.stripe_customer_id, env);
-    if (!charge) throw new Error("No refundable charge on that plan.");
-    const why = `${data.reason}${data.note?.trim() ? `: ${data.note.trim()}` : ""}`;
-    // Same gate as a purchase: "duplicate" means two settled payments, not one charge and the bank's hold.
-    if (data.reason === "duplicate") {
-      const state = paymentState(charge.status, charge.captured);
-      const block = duplicateRefundBlock({
-        checks: data.duplicateChecks ?? [],
-        settled: state === "succeeded",
-        held: state === "requires_capture" || state === "processing",
-        refunded: charge.amount_refunded >= charge.amount,
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ refundId: string; amountCents: number; status: string | null }> => {
+      const ctx = context as unknown as Ctx;
+      const { actorEmail } = await requireBilling(ctx);
+      const env = getPaymentsEnvironment();
+      const d = await db();
+      const { data: row } = await d
+        .from("subscriptions")
+        .select("stripe_customer_id")
+        .eq("stripe_subscription_id", data.subscriptionId)
+        .eq("environment", env)
+        .maybeSingle();
+      const sub = row as { stripe_customer_id: string | null } | null;
+      if (!sub?.stripe_customer_id)
+        throw new Error("That plan has no Stripe customer, so there's no card charge to refund.");
+      const { stripe, charge } = await latestChargeFor(sub.stripe_customer_id, env);
+      if (!charge) throw new Error("No refundable charge on that plan.");
+      const why = `${data.reason}${data.note?.trim() ? `: ${data.note.trim()}` : ""}`;
+      // Same gate as a purchase: "duplicate" means two settled payments, not one charge and the bank's hold.
+      if (data.reason === "duplicate") {
+        const state = paymentState(charge.status, charge.captured);
+        const block = duplicateRefundBlock({
+          checks: data.duplicateChecks ?? [],
+          settled: state === "succeeded",
+          held: state === "requires_capture" || state === "processing",
+          refunded: charge.amount_refunded >= charge.amount,
+        });
+        if (block) {
+          await record({
+            actorId: ctx.userId,
+            actorEmail,
+            targetUserId: null,
+            targetEmail: "",
+            action: "refund",
+            target: data.subscriptionId,
+            stripeObject: charge.id,
+            amountCents: data.amountCents,
+            currency: charge.currency.toUpperCase(),
+            reason: why,
+            status: "failed",
+            error: block,
+            environment: env,
+            requestId: data.requestId,
+          });
+          throw new Error(block);
+        }
+      }
+      const verdict = refundVerdict({
+        paidCents: charge.amount,
+        refundedCents: charge.amount_refunded,
+        amountCents: data.amountCents,
+        paidAt: new Date(charge.created * 1000).toISOString(),
       });
-      if (block) {
-        await record({ actorId: ctx.userId, actorEmail, targetUserId: null, targetEmail: "", action: "refund", target: data.subscriptionId, stripeObject: charge.id, amountCents: data.amountCents, currency: charge.currency.toUpperCase(), reason: why, status: "failed", error: block, environment: env, requestId: data.requestId });
-        throw new Error(block);
+      if (verdict.ok && verdict.discretionary && !data.note?.trim()) {
+        throw new Error(
+          "Past the 30-day window a refund needs a note saying why. It's allowed — a dispute costs more — but the reason has to be on the record.",
+        );
       }
-    }
-    const verdict = refundVerdict({
-      paidCents: charge.amount,
-      refundedCents: charge.amount_refunded,
-      amountCents: data.amountCents,
-      paidAt: new Date(charge.created * 1000).toISOString(),
-    });
-    if (verdict.ok && verdict.discretionary && !data.note?.trim()) {
-      throw new Error("Past the 30-day window a refund needs a note saying why. It's allowed — a dispute costs more — but the reason has to be on the record.");
-    }
-    // Past the window a plan refund covers the unused time only (founder, 2026-11-05), so nobody can refund a year
-    // they have already used.
-    if (verdict.ok && verdict.discretionary) {
-      const unused = proratedRefundCents({ paidCents: charge.amount - charge.amount_refunded, paidAt: new Date(charge.created * 1000).toISOString() });
-      if (data.amountCents > unused) {
-        throw new Error(`Past 30 days a plan refund covers the unused time only: ${formatUsd(unused)} of ${formatUsd(charge.amount)}.`);
+      // Past the window a plan refund covers the unused time only (founder, 2026-11-05), so nobody can refund a year
+      // they have already used.
+      if (verdict.ok && verdict.discretionary) {
+        const unused = proratedRefundCents({
+          paidCents: charge.amount - charge.amount_refunded,
+          paidAt: new Date(charge.created * 1000).toISOString(),
+        });
+        if (data.amountCents > unused) {
+          throw new Error(
+            `Past 30 days a plan refund covers the unused time only: ${formatUsd(unused)} of ${formatUsd(charge.amount)}.`,
+          );
+        }
       }
-    }
-    if (!verdict.ok) {
-      await record({ actorId: ctx.userId, actorEmail, targetUserId: null, targetEmail: "", action: "refund", target: data.subscriptionId, stripeObject: charge.id, amountCents: data.amountCents, currency: charge.currency.toUpperCase(), reason: why, status: "failed", error: verdict.reason, environment: env, requestId: data.requestId });
-      throw new Error(verdict.reason);
-    }
-    try {
-      const refund = await stripe.refunds.create(
-        { charge: charge.id, amount: data.amountCents, reason: data.reason as RefundReason, metadata: { app: "cta_billing_console", subscription_id: data.subscriptionId, actor_id: ctx.userId } },
-        { idempotencyKey: `cta-refund-${data.requestId}` },
-      );
-      await record({ actorId: ctx.userId, actorEmail, targetUserId: null, targetEmail: "", action: "refund", target: data.subscriptionId, stripeObject: charge.id, amountCents: refund.amount, currency: refund.currency.toUpperCase(), reason: why, status: "done", error: null, environment: env, requestId: data.requestId });
-      return { refundId: refund.id, amountCents: refund.amount, status: refund.status };
-    } catch (e) {
-      const reason = getStripeErrorMessage(e);
-      await record({ actorId: ctx.userId, actorEmail, targetUserId: null, targetEmail: "", action: "refund", target: data.subscriptionId, stripeObject: charge.id, amountCents: data.amountCents, currency: charge.currency.toUpperCase(), reason: why, status: "failed", error: reason, environment: env, requestId: data.requestId });
-      throw new Error(`Stripe refused the refund: ${reason}`);
-    }
-  });
+      if (!verdict.ok) {
+        await record({
+          actorId: ctx.userId,
+          actorEmail,
+          targetUserId: null,
+          targetEmail: "",
+          action: "refund",
+          target: data.subscriptionId,
+          stripeObject: charge.id,
+          amountCents: data.amountCents,
+          currency: charge.currency.toUpperCase(),
+          reason: why,
+          status: "failed",
+          error: verdict.reason,
+          environment: env,
+          requestId: data.requestId,
+        });
+        throw new Error(verdict.reason);
+      }
+      try {
+        const refund = await stripe.refunds.create(
+          {
+            charge: charge.id,
+            amount: data.amountCents,
+            reason: data.reason as RefundReason,
+            metadata: {
+              app: "cta_billing_console",
+              subscription_id: data.subscriptionId,
+              actor_id: ctx.userId,
+            },
+          },
+          { idempotencyKey: `cta-refund-${data.requestId}` },
+        );
+        await record({
+          actorId: ctx.userId,
+          actorEmail,
+          targetUserId: null,
+          targetEmail: "",
+          action: "refund",
+          target: data.subscriptionId,
+          stripeObject: charge.id,
+          amountCents: refund.amount,
+          currency: refund.currency.toUpperCase(),
+          reason: why,
+          status: "done",
+          error: null,
+          environment: env,
+          requestId: data.requestId,
+        });
+        return { refundId: refund.id, amountCents: refund.amount, status: refund.status };
+      } catch (e) {
+        const reason = getStripeErrorMessage(e);
+        await record({
+          actorId: ctx.userId,
+          actorEmail,
+          targetUserId: null,
+          targetEmail: "",
+          action: "refund",
+          target: data.subscriptionId,
+          stripeObject: charge.id,
+          amountCents: data.amountCents,
+          currency: charge.currency.toUpperCase(),
+          reason: why,
+          status: "failed",
+          error: reason,
+          environment: env,
+          requestId: data.requestId,
+        });
+        throw new Error(`Stripe refused the refund: ${reason}`);
+      }
+    },
+  );
 
 /** Stop a plan renewing, or let it carry on. Ends at the period end, never mid-year, so nobody loses access they paid for. */
 export const setSubscriptionCancellation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ subscriptionId: z.string().min(3), cancel: z.boolean(), requestId: z.string().uuid() }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        subscriptionId: z.string().min(3),
+        cancel: z.boolean(),
+        requestId: z.string().uuid(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }): Promise<{ cancelAtPeriodEnd: boolean }> => {
     const ctx = context as unknown as Ctx;
     const { actorEmail } = await requireBilling(ctx);
     const env = getPaymentsEnvironment();
     const d = await db();
-    const { data: row } = await d.from("subscriptions").select("user_id, status").eq("stripe_subscription_id", data.subscriptionId).eq("environment", env).maybeSingle();
+    const { data: row } = await d
+      .from("subscriptions")
+      .select("user_id, status")
+      .eq("stripe_subscription_id", data.subscriptionId)
+      .eq("environment", env)
+      .maybeSingle();
     const sub = row as { user_id: string; status: string } | null;
     if (!sub) throw new Error("That plan isn't on this account any more.");
     try {
       const stripe = createBillingStripeClient(env);
-      const updated = await stripe.subscriptions.update(data.subscriptionId, { cancel_at_period_end: data.cancel });
-      await record({ actorId: ctx.userId, actorEmail, targetUserId: sub.user_id, targetEmail: "", action: data.cancel ? "cancel_plan" : "resume_plan", target: data.subscriptionId, stripeObject: data.subscriptionId, amountCents: null, currency: null, reason: data.cancel ? "Stops at the renewal date" : "Renews again", status: "done", error: null, environment: env, requestId: data.requestId });
+      const updated = await stripe.subscriptions.update(data.subscriptionId, {
+        cancel_at_period_end: data.cancel,
+      });
+      await record({
+        actorId: ctx.userId,
+        actorEmail,
+        targetUserId: sub.user_id,
+        targetEmail: "",
+        action: data.cancel ? "cancel_plan" : "resume_plan",
+        target: data.subscriptionId,
+        stripeObject: data.subscriptionId,
+        amountCents: null,
+        currency: null,
+        reason: data.cancel ? "Stops at the renewal date" : "Renews again",
+        status: "done",
+        error: null,
+        environment: env,
+        requestId: data.requestId,
+      });
       return { cancelAtPeriodEnd: !!updated.cancel_at_period_end };
     } catch (e) {
       const reason = getStripeErrorMessage(e);
-      await record({ actorId: ctx.userId, actorEmail, targetUserId: sub.user_id, targetEmail: "", action: data.cancel ? "cancel_plan" : "resume_plan", target: data.subscriptionId, stripeObject: data.subscriptionId, amountCents: null, currency: null, reason: data.cancel ? "Stops at the renewal date" : "Renews again", status: "failed", error: reason, environment: env, requestId: data.requestId });
+      await record({
+        actorId: ctx.userId,
+        actorEmail,
+        targetUserId: sub.user_id,
+        targetEmail: "",
+        action: data.cancel ? "cancel_plan" : "resume_plan",
+        target: data.subscriptionId,
+        stripeObject: data.subscriptionId,
+        amountCents: null,
+        currency: null,
+        reason: data.cancel ? "Stops at the renewal date" : "Renews again",
+        status: "failed",
+        error: reason,
+        environment: env,
+        requestId: data.requestId,
+      });
       throw new Error(`Stripe refused that: ${reason}`);
     }
   });
@@ -459,16 +766,34 @@ export const listBillingActions = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<BillingAction[]> => {
     await requireBilling(context as unknown as Ctx);
     const d = await db();
-    const { data } = await d.from("billing_actions" as never)
-      .select("created_at, actor_email, action, target_email, amount_cents, currency, reason, status, error")
-      .order("created_at", { ascending: false }).limit(25);
+    const { data } = await d
+      .from("billing_actions" as never)
+      .select(
+        "created_at, actor_email, action, target_email, amount_cents, currency, reason, status, error",
+      )
+      .order("created_at", { ascending: false })
+      .limit(25);
     const rows = (data ?? []) as {
-      created_at: string; actor_email: string; action: string; target_email: string;
-      amount_cents: number | null; currency: string | null; reason: string; status: string; error: string | null;
+      created_at: string;
+      actor_email: string;
+      action: string;
+      target_email: string;
+      amount_cents: number | null;
+      currency: string | null;
+      reason: string;
+      status: string;
+      error: string | null;
     }[];
     return rows.map((r) => ({
-      createdAt: r.created_at, actorEmail: r.actor_email, action: r.action, targetEmail: r.target_email,
-      amountCents: r.amount_cents, currency: r.currency, reason: r.reason, status: r.status, error: r.error,
+      createdAt: r.created_at,
+      actorEmail: r.actor_email,
+      action: r.action,
+      targetEmail: r.target_email,
+      amountCents: r.amount_cents,
+      currency: r.currency,
+      reason: r.reason,
+      status: r.status,
+      error: r.error,
     }));
   });
 
@@ -491,45 +816,72 @@ export const checkDuplicateCharges = createServerFn({ method: "POST" })
     const d = await db();
     const stripe = createBillingStripeClient(env);
     const [{ data: purchases }, { data: subs }] = await Promise.all([
-      d.from("purchases").select("id, kind, stripe_session_id, created_at")
-        .eq("user_id", data.userId).eq("environment", env).not("stripe_session_id", "is", null)
-        .order("created_at", { ascending: false }).limit(12),
-      d.from("subscriptions").select("stripe_customer_id")
-        .eq("user_id", data.userId).eq("environment", env).not("stripe_customer_id", "is", null).limit(3),
+      d
+        .from("purchases")
+        .select("id, kind, stripe_session_id, created_at")
+        .eq("user_id", data.userId)
+        .eq("environment", env)
+        .not("stripe_session_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(12),
+      d
+        .from("subscriptions")
+        .select("stripe_customer_id")
+        .eq("user_id", data.userId)
+        .eq("environment", env)
+        .not("stripe_customer_id", "is", null)
+        .limit(3),
     ]);
 
     const facts: ChargeFacts[] = [];
-    const buyRows = (purchases ?? []) as { id: string; kind: string; stripe_session_id: string | null; created_at: string | null }[];
-    await Promise.all(buyRows.map(async (p) => {
-      if (!p.stripe_session_id) return;
-      try {
-        const session = await stripe.checkout.sessions.retrieve(p.stripe_session_id);
-        const pi = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
-        if (!pi) return;
-        const intent = await stripe.paymentIntents.retrieve(pi, { expand: ["latest_charge"] });
-        const charge = typeof intent.latest_charge === "string" ? null : intent.latest_charge;
-        facts.push({
-          id: charge?.id ?? intent.id,
-          paymentIntent: intent.id,
-          amountCents: charge?.amount ?? intent.amount,
-          refundedCents: charge?.amount_refunded ?? 0,
-          currency: (intent.currency ?? "usd").toLowerCase(),
-          createdAt: new Date((intent.created ?? 0) * 1000).toISOString(),
-          state: paymentState(intent.status, charge?.captured),
-          item: purchaseKindLabel(p.kind),
-          purchaseId: p.id,
-        });
-      } catch { /* one unreadable payment must not hide the others */ }
-    }));
+    const buyRows = (purchases ?? []) as {
+      id: string;
+      kind: string;
+      stripe_session_id: string | null;
+      created_at: string | null;
+    }[];
+    await Promise.all(
+      buyRows.map(async (p) => {
+        if (!p.stripe_session_id) return;
+        try {
+          const session = await stripe.checkout.sessions.retrieve(p.stripe_session_id);
+          const pi =
+            typeof session.payment_intent === "string"
+              ? session.payment_intent
+              : (session.payment_intent?.id ?? null);
+          if (!pi) return;
+          const intent = await stripe.paymentIntents.retrieve(pi, { expand: ["latest_charge"] });
+          const charge = typeof intent.latest_charge === "string" ? null : intent.latest_charge;
+          facts.push({
+            id: charge?.id ?? intent.id,
+            paymentIntent: intent.id,
+            amountCents: charge?.amount ?? intent.amount,
+            refundedCents: charge?.amount_refunded ?? 0,
+            currency: (intent.currency ?? "usd").toLowerCase(),
+            createdAt: new Date((intent.created ?? 0) * 1000).toISOString(),
+            state: paymentState(intent.status, charge?.captured),
+            item: purchaseKindLabel(p.kind),
+            purchaseId: p.id,
+          });
+        } catch {
+          /* one unreadable payment must not hide the others */
+        }
+      }),
+    );
 
-    const customerId = ((subs ?? []) as { stripe_customer_id: string | null }[]).find((s) => s.stripe_customer_id)?.stripe_customer_id;
+    const customerId = ((subs ?? []) as { stripe_customer_id: string | null }[]).find(
+      (s) => s.stripe_customer_id,
+    )?.stripe_customer_id;
     if (customerId) {
       try {
         const charges = await stripe.charges.list({ customer: customerId, limit: 20 });
         for (const c of charges.data) {
           facts.push({
             id: c.id,
-            paymentIntent: typeof c.payment_intent === "string" ? c.payment_intent : c.payment_intent?.id ?? null,
+            paymentIntent:
+              typeof c.payment_intent === "string"
+                ? c.payment_intent
+                : (c.payment_intent?.id ?? null),
             amountCents: c.amount,
             refundedCents: c.amount_refunded,
             currency: c.currency.toLowerCase(),
@@ -539,13 +891,17 @@ export const checkDuplicateCharges = createServerFn({ method: "POST" })
             purchaseId: null,
           });
         }
-      } catch { /* the purchases above still answer the question */ }
+      } catch {
+        /* the purchases above still answer the question */
+      }
     }
 
     // A renewal bought through "Renew now" is one payment seen from two places: keep the first reading of it.
     const unique = new Map<string, ChargeFacts>();
     for (const f of facts) unique.set(f.paymentIntent ?? f.id, f);
-    const charges = [...unique.values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    const charges = [...unique.values()].sort(
+      (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    );
     return {
       charges: charges.map((c) => ({ ...c, reading: readCharge(c) })),
       groups: groupPossibleDuplicates(charges),

@@ -9,8 +9,10 @@ import { noticeLine, type InactivityReminder } from "./inactivity";
  * fresh start.
  */
 const FROM = `Came Through Audio <${BILLING_EMAIL}>`;
-const REASON = "You're receiving this because this email is on a Came Through Audio account with no recent sign-in.";
-const DELETED_REASON = "You're receiving this because this email was on a Came Through Audio account that has now been deleted.";
+const REASON =
+  "You're receiving this because this email is on a Came Through Audio account with no recent sign-in.";
+const DELETED_REASON =
+  "You're receiving this because this email was on a Came Through Audio account that has now been deleted.";
 
 export const longDate = (d: string | Date) =>
   new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -63,7 +65,10 @@ function render(e: InactivityEmail): { subject: string; html: string; reason: st
   const d = escapeHtml(longDate(e.deleteOn));
   const left = escapeHtml(noticeLine(e.deleteOn));
   const what = e.keepsAccount ? "the stored files and catalog" : "this account";
-  const heading = e.kind === "1" ? `Last day: ${what} ${e.keepsAccount ? "are" : "is"} deleted on ${d}` : `On ${d}, ${what} ${e.keepsAccount ? "are" : "is"} deleted`;
+  const heading =
+    e.kind === "1"
+      ? `Last day: ${what} ${e.keepsAccount ? "are" : "is"} deleted on ${d}`
+      : `On ${d}, ${what} ${e.keepsAccount ? "are" : "is"} deleted`;
   const buttons = `<p style="margin:24px 0"><a href="${SITE_URL}/plans" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Upgrade and keep everything</a>
 <a href="${SITE_URL}/workspace" style="color:#004AAD;font-weight:700;padding:12px 12px;display:inline-block">Download my assets</a></p>`;
   const body = e.keepsAccount
@@ -79,7 +84,10 @@ ${list(`Deleted on ${d}`, LOST_ACCOUNT)}
 <p style="font-size:15px;line-height:1.6">If you'd rather take your work with you, download everything before ${d}. Your original proof videos are yours already; keep an exact copy of each one somewhere of your own, unchanged.</p>
 ${buttons}`;
   return {
-    subject: e.kind === "1" ? `Last day: ${what} ${e.keepsAccount ? "are" : "is"} deleted on ${d}` : `On ${d}, ${what} ${e.keepsAccount ? "are" : "is"} deleted`,
+    subject:
+      e.kind === "1"
+        ? `Last day: ${what} ${e.keepsAccount ? "are" : "is"} deleted on ${d}`
+        : `On ${d}, ${what} ${e.keepsAccount ? "are" : "is"} deleted`,
     reason: REASON,
     html: `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Your account</p>
 <h1 style="font-size:24px;margin:8px 0 16px">${heading}</h1>
@@ -88,15 +96,32 @@ ${body}
   };
 }
 
-export async function sendInactivityEmail(to: string, email: InactivityEmail, idempotencyKey: string): Promise<boolean> {
+export async function sendInactivityEmail(
+  to: string,
+  email: InactivityEmail,
+  idempotencyKey: string,
+): Promise<boolean> {
   const key = resendKey();
   if (!key) return false;
   const { subject, html, reason } = render(email);
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-    body: JSON.stringify({ from: FROM, to: [to], reply_to: BILLING_EMAIL, subject, html: emailLayout(html, { reason }) }),
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify({
+      from: FROM,
+      to: [to],
+      reply_to: BILLING_EMAIL,
+      subject,
+      html: emailLayout(html, { reason }),
+    }),
   });
-  if (!res.ok) { console.error(`Inactivity email ${email.kind} failed [${res.status}]: ${await res.text()}`); return false; }
+  if (!res.ok) {
+    console.error(`Inactivity email ${email.kind} failed [${res.status}]: ${await res.text()}`);
+    return false;
+  }
   return true;
 }

@@ -5,10 +5,20 @@ import { highestTier, isActiveSub, serverTier, tierFromPrice, type Tier } from "
 import { isPaused, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
 
 /** The plan in force: when it renews, or when it ends if it was cancelled. */
-export type PlanStatus = { periodEnd: string | null; cancelling: boolean; orderedAt: string | null } | null;
+export type PlanStatus = {
+  periodEnd: string | null;
+  cancelling: boolean;
+  orderedAt: string | null;
+} | null;
 /** A Founding 100 seat: paying for `paid_tier` unlocks `granted_tier` (PLAN-founding-upgrades). */
 export type FoundingSeat = { paid_tier: Tier; granted_tier: Tier; seat: number };
-export type Purchase = { id: string; kind: string; price_ids: string[]; details: Record<string, string>; created_at: string };
+export type Purchase = {
+  id: string;
+  kind: string;
+  price_ids: string[];
+  details: Record<string, string>;
+  created_at: string;
+};
 
 type SubRow = PlanSub & { price_id: string; created_at?: string };
 
@@ -33,17 +43,47 @@ export function useBilling(userId: string | undefined) {
   const load = useCallback(async () => {
     if (!userId) return;
     const [subs, buys, paused, lapsed, seats, memberSeats, serverTierRow] = await Promise.all([
-      supabase.from("subscriptions" as never).select("price_id, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
-      supabase.from("purchases" as never).select("id, kind, price_ids, details, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
+      supabase
+        .from("subscriptions" as never)
+        .select(
+          "price_id, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id, created_at",
+        )
+        .eq("user_id", userId)
+        .eq("environment", env)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("purchases" as never)
+        .select("id, kind, price_ids, details, created_at")
+        .eq("user_id", userId)
+        .eq("environment", env)
+        .order("created_at", { ascending: false }),
       // Missing until the retention migrations run; then these simply come back empty.
-      supabase.from("account_pauses" as never).select("id, kind, months, starts_at, ends_at, ended_at, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
-      supabase.from("catalog_lapses" as never).select("plan_ended_at, empty_after, emptied_at, kept_free_at").eq("user_id", userId).maybeSingle(),
+      supabase
+        .from("account_pauses" as never)
+        .select("id, kind, months, starts_at, ends_at, ended_at, created_at")
+        .eq("user_id", userId)
+        .eq("environment", env)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("catalog_lapses" as never)
+        .select("plan_ended_at, empty_after, emptied_at, kept_free_at")
+        .eq("user_id", userId)
+        .maybeSingle(),
       // Missing until the founding migration runs; then empty for everyone outside the first 100.
-      supabase.from("founding_upgrades" as never).select("paid_tier, granted_tier, seat").eq("user_id", userId).eq("environment", env).is("ended_at", null),
+      supabase
+        .from("founding_upgrades" as never)
+        .select("paid_tier, granted_tier, seat")
+        .eq("user_id", userId)
+        .eq("environment", env)
+        .is("ended_at", null),
       // Add-on artist seats this account accepted. A seat IS their plan while it's paid for, so the app has to see it
       // here too: the server's user_tier counts it, and a page must not show a seat holder as Free — except while the
       // account's own plan is paused, when paused is Free, seats included (founder, 2026-11-21).
-      supabase.from("artist_seats" as never).select("tier, status, current_period_end, environment").eq("member_user_id", userId).in("status", ["active", "canceled"]),
+      supabase
+        .from("artist_seats" as never)
+        .select("tier, status, current_period_end, environment")
+        .eq("member_user_id", userId)
+        .in("status", ["active", "canceled"]),
       // The database's own answer, which already counts staff (management for anyone on the team) and a live staff-plan
       // grant on a reported member account. Read from one place so the page can never disagree with the gates.
       supabase.rpc("user_tier" as never, { _uid: userId } as never),
@@ -62,17 +102,45 @@ export function useBilling(userId: string | undefined) {
     // A seat the artist accepted lifts them to its tier, exactly like the server's user_tier: never lower than their own
     // plan. The seat is theirs whichever environment it was bought in, so this environment's rows are preferred only
     // when it has any: a preview/live mismatch must never make a paid seat read Free (founder, 2026-11-04).
-    const usableSeats = ((memberSeats.data ?? []) as { tier: Tier; status: string; current_period_end: string | null; environment?: string }[])
-      .filter((r) => r.status === "active" || (!!r.current_period_end && Date.parse(r.current_period_end) > Date.now()));
+    const usableSeats = (
+      (memberSeats.data ?? []) as {
+        tier: Tier;
+        status: string;
+        current_period_end: string | null;
+        environment?: string;
+      }[]
+    ).filter(
+      (r) =>
+        r.status === "active" ||
+        (!!r.current_period_end && Date.parse(r.current_period_end) > Date.now()),
+    );
     const hereSeats = usableSeats.filter((r) => r.environment === env);
     const seatTiers = (hereSeats.length ? hereSeats : usableSeats).map((r) => r.tier);
     // Paused is Free, full stop: embeddings, uploads, new songs and every paid tool wait until they resume.
-    setTier(onPause ? "free" : highestTier(seat ? seat.granted_tier : best, ...seatTiers, serverTier(serverTierRow.data)));
+    setTier(
+      onPause
+        ? "free"
+        : highestTier(
+            seat ? seat.granted_tier : best,
+            ...seatTiers,
+            serverTier(serverTierRow.data),
+          ),
+    );
     const row = live.find((r) => tierFromPrice(r.price_id) === best);
     // (plan and sub below follow the tier they pay for, so billing shows the real price)
     // orderedAt: when the plan was first bought, for the 30-day full refund countdown.
-    setPlan(row ? { periodEnd: row.current_period_end, cancelling: !!row.cancel_at_period_end || row.status === "canceled", orderedAt: row.created_at ?? null } : null);
-    setSub(live.find((r) => r.stripe_subscription_id && tierFromPrice(r.price_id) === best) ?? null);
+    setPlan(
+      row
+        ? {
+            periodEnd: row.current_period_end,
+            cancelling: !!row.cancel_at_period_end || row.status === "canceled",
+            orderedAt: row.created_at ?? null,
+          }
+        : null,
+    );
+    setSub(
+      live.find((r) => r.stripe_subscription_id && tierFromPrice(r.price_id) === best) ?? null,
+    );
     setPauses(pauseRows);
     setLapse((lapsed.data as Lapse | null) ?? null);
     // A fully refunded purchase no longer unlocks anything (the webhook marks it).
@@ -83,16 +151,31 @@ export function useBilling(userId: string | undefined) {
   useEffect(() => {
     load();
     if (!userId) return;
-    const ch = supabase.channel(`billing-${userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${userId}` }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "purchases", filter: `user_id=eq.${userId}` }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "account_pauses", filter: `user_id=eq.${userId}` }, () => load())
+    const ch = supabase
+      .channel(`billing-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${userId}` },
+        () => load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "purchases", filter: `user_id=eq.${userId}` },
+        () => load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "account_pauses", filter: `user_id=eq.${userId}` },
+        () => load(),
+      )
       .subscribe();
     // Webhooks land a few seconds after checkout; poll briefly too.
     const t = setInterval(load, 8000);
-    return () => { supabase.removeChannel(ch); clearInterval(t); };
+    return () => {
+      supabase.removeChannel(ch);
+      clearInterval(t);
+    };
   }, [load, userId]);
 
   return { tier, plan, purchases, loaded, reload: load, sub, pauses, lapse, founding, paidTier };
 }
-

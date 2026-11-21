@@ -20,10 +20,23 @@ export function WorkspaceReminderHeaderActions() {
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-2">
-      <button type="button" className="cta-reminder-quick" onClick={() => { setEditing(null); setCreateOpen(true); }}>
-        <Plus className="h-3.5 w-3.5" aria-hidden="true" />Set Reminder
+      <button
+        type="button"
+        className="cta-reminder-quick"
+        onClick={() => {
+          setEditing(null);
+          setCreateOpen(true);
+        }}
+      >
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+        Set Reminder
       </button>
-      <button type="button" className="cta-reminder-mine" onClick={() => setDrawerOpen(true)} aria-label={`My Reminders, ${count} active`}>
+      <button
+        type="button"
+        className="cta-reminder-mine"
+        onClick={() => setDrawerOpen(true)}
+        aria-label={`My Reminders, ${count} active`}
+      >
         <Bell className="h-3.5 w-3.5" aria-hidden="true" />
         My Reminders
         <span className="cta-reminder-count">{count}</span>
@@ -31,14 +44,25 @@ export function WorkspaceReminderHeaderActions() {
 
       <CustomWorkspaceReminderModal
         open={createOpen}
-        onOpenChange={(next) => { setCreateOpen(next); if (!next) setEditing(null); }}
+        onOpenChange={(next) => {
+          setCreateOpen(next);
+          if (!next) setEditing(null);
+        }}
         editing={editing}
       />
       <MyRemindersDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        onEdit={(reminder) => { setEditing(reminder); setDrawerOpen(false); setCreateOpen(true); }}
-        onCreate={() => { setEditing(null); setDrawerOpen(false); setCreateOpen(true); }}
+        onEdit={(reminder) => {
+          setEditing(reminder);
+          setDrawerOpen(false);
+          setCreateOpen(true);
+        }}
+        onCreate={() => {
+          setEditing(null);
+          setDrawerOpen(false);
+          setCreateOpen(true);
+        }}
       />
     </div>
   );

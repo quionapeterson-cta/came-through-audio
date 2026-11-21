@@ -24,7 +24,13 @@ const ROW_GROUPS = ["writers", "composers", "producers", "publishers"] as const;
  * The five agency answers a profile holds (founder, 2026-11-12). A song that is blank takes the profile's answer; a song
  * that already names a different country keeps it, because that is the song's own record and not a mistake to correct.
  */
-export const COUNTRY_DEFAULTS = ["masteredIn", "ownerNationality", "firstReleaseCountry", "releaseCountry", "collectionTerritories"] as const;
+export const COUNTRY_DEFAULTS = [
+  "masteredIn",
+  "ownerNationality",
+  "firstReleaseCountry",
+  "releaseCountry",
+  "collectionTerritories",
+] as const;
 const CODES = ["pro", "ipi"] as const;
 
 const nameOf = (r: Contributor) => creditName(r).trim().toLowerCase();
@@ -53,7 +59,8 @@ export function propagationPlan(profile: ArtistProfile | null, songs: SongLike[]
           const has = (row[field] ?? "").trim();
           if (!want) continue;
           if (!has) fills = true;
-          else if (has.toLowerCase() !== want.toLowerCase()) corrections.push(`${creditName(row)}: ${field.toUpperCase()} ${has} → ${want}`);
+          else if (has.toLowerCase() !== want.toLowerCase())
+            corrections.push(`${creditName(row)}: ${field.toUpperCase()} ${has} → ${want}`);
         }
       }
     }
@@ -61,7 +68,12 @@ export function propagationPlan(profile: ArtistProfile | null, songs: SongLike[]
       if (!(song.metadata[key] ?? "").trim() && (profile[key] ?? "").trim()) fills = true;
     }
     if (fills) fill.push({ id: song.id, title: song.metadata.title || "Untitled" });
-    if (corrections.length) change.push({ id: song.id, title: song.metadata.title || "Untitled", what: corrections.join("; ") });
+    if (corrections.length)
+      change.push({
+        id: song.id,
+        title: song.metadata.title || "Untitled",
+        what: corrections.join("; "),
+      });
   }
   const total = new Set([...fill, ...change].map((s) => s.id)).size;
   return { fill, change, total };

@@ -39,17 +39,33 @@ describe("the Vault subscription", () => {
   });
 
   it("passes the monthly price it sells, and names what Stripe holds when it is anything else", () => {
-    expect(vaultPriceShapeProblem({ lookup_key: "vault_month", type: "recurring", recurring: { interval: "month" } })).toBeNull();
+    expect(
+      vaultPriceShapeProblem({
+        lookup_key: "vault_month",
+        type: "recurring",
+        recurring: { interval: "month" },
+      }),
+    ).toBeNull();
     // The old shape: one charge for the whole pause.
-    const oneTime = vaultPriceShapeProblem({ lookup_key: "vault_month", type: "one_time", recurring: null });
+    const oneTime = vaultPriceShapeProblem({
+      lookup_key: "vault_month",
+      type: "one_time",
+      recurring: null,
+    });
     expect(oneTime).toContain("must be a monthly subscription");
     expect(oneTime).toContain("one-time price");
     expect(oneTime).toContain("published price");
     // Billed once a year, which would take the whole pause fee up front and then a year later.
-    const yearly = vaultPriceShapeProblem({ lookup_key: "vault_month", type: "recurring", recurring: { interval: "year" } });
+    const yearly = vaultPriceShapeProblem({
+      lookup_key: "vault_month",
+      type: "recurring",
+      recurring: { interval: "year" },
+    });
     expect(yearly).toContain("recurring yearly price");
     // A recurring price with no interval reads as unset, never as fine.
-    expect(vaultPriceShapeProblem({ type: "recurring", recurring: {} })).toContain("no interval set");
+    expect(vaultPriceShapeProblem({ type: "recurring", recurring: {} })).toContain(
+      "no interval set",
+    );
   });
 
   it("refuses a second pause before Stripe is called", () => {
@@ -60,13 +76,21 @@ describe("the Vault subscription", () => {
   });
 
   it("recognises a pause's subscription by its metadata or its lookup key", () => {
-    expect(isVaultSubscription({ metadata: { kind: "vault" }, items: { data: [] } }, "vault_month")).toBe(true);
     expect(
-      isVaultSubscription({ metadata: {}, items: { data: [{ price: { lookup_key: "vault_month" } }] } }, "vault_month"),
+      isVaultSubscription({ metadata: { kind: "vault" }, items: { data: [] } }, "vault_month"),
     ).toBe(true);
     expect(
       isVaultSubscription(
-        { metadata: { kind: "plan" }, items: { data: [{ price: { lookup_key: "catalog_plus_yearly" } }] } },
+        { metadata: {}, items: { data: [{ price: { lookup_key: "vault_month" } }] } },
+        "vault_month",
+      ),
+    ).toBe(true);
+    expect(
+      isVaultSubscription(
+        {
+          metadata: { kind: "plan" },
+          items: { data: [{ price: { lookup_key: "catalog_plus_yearly" } }] },
+        },
         "vault_month",
       ),
     ).toBe(false);
@@ -84,8 +108,12 @@ describe("the Vault subscription", () => {
   });
 
   it("files one row per paid month, and nothing for a $0 trial invoice", () => {
-    expect(vaultMonthRow({ subscriptionId: "sub_v", invoiceId: "in_1", amountPaid: 0, periodEnd: 1 })).toBeNull();
-    expect(vaultMonthRow({ subscriptionId: "sub_v", invoiceId: "in_1", amountPaid: null })).toBeNull();
+    expect(
+      vaultMonthRow({ subscriptionId: "sub_v", invoiceId: "in_1", amountPaid: 0, periodEnd: 1 }),
+    ).toBeNull();
+    expect(
+      vaultMonthRow({ subscriptionId: "sub_v", invoiceId: "in_1", amountPaid: null }),
+    ).toBeNull();
     const periodEnd = Math.floor(new Date("2026-12-10T00:00:00Z").getTime() / 1000);
     const row = vaultMonthRow({
       subscriptionId: "sub_v",
@@ -112,7 +140,9 @@ describe("the Vault subscription", () => {
 
   it("never reopens a refunded month, however late the event", () => {
     const details = { refunded_at: "2026-12-11T00:00:00Z", subscription: "sub_v" };
-    expect(vaultMonthRow({ subscriptionId: "sub_v", invoiceId: "in_2", amountPaid: 199 }, { details })).toEqual({
+    expect(
+      vaultMonthRow({ subscriptionId: "sub_v", invoiceId: "in_2", amountPaid: 199 }, { details }),
+    ).toEqual({
       key: "vault:in_2",
       details,
     });
@@ -143,9 +173,15 @@ describe("the Vault subscription", () => {
   });
 
   it("keeps the pause while Stripe still has a retry, and ends it when it does not", () => {
-    expect(vaultCollectionGaveUp({ nextPaymentAttempt: 1_765_000_000, status: "past_due" })).toBe(false);
+    expect(vaultCollectionGaveUp({ nextPaymentAttempt: 1_765_000_000, status: "past_due" })).toBe(
+      false,
+    );
     expect(vaultCollectionGaveUp({ nextPaymentAttempt: null, status: "past_due" })).toBe(true);
-    expect(vaultCollectionGaveUp({ nextPaymentAttempt: 1_765_000_000, status: "unpaid" })).toBe(true);
-    expect(vaultCollectionGaveUp({ nextPaymentAttempt: 1_765_000_000, status: "canceled" })).toBe(true);
+    expect(vaultCollectionGaveUp({ nextPaymentAttempt: 1_765_000_000, status: "unpaid" })).toBe(
+      true,
+    );
+    expect(vaultCollectionGaveUp({ nextPaymentAttempt: 1_765_000_000, status: "canceled" })).toBe(
+      true,
+    );
   });
 });

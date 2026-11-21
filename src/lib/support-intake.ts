@@ -41,7 +41,11 @@ export type InfoIntakeResult = {
 function senderName(input: InfoIntakeInput): string {
   const named = (input.fromName ?? "").trim();
   if (named) return named.slice(0, 100);
-  const local = input.from.split("@")[0]?.replace(/[._-]+/g, " ").trim() ?? "";
+  const local =
+    input.from
+      .split("@")[0]
+      ?.replace(/[._-]+/g, " ")
+      .trim() ?? "";
   return (local || "Website visitor").slice(0, 100);
 }
 

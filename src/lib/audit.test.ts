@@ -8,9 +8,12 @@ const track = (patch: Partial<ReturnType<typeof emptyMetadata>>): CatalogTrack =
   return { id: "1", title: m.title, artist: m.artist, updatedAt: "", metadata: m };
 };
 const ready = track({
-  isrc: "US-ABC-24-00001", iswc: "T-123.456.789-0", duration: "3:25",
+  isrc: "US-ABC-24-00001",
+  iswc: "T-123.456.789-0",
+  duration: "3:25",
   writers: [{ name: "A", pro: "BMI", ipi: "123456789", percentage: "100" }],
-  composers: [], publishers: [{ name: "Pub", pro: "BMI", ipi: "987654321", percentage: "100" }],
+  composers: [],
+  publishers: [{ name: "Pub", pro: "BMI", ipi: "987654321", percentage: "100" }],
 });
 
 describe("royalty audit", () => {
@@ -29,21 +32,49 @@ describe("royalty audit", () => {
   });
   it("accepts any worldwide or typed-in PRO, not only US societies", () => {
     for (const pro of ["PRS for Music", "SOCAN", "GEMA", "SACEM", "MÜST"]) {
-      expect(auditTrack({ ...ready, metadata: { ...ready.metadata, writers: [{ ...ready.metadata.writers[0]!, pro }] } })).toEqual([]);
+      expect(
+        auditTrack({
+          ...ready,
+          metadata: { ...ready.metadata, writers: [{ ...ready.metadata.writers[0]!, pro }] },
+        }),
+      ).toEqual([]);
     }
   });
   it("needs a duration for 100%, as a low-weight item", () => {
-    expect(auditTrack({ ...ready, metadata: { ...ready.metadata, duration: "" } })).toMatchObject([{ field: "duration", low: true }]);
+    expect(auditTrack({ ...ready, metadata: { ...ready.metadata, duration: "" } })).toMatchObject([
+      { field: "duration", low: true },
+    ]);
   });
-  it("honors \"BMI writer with no publishing company\" only when every writer is with BMI", () => {
+  it('honors "BMI writer with no publishing company" only when every writer is with BMI', () => {
     const bmi = { ...ready.metadata, publishers: [], bmiWriterPublishing: true };
     expect(auditTrack({ ...ready, metadata: bmi })).toEqual([]);
-    const mixed = { ...bmi, writers: [...bmi.writers, { name: "Bo Ray", pro: "ASCAP", ipi: "123456780", percentage: "0" }] };
-    expect(auditTrack({ ...ready, metadata: mixed }).map((i) => i.field)).toContain("writers-1-publishing");
+    const mixed = {
+      ...bmi,
+      writers: [
+        ...bmi.writers,
+        { name: "Bo Ray", pro: "ASCAP", ipi: "123456780", percentage: "0" },
+      ],
+    };
+    expect(auditTrack({ ...ready, metadata: mixed }).map((i) => i.field)).toContain(
+      "writers-1-publishing",
+    );
   });
   it("needs a PRO for a listed publisher, but not for Self-published or BMI writers with no publisher", () => {
-    expect(auditTrack({ ...ready, metadata: { ...ready.metadata, publishers: [{ ...ready.metadata.publishers[0]!, pro: "" }] } }).map((i) => i.field)).toEqual(["publishers-0-pro"]);
-    expect(auditTrack({ ...ready, metadata: { ...ready.metadata, publishers: [], selfPublished: true } })).toEqual([]);
+    expect(
+      auditTrack({
+        ...ready,
+        metadata: {
+          ...ready.metadata,
+          publishers: [{ ...ready.metadata.publishers[0]!, pro: "" }],
+        },
+      }).map((i) => i.field),
+    ).toEqual(["publishers-0-pro"]);
+    expect(
+      auditTrack({
+        ...ready,
+        metadata: { ...ready.metadata, publishers: [], selfPublished: true },
+      }),
+    ).toEqual([]);
     expect(auditTrack({ ...ready, metadata: { ...ready.metadata, publishers: [] } })).toEqual([]);
   });
   it("flags writers with no PRO", () => {

@@ -29,8 +29,22 @@ export const domIdForField = (field: string) => FIELD_DOM_ID[field] ?? field;
 
 export const HIGHLIGHT_CLASS = "cta-diagnostic-target";
 
-const URL_KEYS = ["songId", "focusField", "agencyIsrc", "agencyVersion", "agencyVersions", "action"] as const;
-export type FocusLink = { songId?: string | undefined; field?: string | undefined; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; agencyVersions?: string | undefined; action?: string | undefined };
+const URL_KEYS = [
+  "songId",
+  "focusField",
+  "agencyIsrc",
+  "agencyVersion",
+  "agencyVersions",
+  "action",
+] as const;
+export type FocusLink = {
+  songId?: string | undefined;
+  field?: string | undefined;
+  agencyIsrc?: string | undefined;
+  agencyVersion?: string | undefined;
+  agencyVersions?: string | undefined;
+  action?: string | undefined;
+};
 
 /** The deep-link parameters, read from the URL when the caller has none of its own. */
 export function readFocusLink(): FocusLink {
@@ -51,7 +65,11 @@ export function clearFocusParams() {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
   let touched = false;
-  for (const k of URL_KEYS) if (url.searchParams.has(k)) { url.searchParams.delete(k); touched = true; }
+  for (const k of URL_KEYS)
+    if (url.searchParams.has(k)) {
+      url.searchParams.delete(k);
+      touched = true;
+    }
   if (!touched) return;
   window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 }
@@ -60,20 +78,38 @@ export function clearFocusParams() {
  * Finds the named field, scrolls it into view and lights it for `durationMs`. Returns whether the spotlight is on, so a
  * page can show its quick-fix bar while the member is looking at the field.
  */
-export function useFocusHighlight({ field, active = true, durationMs = 4500 }: { field?: string | undefined; active?: boolean; durationMs?: number }) {
+export function useFocusHighlight({
+  field,
+  active = true,
+  durationMs = 4500,
+}: {
+  field?: string | undefined;
+  active?: boolean;
+  durationMs?: number;
+}) {
   const [lit, setLit] = useState(false);
 
   useEffect(() => {
-    if (!field || !active) { setLit(false); return; }
+    if (!field || !active) {
+      setLit(false);
+      return;
+    }
     let cancelled = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const light = (node: HTMLElement) => {
       node.scrollIntoView({ behavior: "smooth", block: "center" });
       node.classList.add(HIGHLIGHT_CLASS);
-      const input = node.matches("input, textarea, select") ? node : node.querySelector<HTMLElement>("input, textarea, select");
+      const input = node.matches("input, textarea, select")
+        ? node
+        : node.querySelector<HTMLElement>("input, textarea, select");
       input?.focus({ preventScroll: true });
       setLit(true);
-      timers.push(setTimeout(() => { node.classList.remove(HIGHLIGHT_CLASS); setLit(false); }, durationMs));
+      timers.push(
+        setTimeout(() => {
+          node.classList.remove(HIGHLIGHT_CLASS);
+          setLit(false);
+        }, durationMs),
+      );
     };
     const find = (attempt: number) => {
       if (cancelled) return;
@@ -97,7 +133,15 @@ export function useFocusHighlight({ field, active = true, durationMs = 4500 }: {
  * Wraps any field so it can carry the diagnostic badge while it is the target. Two lines at the call site, used where the
  * field is not one of the named form ids (a release card, a status toggle).
  */
-export function DiagnosticHighlight({ active, label, children }: { active: boolean; label: string; children: ReactNode }) {
+export function DiagnosticHighlight({
+  active,
+  label,
+  children,
+}: {
+  active: boolean;
+  label: string;
+  children: ReactNode;
+}) {
   return (
     <div className="relative">
       {active && (
@@ -122,7 +166,13 @@ export function useReminderSpotlight(active = true) {
     const sheet = p.get("sheetId");
     const contract = p.get("contractId");
     const blueprint = p.get("blueprintId");
-    const id = sheet ? `split-sheet-${sheet}` : contract ? `contract-${contract}` : blueprint ? `guide-${blueprint}` : null;
+    const id = sheet
+      ? `split-sheet-${sheet}`
+      : contract
+        ? `contract-${contract}`
+        : blueprint
+          ? `guide-${blueprint}`
+          : null;
     if (!id) return;
     let cancelled = false;
     const timers: ReturnType<typeof setTimeout>[] = [];

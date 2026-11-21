@@ -9,7 +9,12 @@ import { retireAdvice } from "@/lib/isrc-retirement";
  * works or recordings from an agency account and uploads it. The file is read in the browser and never stored; only
  * the comparison is saved. Every agency formats its export differently, so columns are found by their headings.
  */
-export type ListWriter = { name: string; share?: number | undefined; ipi?: string | undefined; pro?: string | undefined };
+export type ListWriter = {
+  name: string;
+  share?: number | undefined;
+  ipi?: string | undefined;
+  pro?: string | undefined;
+};
 export type ListWork = {
   title: string;
   /** The version the list names, from its own Version column or from the title's own tail ("Clean Version"). Read, never guessed. */
@@ -28,10 +33,23 @@ export type ListWork = {
 export type ListMatch = { trackId: string; title: string; work?: ListWork; issues: string[] };
 /** A work the list has under the song's title, with no writer in common: not the song, and not simply missing either. */
 export type ListClash = { trackId: string; title: string; work: ListWork; issues: string[] };
-export type ListResult = { matched: ListMatch[]; differences: ListMatch[]; clashes: ListClash[]; notListed: { trackId: string; title: string }[]; extra: ListWork[]; works: number };
+export type ListResult = {
+  matched: ListMatch[];
+  differences: ListMatch[];
+  clashes: ListClash[];
+  notListed: { trackId: string; title: string }[];
+  extra: ListWork[];
+  works: number;
+};
 
-const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
-  .replace(/\s*[([](feat|ft|featuring)\.?[^)\]]*[)\]]/g, "").replace(/\b(feat|ft|featuring)\.?\s.*$/, "").replace(/[^a-z0-9]/g, "");
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s*[([](feat|ft|featuring)\.?[^)\]]*[)\]]/g, "")
+    .replace(/\b(feat|ft|featuring)\.?\s.*$/, "")
+    .replace(/[^a-z0-9]/g, "");
 /**
  * Titles an agency prints as part of a party name — "STEPHENS CALVIN ANDRE JR (MR)". They are noise when comparing two
  * spellings of one writer, and never shown or written into a catalog. A generation ("Jr") stays, because it is sometimes
@@ -39,17 +57,29 @@ const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g
  */
 const NAME_NOISE = new Set(["mr", "mrs", "ms", "miss", "dr", "esq", "phd", "md"]);
 /** Agencies often list writers "LAST FIRST" or "LAST, FIRST": compare the name's words in any order. */
-const nameKey = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean).filter((w) => !NAME_NOISE.has(w)).sort().join(" ");
+const nameKey = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((w) => !NAME_NOISE.has(w))
+    .sort()
+    .join(" ");
 /**
  * The same *person*, whatever the spelling (founder, 2026-11-09): BMI prints "STEPHENS CALVIN ANDRE JR (MR)" where the
  * catalog holds "Calvin Stephens", so one key's words containing the other's means one writer, never a stranger. Only a
  * name long enough to be a person may match that way, so a single word never swallows a full name.
  */
 export function sameWriter(a: string, b: string): boolean {
-  const x = nameKey(a), y = nameKey(b);
+  const x = nameKey(a),
+    y = nameKey(b);
   if (!x || !y) return false;
   if (x === y) return true;
-  const xs = x.split(" "), ys = y.split(" ");
+  const xs = x.split(" "),
+    ys = y.split(" ");
   if (Math.min(xs.length, ys.length) < 2) return false;
   const [small, large] = xs.length <= ys.length ? [xs, ys] : [ys, xs];
   return small.every((w) => large.includes(w));
@@ -60,7 +90,8 @@ export function sameWriter(a: string, b: string): boolean {
  * the two records read alike. Word order and titles are not a difference; a missing middle name or suffix is.
  */
 export function spelledDifferently(a: string, b: string): boolean {
-  const x = nameKey(a).split(" ").filter(Boolean), y = nameKey(b).split(" ").filter(Boolean);
+  const x = nameKey(a).split(" ").filter(Boolean),
+    y = nameKey(b).split(" ").filter(Boolean);
   return x.length !== y.length || x.some((w) => !y.includes(w));
 }
 const digits = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "");
@@ -68,19 +99,40 @@ const code = (s: string) => s.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 
 /** Minimal CSV/TSV reader (quoted fields, doubled quotes, newlines inside quotes). */
 export function parseDelimited(text: string): string[][] {
-  const sep = (text.split("\n", 1)[0] ?? "").includes("\t") ? "\t" : (text.split("\n", 1)[0] ?? "").split(";").length > (text.split("\n", 1)[0] ?? "").split(",").length ? ";" : ",";
+  const sep = (text.split("\n", 1)[0] ?? "").includes("\t")
+    ? "\t"
+    : (text.split("\n", 1)[0] ?? "").split(";").length >
+        (text.split("\n", 1)[0] ?? "").split(",").length
+      ? ";"
+      : ",";
   const rows: string[][] = [];
-  let row: string[] = [], cell = "", quoted = false;
+  let row: string[] = [],
+    cell = "",
+    quoted = false;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]!;
     if (quoted) {
-      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') quoted = false; else cell += ch;
+      if (ch === '"' && text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (ch === '"') quoted = false;
+      else cell += ch;
     } else if (ch === '"') quoted = true;
-    else if (ch === sep) { row.push(cell); cell = ""; }
-    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
-    else cell += ch;
+    else if (ch === sep) {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else cell += ch;
   }
-  if (cell || row.length) { row.push(cell); rows.push(row); }
+  if (cell || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
   return rows.map((r) => r.map((c) => c.trim())).filter((r) => r.some(Boolean));
 }
 
@@ -97,18 +149,27 @@ export async function readTable(file: File): Promise<string[][]> {
   }
   if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    pdfjs.GlobalWorkerOptions.workerSrc = (await import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url")).default;
+    pdfjs.GlobalWorkerOptions.workerSrc = (
+      await import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url")
+    ).default;
     const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
     const items: string[] = [];
     for (let i = 1; i <= doc.numPages; i++) {
       const content = await (await doc.getPage(i)).getTextContent();
-      for (const it of content.items) { const t = "str" in it ? it.str.trim() : ""; if (t) items.push(t); }
+      for (const it of content.items) {
+        const t = "str" in it ? it.str.trim() : "";
+        if (t) items.push(t);
+      }
     }
     const rows = bmiPdfRows(items);
-    if (rows.length < 2) throw new Error("We couldn't read songs from this PDF. Upload BMI's Catalog Detail PDF, or a CSV/Excel export.");
+    if (rows.length < 2)
+      throw new Error(
+        "We couldn't read songs from this PDF. Upload BMI's Catalog Detail PDF, or a CSV/Excel export.",
+      );
     return rows;
   }
-  if (/\.xls$/i.test(file.name)) throw new Error("Save the file as .xlsx or .csv first (older .xls files can't be read).");
+  if (/\.xls$/i.test(file.name))
+    throw new Error("Save the file as .xlsx or .csv first (older .xls files can't be read).");
   return parseDelimited(await file.text());
 }
 /**
@@ -116,7 +177,9 @@ export async function readTable(file: File): Promise<string[][]> {
  * participant lines "NAME, W|P, share%, affiliation, [CAE/IPI]". Turned into the same one-row-per-writer table a CSV gives.
  */
 export function bmiPdfRows(items: string[]): string[][] {
-  const rows: string[][] = [["Title", "ISWC", "BMI Work #", "Writer", "Party Type", "Share", "IPI"]];
+  const rows: string[][] = [
+    ["Title", "ISWC", "BMI Work #", "Writer", "Party Type", "Share", "IPI"],
+  ];
   for (let i = 0; i < items.length; i++) {
     if (items[i] !== "Participant Name") continue;
     const workId = items[i - 1] ?? "";
@@ -131,7 +194,15 @@ export function bmiPdfRows(items: string[]): string[][] {
       if (!/^(W|P)$/.test(items[j]!) || !/%$/.test(share)) continue;
       const ipi = /^\d{8,11}$/.test(items[j + 3] ?? "") ? items[j + 3]! : "";
       // Both halves are kept: a W row is a writer, a P row is a publisher, and dropping P lost the publisher half entirely.
-      rows.push([title, iswc, workId, items[j - 1] ?? "", items[j] === "W" ? "Writer" : "Publisher", share, ipi]);
+      rows.push([
+        title,
+        iswc,
+        workId,
+        items[j - 1] ?? "",
+        items[j] === "W" ? "Writer" : "Publisher",
+        share,
+        ipi,
+      ]);
       if (items[j] === "W") any = true;
     }
     if (!any) rows.push([title, iswc, workId, "", "", "", ""]);
@@ -142,18 +213,49 @@ export function bmiPdfRows(items: string[]): string[][] {
 function cellText(v: unknown): string {
   if (v == null) return "";
   if (v instanceof Date) return v.toISOString().slice(0, 10);
-  if (typeof v === "object") { const o = v as { text?: string; result?: unknown; richText?: { text: string }[] }; return o.richText ? o.richText.map((x) => x.text).join("") : String(o.text ?? o.result ?? ""); }
+  if (typeof v === "object") {
+    const o = v as { text?: string; result?: unknown; richText?: { text: string }[] };
+    return o.richText ? o.richText.map((x) => x.text).join("") : String(o.text ?? o.result ?? "");
+  }
   return String(v).trim();
 }
 
-type Columns = Partial<Record<"title" | "iswc" | "isrc" | "workId" | "writer" | "share" | "ipi" | "party" | "pro" | "version" | "artist", number>>;
+type Columns = Partial<
+  Record<
+    | "title"
+    | "iswc"
+    | "isrc"
+    | "workId"
+    | "writer"
+    | "share"
+    | "ipi"
+    | "party"
+    | "pro"
+    | "version"
+    | "artist",
+    number
+  >
+>;
 const HEADINGS: [keyof Columns, RegExp][] = [
-  ["iswc", /iswc/i], ["isrc", /isrc/i], ["ipi", /(\b(ipi|cae)|ip\s*name\s*n(umber|o))/i],
-  ["workId", /(title\s*(number|no|#|code|id)|work\s*(id|#|number|no)|song\s*(code|id|#|number)|mlc\s*song|work\s*code|registration\s*(id|#)|^bmi\s*#|^ascap\s*#)/i],
-  ["share", /(share|%|percent|ownership|split)/i], ["pro", /(affil|afflia|^society$|^pro$)/i], ["party", /(indicator|party\s*type|participant\s*(type|role)|designation|capacity|role|^type$)/i],
-  ["version", /(^\s*version\b|recording\s*version|title\s*version|version\s*(name|label|title)|^\s*alternate\s*version\b)/i],
+  ["iswc", /iswc/i],
+  ["isrc", /isrc/i],
+  ["ipi", /(\b(ipi|cae)|ip\s*name\s*n(umber|o))/i],
+  [
+    "workId",
+    /(title\s*(number|no|#|code|id)|work\s*(id|#|number|no)|song\s*(code|id|#|number)|mlc\s*song|work\s*code|registration\s*(id|#)|^bmi\s*#|^ascap\s*#)/i,
+  ],
+  ["share", /(share|%|percent|ownership|split)/i],
+  ["pro", /(affil|afflia|^society$|^pro$)/i],
+  ["party", /(indicator|party\s*type|participant\s*(type|role)|designation|capacity|role|^type$)/i],
+  [
+    "version",
+    /(^\s*version\b|recording\s*version|title\s*version|version\s*(name|label|title)|^\s*alternate\s*version\b)/i,
+  ],
   ["artist", /(artist|performer|recording\s*artist|credited\s*to|^act$)/i],
-  ["writer", /(writer|composer|author|songwriter|interested\s*part|party\s*name|participant|^name$)/i],
+  [
+    "writer",
+    /(writer|composer|author|songwriter|interested\s*part|party\s*name|participant|^name$)/i,
+  ],
   ["title", /(title|work\s*name|song\s*name|track\s*name|^song$|^work$)/i],
 ];
 function columns(header: string[]): Columns {
@@ -171,21 +273,32 @@ function columns(header: string[]): Columns {
 
 /** Finds the heading row (the first with a title or ISRC column among the first 15) and groups rows into works. */
 export function readWorks(rows: string[][]): ListWork[] {
-  const at = rows.slice(0, 40).findIndex((r) => { const c = columns(r); return c.title !== undefined || c.isrc !== undefined; });
-  if (at < 0) throw new Error("Couldn't find a title or ISRC column. Upload the list as your agency exported it.");
+  const at = rows.slice(0, 40).findIndex((r) => {
+    const c = columns(r);
+    return c.title !== undefined || c.isrc !== undefined;
+  });
+  if (at < 0)
+    throw new Error(
+      "Couldn't find a title or ISRC column. Upload the list as your agency exported it.",
+    );
   const col = columns(rows[at]!);
-  const get = (r: string[], k: keyof Columns) => (col[k] === undefined ? "" : (r[col[k]!] ?? "").trim());
+  const get = (r: string[], k: keyof Columns) =>
+    col[k] === undefined ? "" : (r[col[k]!] ?? "").trim();
   const works = new Map<string, ListWork>();
   let last: ListWork | undefined;
   for (const r of rows.slice(at + 1)) {
-    const title = get(r, "title"), iswc = code(get(r, "iswc")), isrc = code(get(r, "isrc")), workId = get(r, "workId");
+    const title = get(r, "title"),
+      iswc = code(get(r, "iswc")),
+      isrc = code(get(r, "isrc")),
+      workId = get(r, "workId");
     // The list's own version, else the one its title names — read exactly as the agency wrote it, never appended to a title.
-    const version = get(r, "version") || versionTail(title), artist = get(r, "artist");
+    const version = get(r, "version") || versionTail(title),
+      artist = get(r, "artist");
     const coreTitle = stripVersion(title);
     // One row per writer: rows without a title continue the work above.
     const key = workId || iswc || (title ? norm(title) : "") || isrc;
     const fresh = (): ListWork => ({ title, iswc, isrc, workId, writers: [] });
-    let work: ListWork | undefined = key ? works.get(key) ?? fresh() : last;
+    let work: ListWork | undefined = key ? (works.get(key) ?? fresh()) : last;
     // A recordings list (SoundExchange, The MLC) has one row per recording, so two rows can share a title and carry
     // different ISRCs — "Big Swag" and "Off With His Head" do on the founder's own export. Grouping by title kept only
     // the first code and lost the second (founder, 2026-11-12), so a second code starts its own work.
@@ -199,13 +312,19 @@ export function readWorks(rows: string[][]): ListWork[] {
     if (!work.isrc && isrc) work.isrc = isrc;
     if (!work.version && version) work.version = version;
     if (!work.artist && artist) work.artist = artist;
-    if (!work.coreTitle && coreTitle.trim() && coreTitle.trim() !== work.title.trim()) work.coreTitle = coreTitle;
+    if (!work.coreTitle && coreTitle.trim() && coreTitle.trim() !== work.title.trim())
+      work.coreTitle = coreTitle;
     const party = get(r, "party");
     const name = get(r, "writer");
     const isPublisherRow = /publisher|^p$/i.test(party);
     if (name && (isPublisherRow || !/^e$|^op$|^se$|^am$|^pa$/i.test(party))) {
       const share = Number(get(r, "share").replace(/[%\s]/g, "").replace(",", "."));
-      const row = { name, share: Number.isFinite(share) && share > 0 ? share : undefined, ipi: digits(get(r, "ipi")) || undefined, pro: get(r, "pro").replace(/^na$/i, "") || undefined };
+      const row = {
+        name,
+        share: Number.isFinite(share) && share > 0 ? share : undefined,
+        ipi: digits(get(r, "ipi")) || undefined,
+        pro: get(r, "pro").replace(/^na$/i, "") || undefined,
+      };
       // The publisher half belongs to the publisher, never to the writers: keeping it apart is what stops a P row
       // being compared as a co-writer.
       if (isPublisherRow) (work.publishers ??= []).push(row);
@@ -221,10 +340,34 @@ export function readWorks(rows: string[][]): ListWork[] {
  * SEVEN LOVE" where the catalog holds "24/7 Love", and comparing the letters made one song look like a title mismatch.
  */
 const NUMBER_WORDS: Record<number, string> = {
-  0: "zero", 1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine",
-  10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen", 16: "sixteen",
-  17: "seventeen", 18: "eighteen", 19: "nineteen", 20: "twenty", 30: "thirty", 40: "forty", 50: "fifty",
-  60: "sixty", 70: "seventy", 80: "eighty", 90: "ninety",
+  0: "zero",
+  1: "one",
+  2: "two",
+  3: "three",
+  4: "four",
+  5: "five",
+  6: "six",
+  7: "seven",
+  8: "eight",
+  9: "nine",
+  10: "ten",
+  11: "eleven",
+  12: "twelve",
+  13: "thirteen",
+  14: "fourteen",
+  15: "fifteen",
+  16: "sixteen",
+  17: "seventeen",
+  18: "eighteen",
+  19: "nineteen",
+  20: "twenty",
+  30: "thirty",
+  40: "forty",
+  50: "fifty",
+  60: "sixty",
+  70: "seventy",
+  80: "eighty",
+  90: "ninety",
 };
 const numberWord = (n: number): string => {
   if (NUMBER_WORDS[n]) return NUMBER_WORDS[n]!;
@@ -241,13 +384,15 @@ const spoken = (s: string) => s.replace(/\d+/g, (d) => numberWord(Number(d)));
  */
 export const titleKey = (s: string) => norm(spoken(s.toLowerCase().replace(/&/g, " and ")));
 
-export const loose = (s: string) => titleKey(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
+export const loose = (s: string) =>
+  titleKey(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
 
 /**
  * Words that name a version of a recording rather than another work: "Dirty", "Official Instrumental", "Radio Edit".
  * A registration names the composition and never carries them.
  */
-const VERSION_WORDS = /\b(clean|dirty|explicit|censored|acapella|a cappella|instrumental|inst|radio|edit|remix|mix|live|acoustic|sped|slowed|chopped|screwed|extended|deluxe|demo|version|official|master|mono|stereo)\b/i;
+const VERSION_WORDS =
+  /\b(clean|dirty|explicit|censored|acapella|a cappella|instrumental|inst|radio|edit|remix|mix|live|acoustic|sped|slowed|chopped|screwed|extended|deluxe|demo|version|official|master|mono|stereo)\b/i;
 
 /**
  * The title with any version tail dropped (founder, 2026-11-12): the catalog holds "Quit Playing With Me - Dirty
@@ -257,7 +402,9 @@ const VERSION_WORDS = /\b(clean|dirty|explicit|censored|acapella|a cappella|inst
  */
 export function titleCore(title: string): string {
   // A trailing bracket counts only when it names a version; anything else stays part of the title.
-  let core = title.replace(/\s*[([{]([^)\]}]*)[)\]}]\s*$/, (whole: string, inner: string) => (VERSION_WORDS.test(inner) ? " " : whole));
+  let core = title.replace(/\s*[([{]([^)\]}]*)[)\]}]\s*$/, (whole: string, inner: string) =>
+    VERSION_WORDS.test(inner) ? " " : whole,
+  );
   // "Song: Radio Edit" has no space before its colon, "Part 2: The Return" has one — the version words decide, not the spacing.
   const parts = core.split(/\s*[-–—:]\s+/);
   if (parts.length > 1 && VERSION_WORDS.test(parts.slice(1).join(" "))) core = parts[0]!;
@@ -286,7 +433,11 @@ export function versionTail(title: string): string {
  */
 export function stripVersion(title: string): string {
   if (!versionTail(title)) return title.trim();
-  const cut = title.trim().replace(/[([{]\s*[^)\]}]+?\s*[)\]}]\s*$/, "").replace(/\s*[-–—:]\s*[^-–—:]*$/, "").trim();
+  const cut = title
+    .trim()
+    .replace(/[([{]\s*[^)\]}]+?\s*[)\]}]\s*$/, "")
+    .replace(/\s*[-–—:]\s*[^-–—:]*$/, "")
+    .trim();
   return cut || title.trim();
 }
 
@@ -304,7 +455,10 @@ export const printedTitle = (m: { title: string; version?: string | undefined })
  */
 export function titleReadsDifferently(catalogTitle: string, agencyTitle: string): boolean {
   if (!catalogTitle.trim() || !agencyTitle.trim()) return false;
-  return titleKey(catalogTitle) !== titleKey(agencyTitle) && titleCore(catalogTitle) === titleCore(agencyTitle);
+  return (
+    titleKey(catalogTitle) !== titleKey(agencyTitle) &&
+    titleCore(catalogTitle) === titleCore(agencyTitle)
+  );
 }
 
 /**
@@ -326,16 +480,27 @@ export function titledWorks(works: ListWork[], title: string): ListWork[] {
  */
 export function clashIssues(work: ListWork, metadata: Metadata, agency = "the agency"): string[] {
   const named = work.writers.map((w) => w.name).filter(Boolean);
-  const who = named.length ? named.slice(0, 3).join(", ") + (named.length > 3 ? ` and ${named.length - 3} more` : "") : "nobody";
-  const mine = [...(metadata.writers ?? []), ...(metadata.composers ?? [])].map((w) => creditName(w)).filter(Boolean);
-  const issues = [`${agency} has a work called "${work.title}", but none of its writers are on your song — it lists ${who}${mine.length ? `, and your catalog has ${mine.slice(0, 3).join(", ")}` : ""}.`];
-  issues.push(`If it's your work: put ${named[0] ?? "that writer"} on the song's writers in My Catalog, or correct the legal name there if it's only a spelling, then upload the list again.`);
-  issues.push(`If it's another writer's song: your catalog needs nothing here — the work at ${agency} is theirs to settle.`);
+  const who = named.length
+    ? named.slice(0, 3).join(", ") + (named.length > 3 ? ` and ${named.length - 3} more` : "")
+    : "nobody";
+  const mine = [...(metadata.writers ?? []), ...(metadata.composers ?? [])]
+    .map((w) => creditName(w))
+    .filter(Boolean);
+  const issues = [
+    `${agency} has a work called "${work.title}", but none of its writers are on your song — it lists ${who}${mine.length ? `, and your catalog has ${mine.slice(0, 3).join(", ")}` : ""}.`,
+  ];
+  issues.push(
+    `If it's your work: put ${named[0] ?? "that writer"} on the song's writers in My Catalog, or correct the legal name there if it's only a spelling, then upload the list again.`,
+  );
+  issues.push(
+    `If it's another writer's song: your catalog needs nothing here — the work at ${agency} is theirs to settle.`,
+  );
   return issues;
 }
 
 /** Every retired code on a song, in the same shape the comparison uses. */
-export const retiredCodes = (m: { retiredIscrs?: string[] | undefined }) => (m.retiredIscrs ?? []).map(code).filter(Boolean);
+export const retiredCodes = (m: { retiredIscrs?: string[] | undefined }) =>
+  (m.retiredIscrs ?? []).map(code).filter(Boolean);
 
 /**
  * The work on an agency list that is this song: the ISRC first, because that is the code the agencies match recordings
@@ -356,7 +521,8 @@ export function matchWork(
     };
   },
 ): ListWork | undefined {
-  const iswc = t.metadata.iswc ?? "", isrc = t.metadata.isrc ?? "";
+  const iswc = t.metadata.iswc ?? "",
+    isrc = t.metadata.isrc ?? "";
   // A work registered under another name the member already knows (founder, 2026-11-15): an alternate title in the
   // catalog is this song's own name, so a list that files it that way has found the song, not a missing registration.
   const alternates = t.metadata.alternateTitles ?? [];
@@ -365,19 +531,31 @@ export function matchWork(
   // A code the recording used to carry still names it (founder, 2026-11-12): an agency can keep reporting under the
   // retired code for months after the change, and pairing it with the song is what lets the report ask them to update it.
   const retired = (t.metadata.retiredIscrs ?? []).map(code).filter(Boolean);
-  const byRetired = retired.length ? works.find((w) => w.isrc && retired.includes(w.isrc)) : undefined;
+  const byRetired = retired.length
+    ? works.find((w) => w.isrc && retired.includes(w.isrc))
+    : undefined;
   if (byRetired) return byRetired;
   const byIswc = iswc ? works.find((w) => w.iswc && w.iswc === code(iswc)) : undefined;
   if (byIswc) return byIswc;
   // A shared title is real (a re-record, a live version, two artists' songs): the writers say which work it is.
   const named = titledWorks(works, t.title);
-  const titled = named.length ? named : alternates.flatMap((alt: string) => (alt.trim() ? titledWorks(works, alt) : []));
+  const titled = named.length
+    ? named
+    : alternates.flatMap((alt: string) => (alt.trim() ? titledWorks(works, alt) : []));
   if (titled.length <= 1) return titled[0];
-  const mine = new Set([...(t.metadata.writers ?? []), ...(t.metadata.composers ?? [])].map((w) => nameKey(creditName(w))).filter(Boolean));
-  let best = titled[0], bestHits = 0;
+  const mine = new Set(
+    [...(t.metadata.writers ?? []), ...(t.metadata.composers ?? [])]
+      .map((w) => nameKey(creditName(w)))
+      .filter(Boolean),
+  );
+  let best = titled[0],
+    bestHits = 0;
   for (const w of titled) {
     const hits = w.writers.filter((x) => mine.has(nameKey(x.name))).length;
-    if (hits > bestHits) { best = w; bestHits = hits; }
+    if (hits > bestHits) {
+      best = w;
+      bestHits = hits;
+    }
   }
   // Two works share this title and not one writer is in common: that is a different song, not this one. Saying "not on
   // the list" is honest; matching the first same-titled work put someone else's registration on the member's song.
@@ -403,7 +581,8 @@ export function listGaps(w: ListWork, recording = false, society = ""): string[]
     if (w.publishers?.some((x) => !x.ipi)) gaps.push("A publisher with no IPI number");
     // Lists use the whole song or the writer half, so 100 and 200 both add up; anything else is a split to settle.
     const total = w.writers.reduce((n, x) => n + (x.share ?? 0), 0);
-    if (total > 0 && Math.abs(total - 100) > 1 && Math.abs(total - 200) > 1) gaps.push("The shares don't add up to 100%");
+    if (total > 0 && Math.abs(total - 100) > 1 && Math.abs(total - 200) > 1)
+      gaps.push("The shares don't add up to 100%");
   }
   return gaps;
 }
@@ -416,21 +595,30 @@ export function listGaps(w: ListWork, recording = false, society = ""): string[]
  */
 export function scaledShares(writers: ListWriter[]): number[] {
   const total = writers.reduce((n, w) => n + (w.share ?? 0), 0);
-  const out = writers.map((w) => (w.share === undefined || total <= 0 ? 0 : Math.round((w.share / total) * 10000) / 100));
+  const out = writers.map((w) =>
+    w.share === undefined || total <= 0 ? 0 : Math.round((w.share / total) * 10000) / 100,
+  );
   const sum = out.reduce((n, x) => n + x, 0);
-  const last = out.map((v, i) => [v, i] as const).filter(([v]) => v > 0).pop();
-  if (last && Math.abs(sum - 100) >= 0.01) out[last[1]] = Math.round((out[last[1]]! + (100 - sum)) * 100) / 100;
+  const last = out
+    .map((v, i) => [v, i] as const)
+    .filter(([v]) => v > 0)
+    .pop();
+  if (last && Math.abs(sum - 100) >= 0.01)
+    out[last[1]] = Math.round((out[last[1]]! + (100 - sum)) * 100) / 100;
   return out;
 }
 /** The total the list itself prints, to explain a 200% column without calling it wrong. */
-export const listShareTotal = (work: ListWork) => work.writers.reduce((n, x) => n + (x.share ?? 0), 0);
+export const listShareTotal = (work: ListWork) =>
+  work.writers.reduce((n, x) => n + (x.share ?? 0), 0);
 /** True when the list counts the writer's half and the publisher's half together (BMI's 200%). */
 export const combinedHalves = (work: ListWork) => listShareTotal(work) > 100.5;
 
 /** Shares on any scale (100, 200 or the writer half) compared as each writer's part of the total. */
 const parts = (list: { key: string; share?: number | undefined }[]) => {
   const total = list.reduce((n, x) => n + (x.share ?? 0), 0);
-  return total > 0 ? new Map(list.filter((x) => x.share).map((x) => [x.key, (x.share! / total) * 100])) : new Map<string, number>();
+  return total > 0
+    ? new Map(list.filter((x) => x.share).map((x) => [x.key, (x.share! / total) * 100]))
+    : new Map<string, number>();
 };
 
 /**
@@ -442,19 +630,35 @@ const parts = (list: { key: string; share?: number | undefined }[]) => {
  * here; a BMI row is not missing an ISRC any more than a SoundExchange row is missing a writer. A recording list
  * (SoundExchange) names a recording: its ISRC, title, version and artist, and no writers.
  */
-export function workIssues(work: ListWork, metadata: Metadata, kind: AgencyKind = "composition"): string[] {
+export function workIssues(
+  work: ListWork,
+  metadata: Metadata,
+  kind: AgencyKind = "composition",
+): string[] {
   const issues: string[] = [];
   const composition = kind === "composition";
-  const isrc = code(metadata.isrc ?? ""), iswc = code(metadata.iswc ?? "");
+  const isrc = code(metadata.isrc ?? ""),
+    iswc = code(metadata.iswc ?? "");
   // A code is a property of the recording. BMI and The MLC never register one, and a distributor does not deliver a
   // composition, so an ISRC on either side is not a difference to raise (founder, 2026-11-14).
   if (!composition && work.isrc && work.isrc !== isrc) {
     // The agency is on a code this song has retired: the catalog is right, so the answer is what to say to them, not
     // "your catalog is wrong" (founder, 2026-11-12).
-    if (retiredCodes(metadata).includes(work.isrc)) issues.push(retireAdvice(work.isrc, metadata.isrc ?? ""));
-    else issues.push(isrc ? `The agency has ISRC ${work.isrc}, your catalog has ${metadata.isrc.trim()}` : `The agency has ISRC ${work.isrc}, your catalog has none`);
+    if (retiredCodes(metadata).includes(work.isrc))
+      issues.push(retireAdvice(work.isrc, metadata.isrc ?? ""));
+    else
+      issues.push(
+        isrc
+          ? `The agency has ISRC ${work.isrc}, your catalog has ${metadata.isrc.trim()}`
+          : `The agency has ISRC ${work.isrc}, your catalog has none`,
+      );
   }
-  if (work.iswc && work.iswc !== iswc) issues.push(iswc ? `The agency has ISWC ${work.iswc}, your catalog has ${metadata.iswc.trim()}` : `The agency has ISWC ${work.iswc}, your catalog has none`);
+  if (work.iswc && work.iswc !== iswc)
+    issues.push(
+      iswc
+        ? `The agency has ISWC ${work.iswc}, your catalog has ${metadata.iswc.trim()}`
+        : `The agency has ISWC ${work.iswc}, your catalog has none`,
+    );
   // The name, before the early return: a recordings list has no writers but still names the recording.
   // The catalog's title exactly, never with its version field appended: "Bloodline" is Bloodline on SoundExchange, and
   // "Bloodline (Deluxe)" invented a name difference on every song (founder, 2026-11-14). A version baked into the title
@@ -465,13 +669,20 @@ export function workIssues(work: ListWork, metadata: Metadata, kind: AgencyKind 
   const agencyTitle = (work.coreTitle ?? stripVersion(work.title)).trim();
   const catalogTitle = stripVersion(named);
   // An alternate title in the catalog is the same song under its other name: nothing to fix.
-  const known = (metadata.alternateTitles ?? []).some((alt: string) => alt.trim() && titleKey(alt) === titleKey(agencyTitle));
-  if (!known && titleReadsDifferently(catalogTitle, agencyTitle)) issues.push(`The agency calls it "${work.title}", your catalog has "${named}" — same recording, different name`);
+  const known = (metadata.alternateTitles ?? []).some(
+    (alt: string) => alt.trim() && titleKey(alt) === titleKey(agencyTitle),
+  );
+  if (!known && titleReadsDifferently(catalogTitle, agencyTitle))
+    issues.push(
+      `The agency calls it "${work.title}", your catalog has "${named}" — same recording, different name`,
+    );
   // A work is found by its registered title, and a composition list carries no version tail, so a title that reads
   // differently there is its own difference (founder, 2026-11-15): the two names have to match, or one is saved as an
   // alternate title. Without this a BMI work filed under another name was never reported at all.
   if (composition && !known && titleKey(catalogTitle) !== titleKey(agencyTitle)) {
-    issues.push(`The agency registers this work as "${agencyTitle}", your catalog says "${named}" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title`);
+    issues.push(
+      `The agency registers this work as "${agencyTitle}", your catalog says "${named}" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title`,
+    );
   }
   // A version is compared as a version, and only when the list names one: agencies register the recording or the work
   // without version wording all the time, and that is not a difference.
@@ -480,35 +691,64 @@ export function workIssues(work: ListWork, metadata: Metadata, kind: AgencyKind 
   const agencyVersion = composition ? "" : (work.version ?? versionTail(work.title)).trim();
   const catalogVersion = composition ? "" : (metadata.version ?? "").trim() || versionTail(named);
   if (agencyVersion && catalogVersion && norm(agencyVersion) !== norm(catalogVersion)) {
-    issues.push(`The agency has version "${agencyVersion}", your catalog has "${catalogVersion}" — same title, two versions of the recording`);
+    issues.push(
+      `The agency has version "${agencyVersion}", your catalog has "${catalogVersion}" — same title, two versions of the recording`,
+    );
   }
   // A version named in the catalog's own title that the agency lists without one, and that is not out yet: that is a
   // release that has not happened, never a mismatch (founder, 2026-11-14).
   const ownTail = composition ? "" : versionTail(named);
   if (ownTail && !agencyVersion) {
     const today = new Date().toISOString().slice(0, 10);
-    const released = !!metadata.releaseDate && !metadata.unreleased && metadata.releaseDate <= today;
-    if (!released) issues.push(`Your catalog's "${ownTail}" is not released yet, and the agency lists this recording without a version — nothing to fix before release day`);
+    const released =
+      !!metadata.releaseDate && !metadata.unreleased && metadata.releaseDate <= today;
+    if (!released)
+      issues.push(
+        `Your catalog's "${ownTail}" is not released yet, and the agency lists this recording without a version — nothing to fix before release day`,
+      );
   }
   // An unrecorded-version note is about the release, and a composition has none; writers are only compared for a
   // composition list, which is the one that registers them.
   if (!composition || !work.writers.length) return issues;
-  const mine = [...metadata.writers, ...metadata.composers].filter((w) => creditName(w)).map((w) => ({ key: nameKey(creditName(w)), name: creditName(w), ipi: digits(w.ipi ?? ""), share: Number(w.percentage) || undefined }));
+  const mine = [...metadata.writers, ...metadata.composers]
+    .filter((w) => creditName(w))
+    .map((w) => ({
+      key: nameKey(creditName(w)),
+      name: creditName(w),
+      ipi: digits(w.ipi ?? ""),
+      share: Number(w.percentage) || undefined,
+    }));
   const theirs = work.writers.map((w) => ({ ...w, key: nameKey(w.name) }));
-  const same = (a: { key: string; name?: string; ipi?: string | undefined }, b: { key: string; name?: string; ipi?: string | undefined }) =>
-    a.key === b.key || (!!a.ipi && a.ipi === b.ipi) || (!!a.name && !!b.name && sameWriter(a.name, b.name));
-  for (const w of mine) if (!theirs.some((x) => same(w, x))) issues.push(`${w.name} isn't on the agency's registration`);
-  for (const x of theirs) if (!mine.some((w) => same(w, x))) issues.push(`The agency lists ${x.name}, who isn't in your catalog`);
+  const same = (
+    a: { key: string; name?: string; ipi?: string | undefined },
+    b: { key: string; name?: string; ipi?: string | undefined },
+  ) =>
+    a.key === b.key ||
+    (!!a.ipi && a.ipi === b.ipi) ||
+    (!!a.name && !!b.name && sameWriter(a.name, b.name));
+  for (const w of mine)
+    if (!theirs.some((x) => same(w, x)))
+      issues.push(`${w.name} isn't on the agency's registration`);
+  for (const x of theirs)
+    if (!mine.some((w) => same(w, x)))
+      issues.push(`The agency lists ${x.name}, who isn't in your catalog`);
   for (const w of mine) {
     const x = theirs.find((y) => same(w, y));
-    if (x && spelledDifferently(w.name, x.name)) issues.push(`The agency has ${x.name} where your catalog has ${w.name} — repertoire search matches the registered name exactly, so the legal name here has to read "${registeredName(w.name, x.name)}"`);
-    if (x?.ipi && w.ipi && x.ipi !== w.ipi) issues.push(`${w.name}'s IPI is ${x.ipi} there, ${w.ipi} here`);
+    if (x && spelledDifferently(w.name, x.name))
+      issues.push(
+        `The agency has ${x.name} where your catalog has ${w.name} — repertoire search matches the registered name exactly, so the legal name here has to read "${registeredName(w.name, x.name)}"`,
+      );
+    if (x?.ipi && w.ipi && x.ipi !== w.ipi)
+      issues.push(`${w.name}'s IPI is ${x.ipi} there, ${w.ipi} here`);
   }
-  const a = parts(mine), b = parts(theirs);
+  const a = parts(mine),
+    b = parts(theirs);
   for (const w of mine) {
     const x = theirs.find((y) => same(w, y));
-    const here = a.get(w.key), there = x && b.get(x.key);
-    if (here !== undefined && there !== undefined && Math.abs(here - there) > 1) issues.push(`${w.name}'s share is ${Math.round(there)}% there, ${Math.round(here)}% here`);
+    const here = a.get(w.key),
+      there = x && b.get(x.key);
+    if (here !== undefined && there !== undefined && Math.abs(here - there) > 1)
+      issues.push(`${w.name}'s share is ${Math.round(there)}% there, ${Math.round(here)}% here`);
   }
   return issues;
 }
@@ -519,14 +759,23 @@ export function workIssues(work: ListWork, metadata: Metadata, kind: AgencyKind 
  * A **kind** decides what is compared (founder, 2026-11-14): a recording list (SoundExchange) is compared on its codes,
  * title, version and artist, and a composition list (a PRO, The MLC) on its title, ISWC and writers.
  */
-export function compareList(works: ListWork[], tracks: CatalogTrack[], kind: AgencyKind = "composition", agency = "the agency"): ListResult {
+export function compareList(
+  works: ListWork[],
+  tracks: CatalogTrack[],
+  kind: AgencyKind = "composition",
+  agency = "the agency",
+): ListResult {
   const used = new Set<ListWork>();
-  const matched: ListMatch[] = [], differences: ListMatch[] = [], clashes: ListClash[] = [], notListed: ListResult["notListed"] = [];
+  const matched: ListMatch[] = [],
+    differences: ListMatch[] = [],
+    clashes: ListClash[] = [],
+    notListed: ListResult["notListed"] = [];
   // A code a song has retired names the same recording, and the agency is meant to keep it (founder, 2026-11-12): an old
   // code can still carry uncollected royalties years later. So a second row under the old code is expected, not an
   // uncatalogued record, and it is folded into the song rather than reported as extra. Only a list that has the old code
   // and nothing else is a difference — that is the case worth telling the member about.
-  const retiredFor = (w: ListWork) => tracks.find((t) => w.isrc && retiredCodes(t.metadata).includes(w.isrc));
+  const retiredFor = (w: ListWork) =>
+    tracks.find((t) => w.isrc && retiredCodes(t.metadata).includes(w.isrc));
   // One title, more than one recording. Two catalog entries under a title were both handed the list's first work, so the
   // second version of a song was read as the first — "Am Pm (Clean Version)" twice and no Dirty at all (founder,
   // 2026-11-14). An entry takes the work its own version names, and a work no other entry has taken.
@@ -535,8 +784,14 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], kind: Age
     const free = list.filter((w) => !used.has(w));
     if (!free.length) return list[0];
     const own = versionOf(t);
-    const bare = (v: string) => norm(v).replace(/\bversion\b/g, "").replace(/\s+/g, " ").trim();
-    return (own ? free.find((w) => w.version && bare(w.version) === bare(own)) : undefined) ?? free[0];
+    const bare = (v: string) =>
+      norm(v)
+        .replace(/\bversion\b/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    return (
+      (own ? free.find((w) => w.version && bare(w.version) === bare(own)) : undefined) ?? free[0]
+    );
   };
   for (const t of tracks) {
     const m = t.metadata;
@@ -551,10 +806,17 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], kind: Age
       if (own) {
         // The list's works under one title are all accounted for by this one song, unless another catalog entry names the
         // same title: then the works left over are that entry's other recording.
-        const shared = tracks.some((o) => o.id !== t.id && titleCore(o.title) === titleCore(t.title));
+        const shared = tracks.some(
+          (o) => o.id !== t.id && titleCore(o.title) === titleCore(t.title),
+        );
         if (shared) used.add(own);
         else for (const w of titled) used.add(w);
-        clashes.push({ trackId: t.id, title: t.title, work: own, issues: clashIssues(own, m, agency) });
+        clashes.push({
+          trackId: t.id,
+          title: t.title,
+          work: own,
+          issues: clashIssues(own, m, agency),
+        });
         continue;
       }
       notListed.push({ trackId: t.id, title: t.title });
@@ -569,11 +831,12 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], kind: Age
   // was invisible exactly when it mattered (founder, 2026-11-14). A code the catalog already retired is skipped: the
   // agency is meant to keep that entry open.
   const codesByTitle = new Map<string, Set<string>>();
-  if (kind === "recording") for (const w of works) {
-    if (!w.isrc || !w.title) continue;
-    const core = titleCore(w.title);
-    codesByTitle.set(core, (codesByTitle.get(core) ?? new Set<string>()).add(w.isrc));
-  }
+  if (kind === "recording")
+    for (const w of works) {
+      if (!w.isrc || !w.title) continue;
+      const core = titleCore(w.title);
+      codesByTitle.set(core, (codesByTitle.get(core) ?? new Set<string>()).add(w.isrc));
+    }
   for (const w of works) {
     if (used.has(w) || !w.isrc || !w.title) continue;
     const core = titleCore(w.title);
@@ -582,18 +845,30 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], kind: Age
     if (hits.length !== 1) continue;
     const t = hits[0]!;
     const active = code(t.metadata.isrc ?? "");
-    if (retiredCodes(t.metadata).includes(w.isrc)) { used.add(w); continue; }
+    if (retiredCodes(t.metadata).includes(w.isrc)) {
+      used.add(w);
+      continue;
+    }
     used.add(w);
     const version = w.version ? ` (${w.version})` : "";
     differences.push({
       trackId: t.id,
       title: t.title,
       work: w,
-      issues: [`The agency holds a second ISRC for "${w.title}"${version}: ${w.isrc}, beside ${active || "no code in your catalog"} — one title, ${codesByTitle.get(core)!.size} codes`],
+      issues: [
+        `The agency holds a second ISRC for "${w.title}"${version}: ${w.isrc}, beside ${active || "no code in your catalog"} — one title, ${codesByTitle.get(core)!.size} codes`,
+      ],
     });
   }
   for (const w of works) if (!used.has(w) && retiredFor(w)) used.add(w);
-  return { matched, differences, clashes, notListed, extra: works.filter((w) => !used.has(w)), works: works.length };
+  return {
+    matched,
+    differences,
+    clashes,
+    notListed,
+    extra: works.filter((w) => !used.has(w)),
+    works: works.length,
+  };
 }
 
 /**
@@ -635,14 +910,28 @@ export const LIST_DOWNLOAD_STEPS: Record<string, string[]> = {
 };
 
 /** Directions for a society we have no named path for: the same honest route, without inventing a menu. */
-export const downloadSteps = (societyId: string): string[] => LIST_DOWNLOAD_STEPS[societyId] ?? [
-  "Sign in to your account at this society and open your registered works or recordings.",
-  "Download or print that list as a PDF or a spreadsheet.",
-  "Upload that file here.",
-];
+export const downloadSteps = (societyId: string): string[] =>
+  LIST_DOWNLOAD_STEPS[societyId] ?? [
+    "Sign in to your account at this society and open your registered works or recordings.",
+    "Download or print that list as a PDF or a spreadsheet.",
+    "Upload that file here.",
+  ];
 
 /** What's kept in a song's checklist state after an upload: the step key and its saved value. */
 export const listKey = (societyId: string) => `list:${societyId}`;
 export type SavedListNote = { at: string; issues: string[] } | { at: string; missing: true };
-export type SavedListSummary = { at: string; file: string; works: number; matched: number; differences: number; notListed: number };
-export const readNote = (v: string | undefined): SavedListNote | null => { try { return v ? (JSON.parse(v) as SavedListNote) : null; } catch { return null; } };
+export type SavedListSummary = {
+  at: string;
+  file: string;
+  works: number;
+  matched: number;
+  differences: number;
+  notListed: number;
+};
+export const readNote = (v: string | undefined): SavedListNote | null => {
+  try {
+    return v ? (JSON.parse(v) as SavedListNote) : null;
+  } catch {
+    return null;
+  }
+};

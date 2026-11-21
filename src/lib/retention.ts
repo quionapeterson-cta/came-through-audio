@@ -53,9 +53,15 @@ export type Pause = {
   /** The pause's own monthly Vault subscription (null on rows written before 2026-11-20). */
   vault_subscription_id?: string | null;
 };
-export type Lapse = { plan_ended_at: string; empty_after: string; emptied_at: string | null; kept_free_at?: string | null };
+export type Lapse = {
+  plan_ended_at: string;
+  empty_after: string;
+  emptied_at: string | null;
+  kept_free_at?: string | null;
+};
 
-export const addDays = (iso: string | Date, days: number) => new Date(new Date(iso).getTime() + days * DAY);
+export const addDays = (iso: string | Date, days: number) =>
+  new Date(new Date(iso).getTime() + days * DAY);
 export function addMonths(iso: string | Date, months: number) {
   const d = new Date(iso);
   d.setUTCMonth(d.getUTCMonth() + months);
@@ -67,7 +73,9 @@ export function addMonths(iso: string | Date, months: number) {
  * has no end date, so only resuming closes it.
  */
 export const currentPause = (pauses: Pause[], now = new Date()) =>
-  pauses.find((p) => p.kind === "pause" && !p.ended_at && (!p.ends_at || new Date(p.ends_at) > now));
+  pauses.find(
+    (p) => p.kind === "pause" && !p.ended_at && (!p.ends_at || new Date(p.ends_at) > now),
+  );
 export const isPaused = (pauses: Pause[], now = new Date()) => {
   const p = currentPause(pauses, now);
   return !!p && new Date(p.starts_at) <= now;
@@ -110,15 +118,35 @@ export type Offers = {
  * What the account may use right now. `sub` is the Stripe plan, if there is one (free trials don't count). A running
  * plan qualifies (the cancel screen offers them), as does a failing renewal or a plan in its 30-day countdown.
  */
-export function offers(sub: PlanSub | null, lapse: Lapse | null, pauses: Pause[], now = new Date()): Offers {
+export function offers(
+  sub: PlanSub | null,
+  lapse: Lapse | null,
+  pauses: Pause[],
+  now = new Date(),
+): Offers {
   const plan = !!sub?.stripe_subscription_id && !sub.cancel_at_period_end;
   const failing = !!sub?.stripe_subscription_id && sub.status === "past_due";
   const eligible = plan || failing || (!sub?.stripe_subscription_id && inGrace(lapse, now));
-  const lastOf = (kind: Pause["kind"]) => pauses.filter((p) => p.kind === kind).map((p) => new Date(p.created_at)).sort((a, b) => b.getTime() - a.getTime())[0];
-  const again = (kind: Pause["kind"]) => { const last = lastOf(kind); const at = last && addMonths(last, 12); return at && at > now ? at : undefined; };
-  const extendAgain = again("extend"), pauseAgain = again("pause");
+  const lastOf = (kind: Pause["kind"]) =>
+    pauses
+      .filter((p) => p.kind === kind)
+      .map((p) => new Date(p.created_at))
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+  const again = (kind: Pause["kind"]) => {
+    const last = lastOf(kind);
+    const at = last && addMonths(last, 12);
+    return at && at > now ? at : undefined;
+  };
+  const extendAgain = again("extend"),
+    pauseAgain = again("pause");
   const busy = !!currentPause(pauses, now);
-  return { failing, canExtend: eligible && !busy && !extendAgain, canPause: eligible && !busy && !pauseAgain, extendAgain, pauseAgain };
+  return {
+    failing,
+    canExtend: eligible && !busy && !extendAgain,
+    canPause: eligible && !busy && !pauseAgain,
+    extendAgain,
+    pauseAgain,
+  };
 }
 
 /**
@@ -152,20 +180,30 @@ export function shiftedEmptyAfter(lapse: Lapse, resumesAt: Date, now = new Date(
   return new Date(resumesAt.getTime() + left);
 }
 
-export const daysUntil = (iso: string | Date, now = new Date()) => Math.ceil((new Date(iso).getTime() - now.getTime()) / DAY);
+export const daysUntil = (iso: string | Date, now = new Date()) =>
+  Math.ceil((new Date(iso).getTime() - now.getTime()) / DAY);
 
 /** Lapse reminders: day 0, 7 days left, 1 day left. Only the most urgent one due is sent; it covers the ones before it. */
 export type Reminder = "start" | "7" | "1";
-export function dueReminder(lapse: Lapse & { reminders: string[] }, now = new Date()): { send: Reminder; covers: Reminder[] } | null {
+export function dueReminder(
+  lapse: Lapse & { reminders: string[] },
+  now = new Date(),
+): { send: Reminder; covers: Reminder[] } | null {
   const left = daysUntil(lapse.empty_after, now);
   const send: Reminder = left <= 1 ? "1" : left <= 7 ? "7" : "start";
   if (lapse.reminders.includes(send)) return null;
-  const covers: Reminder[] = send === "1" ? ["start", "7", "1"] : send === "7" ? ["start", "7"] : ["start"];
+  const covers: Reminder[] =
+    send === "1" ? ["start", "7", "1"] : send === "7" ? ["start", "7"] : ["start"];
   return { send, covers };
 }
 
 /** The renewal reminder due now (90, 60, 30, 7 or 1 day ahead), unless it already went out for this renewal date. */
-export function dueRenewalReminder(renews: Date, sent: string[], sentFor: string | null, now = new Date()): number | null {
+export function dueRenewalReminder(
+  renews: Date,
+  sent: string[],
+  sentFor: string | null,
+  now = new Date(),
+): number | null {
   const left = daysUntil(renews, now);
   if (left < 1) return null;
   const due = RENEWAL_REMINDER_DAYS.filter((d) => left <= d).at(-1);
@@ -191,10 +229,21 @@ export function withinPrepayCap(target: Date, now = new Date()): boolean {
 }
 
 export function canRenewEarly(sub: PlanSub | null, pauses: Pause[], now = new Date()) {
-  if (!sub?.stripe_subscription_id || sub.cancel_at_period_end || !["active", "trialing"].includes(sub.status) || currentPause(pauses, now)) return false;
+  if (
+    !sub?.stripe_subscription_id ||
+    sub.cancel_at_period_end ||
+    !["active", "trialing"].includes(sub.status) ||
+    currentPause(pauses, now)
+  )
+    return false;
   const renews = renewalDate(sub);
   // One year per payment, and never past five years of paid time however many payments are made.
-  return !!renews && renews > now && renews.getTime() - now.getTime() <= 365 * DAY && withinPrepayCap(earlyRenewalTarget(renews), now);
+  return (
+    !!renews &&
+    renews > now &&
+    renews.getTime() - now.getTime() <= 365 * DAY &&
+    withinPrepayCap(earlyRenewalTarget(renews), now)
+  );
 }
 
 /** After renewing early, the plan runs a full year past the renewal date that was paid for, so no days are lost. */

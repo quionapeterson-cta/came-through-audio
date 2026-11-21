@@ -43,7 +43,10 @@ export function isClosed(ticket: { status: string }): boolean {
 
 /** A short, stable handle for an email subject, e.g. `AB12CD`, taken from the ticket's own id. */
 export function ticketCode(id: string): string {
-  return id.replace(/[^a-z0-9]/gi, "").slice(0, 6).toUpperCase();
+  return id
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(0, 6)
+    .toUpperCase();
 }
 
 /** The subject a reply goes out with, so it threads in a mailbox next to the member's first email. */
@@ -53,7 +56,9 @@ export function replySubject(ticket: { id: string; subject: string }): string {
 
 /** Replies come from and return to the box that owns the ticket: Billing's on a billing ticket, Support's otherwise. */
 export function inboxFor(category: string): string {
-  return category.trim().toLowerCase().startsWith("account & billing") ? BILLING_EMAIL : SUPPORT_EMAIL;
+  return category.trim().toLowerCase().startsWith("account & billing")
+    ? BILLING_EMAIL
+    : SUPPORT_EMAIL;
 }
 
 /**
@@ -152,11 +157,15 @@ export type SendCheck = { ok: true } | { ok: false; error: string };
 export function canSendReply(body: string, internal: boolean): SendCheck {
   const trimmed = body.trim();
   if (trimmed.length < 2) return { ok: false, error: "Write the reply first." };
-  if (trimmed.length > REPLY_MAX) return { ok: false, error: `A reply can be ${REPLY_MAX} characters or fewer.` };
+  if (trimmed.length > REPLY_MAX)
+    return { ok: false, error: `A reply can be ${REPLY_MAX} characters or fewer.` };
   if (!internal) {
     const gaps = draftGaps(trimmed);
     if (gaps.length) {
-      return { ok: false, error: `Fill in ${gaps.map((g) => `{{${g}}}`).join(", ")} before sending — the member would read the braces.` };
+      return {
+        ok: false,
+        error: `Fill in ${gaps.map((g) => `{{${g}}}`).join(", ")} before sending — the member would read the braces.`,
+      };
     }
   }
   return { ok: true };
@@ -177,7 +186,10 @@ export function replyParagraphs(body: string, escape: (s: string) => string): st
   return body
     .trim()
     .split(/\n{2,}/)
-    .map((para) => `<p style="font-size:15px;line-height:1.6;margin:0 0 14px">${escape(para).replace(/\n/g, "<br/>")}</p>`)
+    .map(
+      (para) =>
+        `<p style="font-size:15px;line-height:1.6;margin:0 0 14px">${escape(para).replace(/\n/g, "<br/>")}</p>`,
+    )
     .join("\n");
 }
 

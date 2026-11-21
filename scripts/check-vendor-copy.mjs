@@ -134,28 +134,45 @@ const TABLES = {
 };
 
 /** The bare word "resend" is ordinary English in copy; only the vendor's own forms count. */
-const NEEDLES = "supabase cloudflare resend.com api.resend vercel lovable netlify firebase daily.co github paddle amazon".split(" ");
+const NEEDLES =
+  "supabase cloudflare resend.com api.resend vercel lovable netlify firebase daily.co github paddle amazon".split(
+    " ",
+  );
 
 async function scanDatabase() {
   const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
-    console.log("database scan: SKIPPED (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to include it)");
+    console.log(
+      "database scan: SKIPPED (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to include it)",
+    );
     return [];
   }
   const hits = [];
   for (const [table, columns] of Object.entries(TABLES)) {
-    const filter = NEEDLES.flatMap((needle) => columns.map((column) => `${column}.ilike.*${needle}*`)).join(",");
+    const filter = NEEDLES.flatMap((needle) =>
+      columns.map((column) => `${column}.ilike.*${needle}*`),
+    ).join(",");
     const query = `${url}/rest/v1/${table}?select=id&or=(${encodeURIComponent(filter).replace(/%2C/g, ",").replace(/%2A/g, "*")})&limit=3`;
-    const res = await fetch(query, { headers: { apikey: key, Authorization: `Bearer ${key}`, Prefer: "count=exact" } });
+    const res = await fetch(query, {
+      headers: { apikey: key, Authorization: `Bearer ${key}`, Prefer: "count=exact" },
+    });
     if (!res.ok) {
-      hits.push({ where: table, vendor: `HTTP ${res.status}`, text: (await res.text()).slice(0, 200) });
+      hits.push({
+        where: table,
+        vendor: `HTTP ${res.status}`,
+        text: (await res.text()).slice(0, 200),
+      });
       continue;
     }
     const rows = await res.json();
     if (rows.length) {
       const count = res.headers.get("content-range")?.split("/")[1] ?? String(rows.length);
-      hits.push({ where: table, vendor: `${count} row(s)`, text: rows.map((r) => r.id).join(", ") });
+      hits.push({
+        where: table,
+        vendor: `${count} row(s)`,
+        text: rows.map((r) => r.id).join(", "),
+      });
     }
   }
   return hits;
@@ -167,7 +184,9 @@ hits.push(...(await scanDatabase()));
 if (hits.length) {
   console.error(`\nBanned vendor names in copy (${hits.length}):\n`);
   for (const h of hits) console.error(`  ${h.where}  [${h.vendor}]  ${h.text}`);
-  console.error("\nMembers and standard staff must not learn backend vendor names. Stripe, Link and opentimestamps.org are approved.\n");
+  console.error(
+    "\nMembers and standard staff must not learn backend vendor names. Stripe, Link and opentimestamps.org are approved.\n",
+  );
   process.exit(1);
 }
 console.log("vendor copy: clean");

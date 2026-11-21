@@ -14,7 +14,9 @@ describe("territories of collection rights", () => {
     // Sorted after those two, so the picker is scannable (plain case-folded order, the same rule the list is built with).
     const rest = [...TERRITORY_OPTIONS.slice(2)];
     const folded = (v: string) => v.toLowerCase();
-    expect(rest).toEqual([...rest].sort((a, b) => (folded(a) < folded(b) ? -1 : folded(a) > folded(b) ? 1 : 0)));
+    expect(rest).toEqual(
+      [...rest].sort((a, b) => (folded(a) < folded(b) ? -1 : folded(a) > folded(b) ? 1 : 0)),
+    );
   });
   it("offers Worldwide first among the territories a member can add, and never the United States", () => {
     expect(TERRITORY_EXTRA_OPTIONS[0]).toBe("Worldwide");

@@ -2,10 +2,24 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { updateTarget } from "@/lib/ids";
 import { requestBadgeCheck } from "@/lib/badge-events";
-import { creditName, emptyContributor, emptyMetadata, isoDate, splitTrack, withLegalName, type Metadata } from "@/lib/metadata";
+import {
+  creditName,
+  emptyContributor,
+  emptyMetadata,
+  isoDate,
+  splitTrack,
+  withLegalName,
+  type Metadata,
+} from "@/lib/metadata";
 import { albumKey, routedKinds } from "@/lib/release-routing";
 
-export type CatalogTrack = { id: string; title: string; artist: string; updatedAt: string; metadata: Metadata };
+export type CatalogTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  updatedAt: string;
+  metadata: Metadata;
+};
 
 const names = (rows: Metadata["writers"]) => rows.filter((r) => r.name);
 
@@ -52,7 +66,13 @@ export function fromCatalogRow(row: Record<string, unknown>): CatalogTrack {
     // Songs saved before 2026-10-27 read "3:45"; agencies want "03:45". Shown and exported padded; saved as-is.
     ...(/^\d:[0-5]\d$/.test(saved.duration ?? "") && { duration: `0${saved.duration}` }),
   };
-  return { id: row["id"] as string, title: metadata.title, artist: metadata.artist, updatedAt: (row["updated_at"] ?? row["created_at"]) as string, metadata };
+  return {
+    id: row["id"] as string,
+    title: metadata.title,
+    artist: metadata.artist,
+    updatedAt: (row["updated_at"] ?? row["created_at"]) as string,
+    metadata,
+  };
 }
 
 /**
@@ -92,7 +112,11 @@ export async function deleteTrack(id: string, ownerId?: string) {
   // Ask for the removed row back. Removing songs is gated by a restrictive policy (it needs Catalog Plus), and a
   // refused delete is not an error in the API — it is simply zero rows — so without this the button looked like it had
   // worked and the song was still there on the next load (founder, 2026-11-12).
-  const { data: removed, error } = await supabase.from("catalogs").delete().eq("id", id).select("id");
+  const { data: removed, error } = await supabase
+    .from("catalogs")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
   if (!removed?.length) {
     throw new Error(
@@ -107,7 +131,9 @@ export async function deleteTrack(id: string, ownerId?: string) {
   if (!folder) return;
   const { data: files } = await supabase.storage.from(BUCKET).list(folder);
   if (files?.length) {
-    const { error: fileError } = await supabase.storage.from(BUCKET).remove(files.map((f) => `${folder}/${f.name}`));
+    const { error: fileError } = await supabase.storage
+      .from(BUCKET)
+      .remove(files.map((f) => `${folder}/${f.name}`));
     if (fileError) console.error("Song deleted, but its files weren't removed", fileError.message);
   }
 }
@@ -115,7 +141,8 @@ export async function deleteTrack(id: string, ownerId?: string) {
 const BUCKET = "catalog-files";
 
 /** "Therapy" + "Clean" → "Therapy (Clean)"; an untitled song still gets a name. */
-export const versionTitle = (title: string, version: string) => `${title.trim() || "Untitled"} (${version})`;
+export const versionTitle = (title: string, version: string) =>
+  `${title.trim() || "Untitled"} (${version})`;
 
 export type DuplicateResult = { id: string; files: boolean };
 
@@ -126,16 +153,32 @@ export type DuplicateResult = { id: string; files: boolean };
  * are copied into the new entry's own folder, so deleting or replacing either song never touches the other's files.
  * Returns the new id, and whether the files came across (they can fail on their own without losing the entry).
  */
-export async function duplicateTrack(track: CatalogTrack, userId: string, version = "Copy"): Promise<DuplicateResult> {
-  const base: Metadata = { ...track.metadata, title: versionTitle(track.title, version), isrc: "", audioPath: "", artPath: "" };
+export async function duplicateTrack(
+  track: CatalogTrack,
+  userId: string,
+  version = "Copy",
+): Promise<DuplicateResult> {
+  const base: Metadata = {
+    ...track.metadata,
+    title: versionTitle(track.title, version),
+    isrc: "",
+    audioPath: "",
+    artPath: "",
+  };
   const id = await saveTrack(base, userId);
   const copied: { audioPath?: string; artPath?: string } = {};
-  for (const [kind, path] of [["master", track.metadata.audioPath], ["artwork", track.metadata.artPath]] as const) {
+  for (const [kind, path] of [
+    ["master", track.metadata.audioPath],
+    ["artwork", track.metadata.artPath],
+  ] as const) {
     if (!path) continue;
     const ext = path.split(".").pop() || (kind === "master" ? "mp3" : "jpg");
     const to = `${userId}/${id}/${kind}.${ext}`;
     const { error } = await supabase.storage.from(BUCKET).copy(path, to);
-    if (error) { console.error("Song duplicated, but its file wasn't copied", error.message); continue; }
+    if (error) {
+      console.error("Song duplicated, but its file wasn't copied", error.message);
+      continue;
+    }
     if (kind === "master") copied.audioPath = to;
     else copied.artPath = to;
   }
@@ -144,9 +187,18 @@ export async function duplicateTrack(track: CatalogTrack, userId: string, versio
 }
 
 /** Store a master or artwork file privately under the owner's folder; returns its storage path. */
-export async function uploadCatalogFile(userId: string, trackId: string, kind: "master" | "artwork", file: Blob, ext: string) {
+export async function uploadCatalogFile(
+  userId: string,
+  trackId: string,
+  kind: "master" | "artwork",
+  file: Blob,
+  ext: string,
+) {
   const path = `${userId}/${trackId}/${kind}.${ext}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type || (kind === "master" ? "audio/mpeg" : "image/jpeg") });
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    upsert: true,
+    contentType: file.type || (kind === "master" ? "audio/mpeg" : "image/jpeg"),
+  });
   if (error) throw error;
   return path;
 }
@@ -203,10 +255,16 @@ export async function setReleaseArtwork(
       // Only one artwork file per song is ever read, and a cover in the other format would otherwise sit in the folder
       // for good after a JPEG replaces a PNG (or the other way round). Failing to clear it is harmless, so it is quiet.
       try {
-        await supabase.storage.from(BUCKET).remove([`${userId}/${track.id}/artwork.${path.endsWith(".png") ? "jpg" : "png"}`]);
-      } catch { /* a stray copy nobody points at */ }
+        await supabase.storage
+          .from(BUCKET)
+          .remove([`${userId}/${track.id}/artwork.${path.endsWith(".png") ? "jpg" : "png"}`]);
+      } catch {
+        /* a stray copy nobody points at */
+      }
     } catch (e) {
-      failed.push(`${track.title || "the untitled song"} (${e instanceof Error ? e.message : "the save was refused"})`);
+      failed.push(
+        `${track.title || "the untitled song"} (${e instanceof Error ? e.message : "the save was refused"})`,
+      );
     }
   };
 
@@ -261,7 +319,13 @@ const READY_TOAST = "file-ready";
 let readyTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** Preview panes are iframes, and a sandboxed iframe swallows downloads its host didn't allow. */
-const inFrame = () => { try { return window.self !== window.top; } catch { return true; } };
+const inFrame = () => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+};
 
 /** Clicks a link that is in the document: a detached anchor is ignored, which is what made buttons look dead. */
 function clickSave(href: string, name: string) {
@@ -296,7 +360,12 @@ export function saveBlob(blob: Blob, filename: string) {
       ? `${filename} — this preview window blocks downloads. Open Came Through Audio in its own tab, or tap Save.`
       : `${filename} — if it didn't arrive, tap Save.`,
     duration: ms,
-    action: { label: "Save", onClick: () => { if (pending) clickSave(pending.url, pending.name); } },
+    action: {
+      label: "Save",
+      onClick: () => {
+        if (pending) clickSave(pending.url, pending.name);
+      },
+    },
   });
   clearTimeout(readyTimer);
   readyTimer = setTimeout(() => toast.dismiss(READY_TOAST), ms);
@@ -312,7 +381,11 @@ export type Release = { key: string; album: string; type: "Album" | "EP"; tracks
  * one at a time from their own row, so they are not a release here.
  */
 export function groupReleases(tracks: CatalogTrack[]): Release[] {
-  const kinds = routedKinds(tracks, (t) => t.metadata, (t) => t.id);
+  const kinds = routedKinds(
+    tracks,
+    (t) => t.metadata,
+    (t) => t.id,
+  );
   const groups = new Map<string, CatalogTrack[]>();
   for (const t of tracks) {
     const kind = kinds.get(t.id);
@@ -323,8 +396,15 @@ export function groupReleases(tracks: CatalogTrack[]): Release[] {
   const trackNo = (t: CatalogTrack) => Number(t.metadata.trackNumber) || 999;
   return [...groups.entries()]
     .map(([key, list]) => {
-      const ordered = [...list].sort((a, b) => trackNo(a) - trackNo(b) || a.title.localeCompare(b.title));
-      return { key, album: (ordered[0]!.metadata.album ?? "").trim(), type: kinds.get(ordered[0]!.id) === "EP" ? "EP" as const : "Album" as const, tracks: ordered };
+      const ordered = [...list].sort(
+        (a, b) => trackNo(a) - trackNo(b) || a.title.localeCompare(b.title),
+      );
+      return {
+        key,
+        album: (ordered[0]!.metadata.album ?? "").trim(),
+        type: kinds.get(ordered[0]!.id) === "EP" ? ("EP" as const) : ("Album" as const),
+        tracks: ordered,
+      };
     })
     .sort((a, b) => a.album.localeCompare(b.album));
 }
@@ -339,8 +419,25 @@ export type ZipResult = { songs: number; skipped: number; gaps: DownloadGap[] };
  * that came out incomplete is named with what to add, so the member can fill it in and download again (founder,
  * 2026-11-06: "2 files couldn't be fetched" told them nothing they could act on).
  */
-async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgress?: (done: number, total: number) => void, kitId?: string): Promise<ZipResult> {
-  const [{ makeZip, uniqueName }, { buildCatalogPdf }, { buildLyricsPdf }, { myBrand }, { releaseKind }] = await Promise.all([import("@/lib/zip"), import("@/lib/catalog-pdf"), import("@/lib/lyrics-pdf"), import("@/lib/brand-load"), import("@/lib/health-checklist")]);
+async function downloadSongsZip(
+  tracks: CatalogTrack[],
+  zipName: string,
+  onProgress?: (done: number, total: number) => void,
+  kitId?: string,
+): Promise<ZipResult> {
+  const [
+    { makeZip, uniqueName },
+    { buildCatalogPdf },
+    { buildLyricsPdf },
+    { myBrand },
+    { releaseKind },
+  ] = await Promise.all([
+    import("@/lib/zip"),
+    import("@/lib/catalog-pdf"),
+    import("@/lib/lyrics-pdf"),
+    import("@/lib/brand-load"),
+    import("@/lib/health-checklist"),
+  ]);
   // The ZIP is laid out like the catalog (founder, 2026-11-06): "MP3 & WAV", "Artwork" and "Lyrics" at the top, each split
   // into Singles, EPs and Albums, with every EP and album in its own folder. Catalog.pdf sits at the root.
   const shelf = (t: CatalogTrack) => {
@@ -361,35 +458,80 @@ async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgr
     const where = shelf(t);
     const items: DownloadGap["items"] = [];
     const files = [
-      { field: "audio", path: t.metadata.audioPath, file: `MP3 & WAV/${where}/${name}.${/\.wav$/i.test(t.metadata.audioPath ?? "") ? "wav" : "mp3"}`, none: "No master saved yet: open the song and choose its MP3 or WAV.", lost: "Its saved master couldn't be found: open the song and choose its MP3 or WAV again." },
-      { field: "artwork", path: t.metadata.artPath, file: `Artwork/${where}/${name}.${t.metadata.artPath?.split(".").pop() ?? "jpg"}`, none: "", lost: "Its saved cover art couldn't be found: open the song and add the cover again." },
+      {
+        field: "audio",
+        path: t.metadata.audioPath,
+        file: `MP3 & WAV/${where}/${name}.${/\.wav$/i.test(t.metadata.audioPath ?? "") ? "wav" : "mp3"}`,
+        none: "No master saved yet: open the song and choose its MP3 or WAV.",
+        lost: "Its saved master couldn't be found: open the song and choose its MP3 or WAV again.",
+      },
+      {
+        field: "artwork",
+        path: t.metadata.artPath,
+        file: `Artwork/${where}/${name}.${t.metadata.artPath?.split(".").pop() ?? "jpg"}`,
+        none: "",
+        lost: "Its saved cover art couldn't be found: open the song and add the cover again.",
+      },
     ];
     for (const f of files) {
       // A song without cover art is normal (singles often share one), so only a cover that went missing is reported.
-      if (!f.path) { if (f.none) items.push({ field: f.field, message: f.none }); continue; }
+      if (!f.path) {
+        if (f.none) items.push({ field: f.field, message: f.none });
+        continue;
+      }
       const { data, error } = await supabase.storage.from(BUCKET).download(f.path);
-      if (error || !data) { skipped += 1; items.push({ field: f.field, message: f.lost }); continue; }
+      if (error || !data) {
+        skipped += 1;
+        items.push({ field: f.field, message: f.lost });
+        continue;
+      }
       entries.push({ name: uniqueName(f.file, taken), data: await bytes(data) });
     }
-    if (t.metadata.lyrics?.trim()) entries.push({ name: uniqueName(`Lyrics/${where}/${name} - lyrics.pdf`, taken), data: await bytes((await buildLyricsPdf(t, brand)).output("blob")) });
-    else if (!t.metadata.instrumental) items.push({ field: "lyrics", message: "No lyrics yet: paste them in the song's Lyrics section (or mark it Instrumental)." });
+    if (t.metadata.lyrics?.trim())
+      entries.push({
+        name: uniqueName(`Lyrics/${where}/${name} - lyrics.pdf`, taken),
+        data: await bytes((await buildLyricsPdf(t, brand)).output("blob")),
+      });
+    else if (!t.metadata.instrumental)
+      items.push({
+        field: "lyrics",
+        message:
+          "No lyrics yet: paste them in the song's Lyrics section (or mark it Instrumental).",
+      });
     if (items.length) gaps.push({ track: t, items });
   }
-  if (tracks.length) entries.push({ name: uniqueName("Catalog.pdf", taken), data: await bytes((await buildCatalogPdf(tracks, brand)).output("blob")) });
+  if (tracks.length)
+    entries.push({
+      name: uniqueName("Catalog.pdf", taken),
+      data: await bytes((await buildCatalogPdf(tracks, brand)).output("blob")),
+    });
   onProgress?.(tracks.length, tracks.length);
   saveBlob(makeZip(entries), zipName);
   return { songs: tracks.length, skipped, gaps };
 }
 
 /** Every song in the catalog as one ZIP. */
-export async function downloadWholeCatalog(onProgress?: (done: number, total: number) => void, kitId?: string, ownerId?: string) {
+export async function downloadWholeCatalog(
+  onProgress?: (done: number, total: number) => void,
+  kitId?: string,
+  ownerId?: string,
+) {
   const tracks = await listTracks(ownerId);
   if (!tracks.length) throw new Error("Your catalog is empty, so there is nothing to zip yet.");
   return downloadSongsZip(tracks, "My Catalog.zip", onProgress, kitId);
 }
 
 /** One album or EP as its own ZIP, so a release can be handed over in one click without the whole catalog. */
-export async function downloadRelease(release: Release, onProgress?: (done: number, total: number) => void, kitId?: string) {
+export async function downloadRelease(
+  release: Release,
+  onProgress?: (done: number, total: number) => void,
+  kitId?: string,
+) {
   if (!release.tracks.length) throw new Error("That release has no songs in it yet.");
-  return downloadSongsZip(release.tracks, `${safeName(release.album)} (${release.type}).zip`, onProgress, kitId);
+  return downloadSongsZip(
+    release.tracks,
+    `${safeName(release.album)} (${release.type}).zip`,
+    onProgress,
+    kitId,
+  );
 }

@@ -200,7 +200,11 @@ describe("spotifyArtistName", () => {
     expect(name).toBe("Karma Came");
     expect(seen.startsWith("https://open.spotify.com/oembed?url=")).toBe(true);
     // The whole link goes in the query, escaped, so Spotify sees the artist page rather than a bare id.
-    expect(seen).toContain(encodeURIComponent("https://open.spotify.com/artist/2f8LjB4H36k7JqeyXKuyVR?si=2EQRMk7RT9eQHuEUbvHheQ"));
+    expect(seen).toContain(
+      encodeURIComponent(
+        "https://open.spotify.com/artist/2f8LjB4H36k7JqeyXKuyVR?si=2EQRMk7RT9eQHuEUbvHheQ",
+      ),
+    );
   });
 
   it("answers undefined rather than throwing when the embed service can't help", async () => {
@@ -210,7 +214,9 @@ describe("spotifyArtistName", () => {
     };
     expect(await spotifyArtistName("https://open.spotify.com/artist/X", notFound)).toBeUndefined();
     expect(await spotifyArtistName("https://open.spotify.com/artist/X", offline)).toBeUndefined();
-    expect(await spotifyArtistName("https://open.spotify.com/artist/X", async () => named("  "))).toBeUndefined();
+    expect(
+      await spotifyArtistName("https://open.spotify.com/artist/X", async () => named("  ")),
+    ).toBeUndefined();
   });
 });
 

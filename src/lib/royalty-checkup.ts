@@ -17,15 +17,31 @@ import { readNote } from "@/lib/agency-lists";
 export type OrganId = "heart" | "lungs" | "kidneys" | "brain" | "spine" | "pulse";
 export type OrganState = "healthy" | "watch" | "treat" | "noflow";
 export type ConditionId =
-  | "noheart" | "broken" | "artery-left" | "artery-right"
-  | "lungs-hold" | "lungs-one" | "kidney-none" | "kidney-one"
-  | "brain-fog" | "brain-mixed" | "brain-double" | "brain-tag"
-  | "spine-align" | "spine-back" | "pulse-skip" | "pulse-faint"
-  | "brain-agency" | "pulse-missing";
+  | "noheart"
+  | "broken"
+  | "artery-left"
+  | "artery-right"
+  | "lungs-hold"
+  | "lungs-one"
+  | "kidney-none"
+  | "kidney-one"
+  | "brain-fog"
+  | "brain-mixed"
+  | "brain-double"
+  | "brain-tag"
+  | "spine-align"
+  | "spine-back"
+  | "pulse-skip"
+  | "pulse-faint"
+  | "brain-agency"
+  | "pulse-missing";
 
 /** Findings from an uploaded agency list reuse the closest picture. */
 export type ScanId = Exclude<ConditionId, "brain-agency" | "pulse-missing">;
-const SCAN_OF: Partial<Record<ConditionId, ScanId>> = { "brain-agency": "brain-mixed", "pulse-missing": "pulse-faint" };
+const SCAN_OF: Partial<Record<ConditionId, ScanId>> = {
+  "brain-agency": "brain-mixed",
+  "pulse-missing": "pulse-faint",
+};
 
 /** What a treatment step's button does. `agency` picks the one-click file: the PRO cheat sheet, The MLC or SoundExchange. */
 export type StepAction =
@@ -40,7 +56,15 @@ export type StepAction =
   | { kind: "upload" };
 export type TreatmentStep = { title: string; text: string; action?: StepAction | undefined };
 /** `unsure`: the check-in answer was "Not sure", so the treatment starts with searching for it at the agency. */
-export type AffectedSong = { id: string; title: string; why: string; field?: string | undefined; registration?: boolean; society?: Society | undefined; unsure?: boolean };
+export type AffectedSong = {
+  id: string;
+  title: string;
+  why: string;
+  field?: string | undefined;
+  registration?: boolean;
+  society?: Society | undefined;
+  unsure?: boolean;
+};
 export type Finding = {
   id: ConditionId;
   organ: OrganId;
@@ -55,12 +79,38 @@ export type Finding = {
   /** Which scan picture shows it. */
   scan: ScanId;
 };
-export type Organ = { id: OrganId; name: string; system: string; state: OrganState; findings: Finding[]; checks: string[]; broken: boolean };
-export type Checkup = { score: number; songs: number; organs: Organ[]; lead: Finding | null; rhythm: OrganState };
+export type Organ = {
+  id: OrganId;
+  name: string;
+  system: string;
+  state: OrganState;
+  findings: Finding[];
+  checks: string[];
+  broken: boolean;
+};
+export type Checkup = {
+  score: number;
+  songs: number;
+  organs: Organ[];
+  lead: Finding | null;
+  rhythm: OrganState;
+};
 
 export const ORGAN_ORDER: OrganId[] = ["heart", "lungs", "kidneys", "brain", "spine", "pulse"];
-export const ORGAN_NAME: Record<OrganId, string> = { heart: "Heart", lungs: "Lungs", kidneys: "Kidneys", brain: "Brain", spine: "Spine", pulse: "Pulse" };
-export const STATE_LABEL: Record<OrganState, string> = { healthy: "Healthy", watch: "Watch", treat: "Needs treatment", noflow: "No flow" };
+export const ORGAN_NAME: Record<OrganId, string> = {
+  heart: "Heart",
+  lungs: "Lungs",
+  kidneys: "Kidneys",
+  brain: "Brain",
+  spine: "Spine",
+  pulse: "Pulse",
+};
+export const STATE_LABEL: Record<OrganState, string> = {
+  healthy: "Healthy",
+  watch: "Watch",
+  treat: "Needs treatment",
+  noflow: "No flow",
+};
 
 /** Agency portals for the "Register at …" step. Other societies use their own site. */
 // One map of agency sign-in pages, shared with the Differences chart (founder, 2026-11-14): a "Register at …" step used
@@ -71,15 +121,65 @@ const portal = (s: Society) => {
 };
 
 /** Most serious first; ties in the lead go to the finding touching the most songs, then this order. */
-const PRIORITY: ConditionId[] = ["noheart", "broken", "artery-left", "artery-right", "spine-align", "pulse-missing", "brain-agency", "brain-double", "lungs-hold", "kidney-none",
-  "pulse-skip", "lungs-one", "kidney-one", "brain-mixed", "brain-tag", "brain-fog", "spine-back", "pulse-faint"];
+const PRIORITY: ConditionId[] = [
+  "noheart",
+  "broken",
+  "artery-left",
+  "artery-right",
+  "spine-align",
+  "pulse-missing",
+  "brain-agency",
+  "brain-double",
+  "lungs-hold",
+  "kidney-none",
+  "pulse-skip",
+  "lungs-one",
+  "kidney-one",
+  "brain-mixed",
+  "brain-tag",
+  "brain-fog",
+  "spine-back",
+  "pulse-faint",
+];
 const SEVERITY: Record<ConditionId, "treat" | "watch"> = {
-  noheart: "treat", broken: "treat", "artery-left": "treat", "artery-right": "treat", "spine-align": "treat", "brain-double": "treat", "pulse-missing": "treat", "brain-agency": "treat", "lungs-hold": "treat", "kidney-none": "treat",
-  "pulse-skip": "watch", "lungs-one": "watch", "kidney-one": "watch", "brain-mixed": "watch", "brain-tag": "watch", "brain-fog": "watch", "spine-back": "watch", "pulse-faint": "watch",
+  noheart: "treat",
+  broken: "treat",
+  "artery-left": "treat",
+  "artery-right": "treat",
+  "spine-align": "treat",
+  "brain-double": "treat",
+  "pulse-missing": "treat",
+  "brain-agency": "treat",
+  "lungs-hold": "treat",
+  "kidney-none": "treat",
+  "pulse-skip": "watch",
+  "lungs-one": "watch",
+  "kidney-one": "watch",
+  "brain-mixed": "watch",
+  "brain-tag": "watch",
+  "brain-fog": "watch",
+  "spine-back": "watch",
+  "pulse-faint": "watch",
 };
 const ORGAN_OF: Record<ConditionId, OrganId> = {
-  noheart: "heart", broken: "heart", "artery-left": "heart", "artery-right": "heart", "lungs-hold": "lungs", "lungs-one": "lungs", "kidney-none": "kidneys", "kidney-one": "kidneys",
-  "brain-fog": "brain", "brain-mixed": "brain", "brain-double": "brain", "brain-tag": "brain", "spine-align": "spine", "spine-back": "spine", "pulse-skip": "pulse", "pulse-faint": "pulse", "brain-agency": "brain", "pulse-missing": "pulse",
+  noheart: "heart",
+  broken: "heart",
+  "artery-left": "heart",
+  "artery-right": "heart",
+  "lungs-hold": "lungs",
+  "lungs-one": "lungs",
+  "kidney-none": "kidneys",
+  "kidney-one": "kidneys",
+  "brain-fog": "brain",
+  "brain-mixed": "brain",
+  "brain-double": "brain",
+  "brain-tag": "brain",
+  "spine-align": "spine",
+  "spine-back": "spine",
+  "pulse-skip": "pulse",
+  "pulse-faint": "pulse",
+  "brain-agency": "brain",
+  "pulse-missing": "pulse",
 };
 /** New registrations usually show up within a few weeks; after six, an unconfirmed one is worth a look. */
 export const CONFIRM_AFTER_DAYS = 42;
@@ -94,31 +194,46 @@ export type CheckupInput = {
 const songs = (n: number) => `${n} song${n === 1 ? "" : "s"}`;
 const recs = (n: number) => `${n} recording${n === 1 ? "" : "s"}`;
 const names = (list: AffectedSong[]) => list.map((s) => `"${s.title}"`);
-const plain = (list: string[]) => (list.length < 3 ? list.join(" and ") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`);
+const plain = (list: string[]) =>
+  list.length < 3 ? list.join(" and ") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
 const named = (rows: Contributor[]) => rows.filter((w) => creditName(w));
 const writersOf = (m: Metadata) => named([...m.writers, ...m.composers]);
 const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 /** The society most of these songs point at for one pillar, from their checklist steps. */
-function societyFor(list: CheckupInput["rows"], ids: Set<string>, pillar: string): Society | undefined {
+function societyFor(
+  list: CheckupInput["rows"],
+  ids: Set<string>,
+  pillar: string,
+): Society | undefined {
   const count = new Map<string, { s: Society; n: number }>();
   for (const { r, c } of list) {
     if (!ids.has(r.track.id)) continue;
-    const s = c.steps.find((x) => x.stage === "register" && x.pillar === pillar)?.society ?? c.steps.find((x) => x.pillar === pillar)?.society;
+    const s =
+      c.steps.find((x) => x.stage === "register" && x.pillar === pillar)?.society ??
+      c.steps.find((x) => x.pillar === pillar)?.society;
     if (s) count.set(s.id, { s, n: (count.get(s.id)?.n ?? 0) + 1 });
   }
   return [...count.values()].sort((a, b) => b.n - a.n)[0]?.s;
 }
 
-export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOString() }: CheckupInput): Checkup {
+export function royaltyCheckup({
+  rows,
+  signedSheets,
+  today = new Date().toISOString(),
+}: CheckupInput): Checkup {
   const hits = new Map<ConditionId, AffectedSong[]>();
   // One song is listed once per finding: a second reason for the same song (e.g. two streaming mismatches, or two
   // agency lists) joins the first instead of counting the song twice.
   const hit = (id: ConditionId, s: AffectedSong) => {
     const list = hits.get(id) ?? [];
     const same = list.find((x) => x.id === s.id);
-    if (!same) { hits.set(id, [...list, s]); return; }
+    if (!same) {
+      hits.set(id, [...list, s]);
+      return;
+    }
     if (!same.why.split("; ").includes(s.why)) same.why = `${same.why}; ${s.why}`;
-    same.field ??= s.field; same.society ??= s.society;
+    same.field ??= s.field;
+    same.society ??= s.society;
     if (s.unsure) same.unsure = true;
     if (s.registration === false) same.registration = false;
   };
@@ -129,20 +244,34 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
   const ageDays = (iso: string) => (Date.parse(today) - Date.parse(iso)) / 86_400_000;
 
   for (const { r, c, status } of rows) {
-    const t = r.track, m = t.metadata, id = t.id, title = t.title || "Untitled";
-    const song = (why: string, field?: string, registration = false): AffectedSong => ({ id, title, why, field, registration });
+    const t = r.track,
+      m = t.metadata,
+      id = t.id,
+      title = t.title || "Untitled";
+    const song = (why: string, field?: string, registration = false): AffectedSong => ({
+      id,
+      title,
+      why,
+      field,
+      registration,
+    });
     // Check-in answers (HealthCheckIn): "Not sure" about a registration, a split sheet signed elsewhere, a release still to come.
     const answer = (k: string) => status?.steps[`checkin:${k}`];
-    const unsure = (s?: Society): Partial<AffectedSong> => (s && answer(s.id) === "unsure" ? { unsure: true, why: `not sure it's registered with ${s.name}` } : {});
+    const unsure = (s?: Society): Partial<AffectedSong> =>
+      s && answer(s.id) === "unsure"
+        ? { unsure: true, why: `not sure it's registered with ${s.name}` }
+        : {};
     // Not out yet: the song's release date / "isn't released yet" box (pre-distribution), or the check-in says so.
     const unreleased = c.prerelease || (answer("delivered") === "no" && !r.streaming?.hit);
     const before = unreleased ? ": register before release so it's on file from day one" : "";
-    const step = (stage: string, pillar: string) => c.steps.find((s) => s.stage === stage && s.pillar === pillar);
+    const step = (stage: string, pillar: string) =>
+      c.steps.find((s) => s.stage === stage && s.pillar === pillar);
     const writers = writersOf(m);
     const pubs = named(m.publishers);
     for (const p of r.pillars) {
       pillarSongs[p.pillar]++;
-      if (step("register", p.pillar)?.done || step("register", p.pillar)?.update) registered[p.pillar]++;
+      if (step("register", p.pillar)?.done || step("register", p.pillar)?.update)
+        registered[p.pillar]++;
     }
 
     // Heart: both halves (writer and publisher) must be there. A missing publisher never stops the writer share, and BMI
@@ -151,57 +280,136 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
     // Per writer (readiness.ts publishingGaps): a writer marked "no publishing on this song" or Self-published is covered.
     const gaps = publishingGaps(m);
     const noPublisher = gaps.length > 0;
-    const needPublisher = gaps.length < writers.length ? `no publisher for ${plain(gaps.map((g) => g.who))}` : "no publisher";
-    if (noWriter || noPublisher) hit("broken", song(noWriter ? "no writer" : needPublisher, noWriter ? "writers-0-legalName" : gaps[0]?.field ?? "selfPublished"));
+    const needPublisher =
+      gaps.length < writers.length
+        ? `no publisher for ${plain(gaps.map((g) => g.who))}`
+        : "no publisher";
+    if (noWriter || noPublisher)
+      hit(
+        "broken",
+        song(
+          noWriter ? "no writer" : needPublisher,
+          noWriter ? "writers-0-legalName" : (gaps[0]?.field ?? "selfPublished"),
+        ),
+      );
     if (!noPro && writers.length) {
       const why: string[] = [];
-      const missingIpi = [...m.writers.map((w, i) => ({ w, f: `writers-${i}-ipi` })), ...m.composers.map((w, i) => ({ w, f: `composers-${i}-ipi` }))]
-        .find(({ w }) => creditName(w) && hasPro(w.pro) && !isIpi(w.ipi ?? ""));
+      const missingIpi = [
+        ...m.writers.map((w, i) => ({ w, f: `writers-${i}-ipi` })),
+        ...m.composers.map((w, i) => ({ w, f: `composers-${i}-ipi` })),
+      ].find(({ w }) => creditName(w) && hasPro(w.pro) && !isIpi(w.ipi ?? ""));
       if (missingIpi) why.push("IPI missing");
       const reg = step("register", "performance");
-      const notSure = reg && !reg.done && !reg.update && reg.society && answer(reg.society.id) === "unsure";
-      if (reg && !reg.done && !reg.update) why.push(notSure ? `not sure it's registered with ${reg.society!.name}` : `not registered with ${reg.society?.name ?? "your PRO"}${before}`);
-      if (why.length) hit("artery-left", { ...song(why.join(", "), missingIpi?.f, !missingIpi), ...(notSure ? { unsure: true } : {}) });
+      const notSure =
+        reg && !reg.done && !reg.update && reg.society && answer(reg.society.id) === "unsure";
+      if (reg && !reg.done && !reg.update)
+        why.push(
+          notSure
+            ? `not sure it's registered with ${reg.society!.name}`
+            : `not registered with ${reg.society?.name ?? "your PRO"}${before}`,
+        );
+      if (why.length)
+        hit("artery-left", {
+          ...song(why.join(", "), missingIpi?.f, !missingIpi),
+          ...(notSure ? { unsure: true } : {}),
+        });
     }
     const pubIpi = m.publishers.findIndex((p) => creditName(p) && !isIpi(p.ipi ?? ""));
-    if (pubIpi >= 0) hit("artery-right", song(`${creditName(m.publishers[pubIpi]!)}: IPI missing`, `publishers-${pubIpi}-ipi`));
+    if (pubIpi >= 0)
+      hit(
+        "artery-right",
+        song(`${creditName(m.publishers[pubIpi]!)}: IPI missing`, `publishers-${pubIpi}-ipi`),
+      );
 
     // Lungs (mechanicals) and kidneys (the recording's digital performance), when the country has those agencies.
     const mech = step("register", "mechanical");
-    if (mech && !mech.done && !mech.update) hit("lungs-hold", { ...song(`not registered with ${mech.society?.name}${before}`, undefined, true), ...unsure(mech.society) });
+    if (mech && !mech.done && !mech.update)
+      hit("lungs-hold", {
+        ...song(`not registered with ${mech.society?.name}${before}`, undefined, true),
+        ...unsure(mech.society),
+      });
     else if (mech && !m.isrc.trim()) hit("lungs-one", song("no ISRC", "isrc"));
     const dig = step("register", "digital");
     // A recording that isn't out yet gets registered once it's released, so it isn't a finding until then.
-    if (dig && !dig.done && !dig.update && !unreleased) hit("kidney-none", { ...song(`not registered with ${dig.society?.name}`, undefined, true), ...unsure(dig.society) });
+    if (dig && !dig.done && !dig.update && !unreleased)
+      hit("kidney-none", {
+        ...song(`not registered with ${dig.society?.name}`, undefined, true),
+        ...unsure(dig.society),
+      });
     if (dig && dig.society?.id === "soundexchange" && m.isrc.trim()) {
       const owner = registrationCheck(m, "soundexchange").missing.filter((x) => x.code !== "isrc");
-      if (owner.length) hit("kidney-one", song(owner.map((x) => (x.code === "upc" ? "UPC missing" : "master share missing")).join(", "), owner[0]!.field));
+      if (owner.length)
+        hit(
+          "kidney-one",
+          song(
+            owner
+              .map((x) => (x.code === "upc" ? "UPC missing" : "master share missing"))
+              .join(", "),
+            owner[0]!.field,
+          ),
+        );
     }
 
     // Brain: the codes agencies recognise a song by. The ISWC only counts once the song is registered with a PRO.
-    const codes = [!m.isrc.trim() && "ISRC", step("register", "performance")?.done && !m.iswc.trim() && "ISWC"].filter(Boolean) as string[];
-    if (codes.length) hit("brain-fog", song(`${plain(codes)} missing`, codes[0] === "ISRC" ? "isrc" : "iswc"));
-    for (const f of r.findings) if (f.level === "warn") hit("brain-tag", song(f.text, f.field === "writers" ? "writers-0-legalName" : f.field));
+    const codes = [
+      !m.isrc.trim() && "ISRC",
+      step("register", "performance")?.done && !m.iswc.trim() && "ISWC",
+    ].filter(Boolean) as string[];
+    if (codes.length)
+      hit("brain-fog", song(`${plain(codes)} missing`, codes[0] === "ISRC" ? "isrc" : "iswc"));
+    for (const f of r.findings)
+      if (f.level === "warn")
+        hit("brain-tag", song(f.text, f.field === "writers" ? "writers-0-legalName" : f.field));
 
     // Spine: splits that add up, and a signed split sheet whenever there's more than one writer.
     const split = splitStatus(writers);
     const pie = publisherPie(m);
-    if (split.state === "over" || (split.state === "under" && split.total > 0) || (split.state === "empty" && writers.length > 1)) hit("spine-align", song(split.state === "empty" ? "no shares entered" : `writers total ${split.total}%`, "writers-0-share"));
-    else if (pie.state === "over" || pie.state === "under") hit("spine-align", song(`publisher shares total ${pie.total}%`, pie.parts[0]?.field ?? "publishers-0-share"));
+    if (
+      split.state === "over" ||
+      (split.state === "under" && split.total > 0) ||
+      (split.state === "empty" && writers.length > 1)
+    )
+      hit(
+        "spine-align",
+        song(
+          split.state === "empty" ? "no shares entered" : `writers total ${split.total}%`,
+          "writers-0-share",
+        ),
+      );
+    else if (pie.state === "over" || pie.state === "under")
+      hit(
+        "spine-align",
+        song(`publisher shares total ${pie.total}%`, pie.parts[0]?.field ?? "publishers-0-share"),
+      );
     // A sheet signed outside Came Through Audio counts once the check-in says so; without either, there's nothing to read.
     const sheet = answer("split");
     if ((signedSheets || sheet) && writers.length > 1 && !signedSheets?.get(id) && sheet !== "yes")
-      hit("spine-back", song(signedSheets?.has(id) ? "split sheet not signed by everyone" : sheet === "unsure" ? "not sure a split sheet was signed" : "no split sheet"));
+      hit(
+        "spine-back",
+        song(
+          signedSheets?.has(id)
+            ? "split sheet not signed by everyone"
+            : sheet === "unsure"
+              ? "not sure a split sheet was signed"
+              : "no split sheet",
+        ),
+      );
 
     // Pulse: registrations that went stale (edited since) or were never confirmed.
-    const stale = c.steps.filter((s) => s.update).map((s) => s.society?.name).filter(Boolean) as string[];
+    const stale = c.steps
+      .filter((s) => s.update)
+      .map((s) => s.society?.name)
+      .filter(Boolean) as string[];
     if (stale.length) hit("pulse-skip", song(`changed since registering with ${plain(stale)}`));
-    const faint = c.steps.filter((s) => s.stage === "register" && s.done && s.society).filter((s) => {
-      const at = status?.steps[`registered:${s.society!.id}`];
-      const confirmed = c.steps.find((x) => x.stage === "confirm" && x.pillar === s.pillar)?.done;
-      return at && !confirmed && ageDays(at) > CONFIRM_AFTER_DAYS;
-    });
-    if (faint.length) hit("pulse-faint", song(`not confirmed at ${plain(faint.map((s) => s.society!.name))}`));
+    const faint = c.steps
+      .filter((s) => s.stage === "register" && s.done && s.society)
+      .filter((s) => {
+        const at = status?.steps[`registered:${s.society!.id}`];
+        const confirmed = c.steps.find((x) => x.stage === "confirm" && x.pillar === s.pillar)?.done;
+        return at && !confirmed && ageDays(at) > CONFIRM_AFTER_DAYS;
+      });
+    if (faint.length)
+      hit("pulse-faint", song(`not confirmed at ${plain(faint.map((s) => s.society!.name))}`));
 
     // Uploaded agency lists: what the agency has on file, compared with the catalog.
     for (const [k, v] of Object.entries(status?.steps ?? {})) {
@@ -210,192 +418,598 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
       const sid = k.slice(5);
       const society = c.steps.find((x) => x.society?.id === sid)?.society;
       const name = society?.name ?? sid.toUpperCase();
-      if (note && "issues" in note && note.issues.length) hit("brain-agency", { ...song(`${name}: ${note.issues[0]}${note.issues.length > 1 ? ` (+${note.issues.length - 1} more)` : ""}`), society });
-      if (note && "missing" in note && status?.steps[`registered:${sid}`]) hit("pulse-missing", { ...song(`not on your ${name} list`), society });
+      if (note && "issues" in note && note.issues.length)
+        hit("brain-agency", {
+          ...song(
+            `${name}: ${note.issues[0]}${note.issues.length > 1 ? ` (+${note.issues.length - 1} more)` : ""}`,
+          ),
+          society,
+        });
+      if (note && "missing" in note && status?.steps[`registered:${sid}`])
+        hit("pulse-missing", { ...song(`not on your ${name} list`), society });
     }
   }
-  if (noPro) for (const { r } of rows) if (writersOf(r.track.metadata).length) hit("noheart", { id: r.track.id, title: r.track.title || "Untitled", why: "no PRO", field: "writers-0-pro" });
+  if (noPro)
+    for (const { r } of rows)
+      if (writersOf(r.track.metadata).length)
+        hit("noheart", {
+          id: r.track.id,
+          title: r.track.title || "Untitled",
+          why: "no PRO",
+          field: "writers-0-pro",
+        });
 
   // Catalog-wide brain checks: one writer entered two ways, and one ISRC on two songs.
-  const people = new Map<string, { names: Set<string>; ipis: Set<string>; songs: Map<string, string> }>();
-  for (const { r } of rows) for (const w of writersOf(r.track.metadata)) {
-    const k = key(creditName(w));
-    const p = people.get(k) ?? { names: new Set(), ipis: new Set(), songs: new Map() };
-    p.names.add(creditName(w)); if (w.ipi?.trim()) p.ipis.add(w.ipi.trim()); p.songs.set(r.track.id, r.track.title || "Untitled");
-    people.set(k, p);
-  }
+  const people = new Map<
+    string,
+    { names: Set<string>; ipis: Set<string>; songs: Map<string, string> }
+  >();
+  for (const { r } of rows)
+    for (const w of writersOf(r.track.metadata)) {
+      const k = key(creditName(w));
+      const p = people.get(k) ?? { names: new Set(), ipis: new Set(), songs: new Map() };
+      p.names.add(creditName(w));
+      if (w.ipi?.trim()) p.ipis.add(w.ipi.trim());
+      p.songs.set(r.track.id, r.track.title || "Untitled");
+      people.set(k, p);
+    }
   for (const p of people.values()) {
     if (p.ipis.size < 2 && p.names.size < 2) continue;
     const who = [...p.names][0]!;
-    const why = p.ipis.size > 1 ? `${who}: two different IPI numbers` : `${who}: spelled ${plain([...p.names].map((n) => `"${n}"`))}`;
-    for (const [id, title] of p.songs) hit("brain-mixed", { id, title, why, field: "writers-0-ipi" });
+    const why =
+      p.ipis.size > 1
+        ? `${who}: two different IPI numbers`
+        : `${who}: spelled ${plain([...p.names].map((n) => `"${n}"`))}`;
+    for (const [id, title] of p.songs)
+      hit("brain-mixed", { id, title, why, field: "writers-0-ipi" });
   }
   const byIsrc = new Map<string, AffectedSong[]>();
   for (const { r } of rows) {
     const k = r.track.metadata.isrc.replace(/-/g, "").toUpperCase();
-    if (k) byIsrc.set(k, [...(byIsrc.get(k) ?? []), { id: r.track.id, title: r.track.title || "Untitled", why: `ISRC ${k} on more than one song`, field: "isrc" }]);
+    if (k)
+      byIsrc.set(k, [
+        ...(byIsrc.get(k) ?? []),
+        {
+          id: r.track.id,
+          title: r.track.title || "Untitled",
+          why: `ISRC ${k} on more than one song`,
+          field: "isrc",
+        },
+      ]);
   }
-  for (const list of byIsrc.values()) if (list.length > 1) list.forEach((s) => hit("brain-double", s));
+  for (const list of byIsrc.values())
+    if (list.length > 1) list.forEach((s) => hit("brain-double", s));
 
-  const findings = PRIORITY.filter((id) => hits.get(id)?.length).map((id) => checkFirst(word(id, hits.get(id)!, rows)));
+  const findings = PRIORITY.filter((id) => hits.get(id)?.length).map((id) =>
+    checkFirst(word(id, hits.get(id)!, rows)),
+  );
   const organs = ORGAN_ORDER.map((id): Organ => {
     const mine = findings.filter((f) => f.organ === id);
-    const pillar = id === "heart" ? "performance" : id === "lungs" ? "mechanical" : id === "kidneys" ? "digital" : undefined;
+    const pillar =
+      id === "heart"
+        ? "performance"
+        : id === "lungs"
+          ? "mechanical"
+          : id === "kidneys"
+            ? "digital"
+            : undefined;
     // No flow: nothing registered for this stream yet, and nothing wrong in the data itself (a broken heart still shows broken).
-    const dataTreat = mine.some((f) => f.severity === "treat" && f.songs.some((s) => !s.registration));
+    const dataTreat = mine.some(
+      (f) => f.severity === "treat" && f.songs.some((s) => !s.registration),
+    );
     const noflow = !!pillar && pillarSongs[pillar] > 0 && registered[pillar] === 0 && !dataTreat;
-    const state: OrganState = noflow ? "noflow" : mine.some((f) => f.severity === "treat") ? "treat" : mine.length ? "watch" : "healthy";
-    return { id, name: ORGAN_NAME[id], system: SYSTEM[id], state, findings: mine, checks: CHECKS[id], broken: mine.some((f) => f.id === "broken") };
-  }).filter((o) => o.id !== "kidneys" || pillarSongs.digital > 0).filter((o) => o.id !== "lungs" || pillarSongs.mechanical > 0);
-  const lead = [...findings].sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "treat" ? -1 : 1) || b.songs.length - a.songs.length || PRIORITY.indexOf(a.id) - PRIORITY.indexOf(b.id))[0] ?? null;
+    const state: OrganState = noflow
+      ? "noflow"
+      : mine.some((f) => f.severity === "treat")
+        ? "treat"
+        : mine.length
+          ? "watch"
+          : "healthy";
+    return {
+      id,
+      name: ORGAN_NAME[id],
+      system: SYSTEM[id],
+      state,
+      findings: mine,
+      checks: CHECKS[id],
+      broken: mine.some((f) => f.id === "broken"),
+    };
+  })
+    .filter((o) => o.id !== "kidneys" || pillarSongs.digital > 0)
+    .filter((o) => o.id !== "lungs" || pillarSongs.mechanical > 0);
+  const lead =
+    [...findings].sort(
+      (a, b) =>
+        (a.severity === b.severity ? 0 : a.severity === "treat" ? -1 : 1) ||
+        b.songs.length - a.songs.length ||
+        PRIORITY.indexOf(a.id) - PRIORITY.indexOf(b.id),
+    )[0] ?? null;
   // Each song: half its details, scored per agency (health.ts songDataScore), half its checklist progress
   // (registered and confirmed). 100% only when both are complete.
   const songScore = ({ r, c }: CheckupInput["rows"][number]) => {
-    const data = songDataScore(r), steps = c.total ? c.done / c.total : 0;
+    const data = songDataScore(r),
+      steps = c.total ? c.done / c.total : 0;
     return data === 1 && steps === 1 ? 1 : Math.min(0.99, (data + steps) / 2);
   };
-  const score = rows.length ? Math.round(rows.reduce((n, x) => n + songScore(x), 0) / rows.length * 100) : 0;
+  const score = rows.length
+    ? Math.round((rows.reduce((n, x) => n + songScore(x), 0) / rows.length) * 100)
+    : 0;
   const rank: OrganState[] = ["treat", "noflow", "watch", "healthy"];
   const rhythm = rank.find((s) => organs.some((o) => o.state === s)) ?? "healthy";
   return { score, songs: rows.length, organs, lead, rhythm };
 }
 
 const SYSTEM: Record<OrganId, string> = {
-  heart: "Performance royalties (your PRO)", lungs: "Mechanicals (The MLC)", kidneys: "Digital performance (SoundExchange)",
-  brain: "Metadata and identifiers", spine: "Splits and paperwork", pulse: "Follow-through",
+  heart: "Performance royalties (your PRO)",
+  lungs: "Mechanicals (The MLC)",
+  kidneys: "Digital performance (SoundExchange)",
+  brain: "Metadata and identifiers",
+  spine: "Splits and paperwork",
+  pulse: "Follow-through",
 };
 /** What each organ examines, listed as "what we examined" when it's healthy. */
 const CHECKS: Record<OrganId, string[]> = {
-  heart: ["Every song has a writer and a publisher side (Self-published, or BMI writers with no publisher: BMI pays them both)", "Writers in a PRO have their IPI", "Publishers have their IPI", "Songs are registered with your PRO"],
-  lungs: ["Songs are registered for mechanicals", "Registered songs have an ISRC to link the recording"],
-  kidneys: ["Recordings are registered for digital performance", "Recordings have a UPC and master share"],
-  brain: ["Every song has an ISRC", "Registered songs have their ISWC", "No writer has two different IPIs or spellings", "No ISRC is used twice", "Streaming matches your titles and artist name"],
-  spine: ["Writer splits total 100%", "Publisher shares total 100% of the publisher half", "Songs with co-writers have a signed split sheet"],
-  pulse: ["Registrations match your latest details", `Registrations are confirmed within ${CONFIRM_AFTER_DAYS / 7} weeks`],
+  heart: [
+    "Every song has a writer and a publisher side (Self-published, or BMI writers with no publisher: BMI pays them both)",
+    "Writers in a PRO have their IPI",
+    "Publishers have their IPI",
+    "Songs are registered with your PRO",
+  ],
+  lungs: [
+    "Songs are registered for mechanicals",
+    "Registered songs have an ISRC to link the recording",
+  ],
+  kidneys: [
+    "Recordings are registered for digital performance",
+    "Recordings have a UPC and master share",
+  ],
+  brain: [
+    "Every song has an ISRC",
+    "Registered songs have their ISWC",
+    "No writer has two different IPIs or spellings",
+    "No ISRC is used twice",
+    "Streaming matches your titles and artist name",
+  ],
+  spine: [
+    "Writer splits total 100%",
+    "Publisher shares total 100% of the publisher half",
+    "Songs with co-writers have a signed split sheet",
+  ],
+  pulse: [
+    "Registrations match your latest details",
+    `Registrations are confirmed within ${CONFIRM_AFTER_DAYS / 7} weeks`,
+  ],
 };
 
 /** "Not sure" at check-in: the treatment starts by searching the agency, so nothing gets registered twice. */
 function checkFirst(f: Finding): Finding {
   const doubt = f.songs.find((s) => s.unsure);
   if (!doubt) return f;
-  return { ...f, steps: [{ title: "Check first", text: "Not sure it's registered? Search for it at the agency before registering, so it isn't registered twice.", action: { kind: "changes", trackId: doubt.id } }, ...f.steps] };
+  return {
+    ...f,
+    steps: [
+      {
+        title: "Check first",
+        text: "Not sure it's registered? Search for it at the agency before registering, so it isn't registered twice.",
+        action: { kind: "changes", trackId: doubt.id },
+      },
+      ...f.steps,
+    ],
+  };
 }
 
 /** The approved wording (PLAN-royalty-health-report §2), filled in from the songs. */
 function word(id: ConditionId, list: AffectedSong[], rows: CheckupInput["rows"]): Finding {
-  const n = list.length, ids = new Set(list.map((s) => s.id)), first = list[0]!;
-  const fix = (title: string, text: string): TreatmentStep => ({ title, text, action: first.field ? { kind: "field", trackId: first.id, field: first.field } : undefined });
+  const n = list.length,
+    ids = new Set(list.map((s) => s.id)),
+    first = list[0]!;
+  const fix = (title: string, text: string): TreatmentStep => ({
+    title,
+    text,
+    action: first.field ? { kind: "field", trackId: first.id, field: first.field } : undefined,
+  });
   const pro = societyFor(rows, ids, "performance");
   const proName = pro?.name ?? "your PRO";
-  const mech = societyFor(rows, ids, "mechanical"), dig = societyFor(rows, ids, "digital");
-  const mechName = mech?.name ?? "your mechanical society", digName = dig?.name ?? "your recording society";
-  const at = (s: Society | undefined, title: string, text: string): TreatmentStep => ({ title, text, action: s ? { kind: "portal", ...portal(s) } : undefined });
-  const dl = (agency: "pro" | "mlc" | "soundexchange", title: string, text: string): TreatmentStep => ({ title, text, action: { kind: "download", agency } });
-  const tick = (title = "Tick Registered", text = "New registrations take a few weeks to show up. We'll remind you to confirm."): TreatmentStep => ({ title, text, action: { kind: "tick" } });
+  const mech = societyFor(rows, ids, "mechanical"),
+    dig = societyFor(rows, ids, "digital");
+  const mechName = mech?.name ?? "your mechanical society",
+    digName = dig?.name ?? "your recording society";
+  const at = (s: Society | undefined, title: string, text: string): TreatmentStep => ({
+    title,
+    text,
+    action: s ? { kind: "portal", ...portal(s) } : undefined,
+  });
+  const dl = (
+    agency: "pro" | "mlc" | "soundexchange",
+    title: string,
+    text: string,
+  ): TreatmentStep => ({ title, text, action: { kind: "download", agency } });
+  const tick = (
+    title = "Tick Registered",
+    text = "New registrations take a few weeks to show up. We'll remind you to confirm.",
+  ): TreatmentStep => ({ title, text, action: { kind: "tick" } });
   const total = rows.length;
-  const base = { id, organ: ORGAN_OF[id], severity: SEVERITY[id], songs: list, scan: SCAN_OF[id] ?? (id as ScanId) };
+  const base = {
+    id,
+    organ: ORGAN_OF[id],
+    severity: SEVERITY[id],
+    songs: list,
+    scan: SCAN_OF[id] ?? (id as ScanId),
+  };
   switch (id) {
     case "broken": {
       const noPub = (s: AffectedSong) => s.why.startsWith("no publisher");
-      const half = list.every(noPub) ? "the publisher half" : list.every((s) => s.why === "no writer") ? "the writer half" : "half";
+      const half = list.every(noPub)
+        ? "the publisher half"
+        : list.every((s) => s.why === "no writer")
+          ? "the writer half"
+          : "half";
       const bmi = list.some((s) => s.why.startsWith("no publisher for"));
-      return { ...base, dx: "Your heart is broken in two.", what: `${songs(n)} ${n === 1 ? "has" : "have"} only one half set up, so ${half} of the money has nowhere to go.${list.every(noPub) ? " The writer share still gets paid." : ""}`,
-        symptom: "Performance royalties for that half can't be paid to anyone, even when the song plays.",
-        cause: list.some(noPub) ? `No publisher is listed and Self-published isn't checked.${bmi ? " BMI writers are covered: with no publisher, BMI pays them the publisher share too. The other writers need a publisher, or Self-published." : ""}` : "No writer is listed.",
-        steps: [fix("Fill the gap", "Add the missing half in the song's Writer or Publisher section, or check Self-published."), dl("pro", "Download your PRO cheat sheet", "Every field your PRO asks for, filled in."),
-          at(pro, `Register at ${proName}`, `Register or update the ${n === 1 ? "song" : "songs"} in ${pro ? portal(pro).name : "your PRO's member portal"}.`), tick()],
-        note: "A heart needs both halves to beat." };
+      return {
+        ...base,
+        dx: "Your heart is broken in two.",
+        what: `${songs(n)} ${n === 1 ? "has" : "have"} only one half set up, so ${half} of the money has nowhere to go.${list.every(noPub) ? " The writer share still gets paid." : ""}`,
+        symptom:
+          "Performance royalties for that half can't be paid to anyone, even when the song plays.",
+        cause: list.some(noPub)
+          ? `No publisher is listed and Self-published isn't checked.${bmi ? " BMI writers are covered: with no publisher, BMI pays them the publisher share too. The other writers need a publisher, or Self-published." : ""}`
+          : "No writer is listed.",
+        steps: [
+          fix(
+            "Fill the gap",
+            "Add the missing half in the song's Writer or Publisher section, or check Self-published.",
+          ),
+          dl("pro", "Download your PRO cheat sheet", "Every field your PRO asks for, filled in."),
+          at(
+            pro,
+            `Register at ${proName}`,
+            `Register or update the ${n === 1 ? "song" : "songs"} in ${pro ? portal(pro).name : "your PRO's member portal"}.`,
+          ),
+          tick(),
+        ],
+        note: "A heart needs both halves to beat.",
+      };
     }
     case "artery-left": {
       const ipi = list.some((s) => s.why.includes("IPI"));
       const reg = list.some((s) => s.why.includes("not registered"));
-      return { ...base, dx: "Blockage in the left heart artery.", what: `${n} of ${total} songs can't pay your writer share from ${proName}.`,
+      return {
+        ...base,
+        dx: "Blockage in the left heart artery.",
+        what: `${n} of ${total} songs can't pay your writer share from ${proName}.`,
         symptom: `No writer royalties from ${proName} for these songs, even when they play on radio, TV or streaming.`,
-        cause: [ipi && "Your IPI number is missing", reg && `${ipi ? "those" : "Those"} songs aren't registered with ${proName} yet`].filter(Boolean).join(", and ") + ".",
-        steps: [...(ipi ? [fix("Add your IPI", `Add it once in Catalog Profile. It fills all ${n === 1 ? "of them" : n}.`)] : []), dl("pro", `Download your ${proName} cheat sheet`, `Every field ${proName} asks for, filled in.`),
-          at(pro, `Register at ${proName}`, `Register the ${songs(n)} in ${pro ? portal(pro).name : "your PRO's member portal"}.`), tick()],
-        note: "Strong, even breaths: one song at a time." };
+        cause:
+          [
+            ipi && "Your IPI number is missing",
+            reg && `${ipi ? "those" : "Those"} songs aren't registered with ${proName} yet`,
+          ]
+            .filter(Boolean)
+            .join(", and ") + ".",
+        steps: [
+          ...(ipi
+            ? [
+                fix(
+                  "Add your IPI",
+                  `Add it once in Catalog Profile. It fills all ${n === 1 ? "of them" : n}.`,
+                ),
+              ]
+            : []),
+          dl(
+            "pro",
+            `Download your ${proName} cheat sheet`,
+            `Every field ${proName} asks for, filled in.`,
+          ),
+          at(
+            pro,
+            `Register at ${proName}`,
+            `Register the ${songs(n)} in ${pro ? portal(pro).name : "your PRO's member portal"}.`,
+          ),
+          tick(),
+        ],
+        note: "Strong, even breaths: one song at a time.",
+      };
     }
     case "artery-right":
-      return { ...base, dx: "Blockage in the right heart artery.", what: `${songs(n)} can't pay the publisher share.`,
-        symptom: "The publisher half of the performance royalties can't be matched to the publisher.",
+      return {
+        ...base,
+        dx: "Blockage in the right heart artery.",
+        what: `${songs(n)} can't pay the publisher share.`,
+        symptom:
+          "The publisher half of the performance royalties can't be matched to the publisher.",
         cause: `${first.why.split(":")[0]} has no IPI on file, or isn't on the registration.`,
-        steps: [fix("Add the publisher IPI", "Find it in the publisher's PRO account."), dl("pro", "Download the cheat sheet", "With the publisher filled in."), at(pro, `Update at ${proName}`, `Add the publisher to each song at ${proName}.`)] };
+        steps: [
+          fix("Add the publisher IPI", "Find it in the publisher's PRO account."),
+          dl("pro", "Download the cheat sheet", "With the publisher filled in."),
+          at(pro, `Update at ${proName}`, `Add the publisher to each song at ${proName}.`),
+        ],
+      };
     case "noheart":
-      return { ...base, dx: "No heartbeat yet.", what: "None of your songs can collect performance royalties.", symptom: "Radio, TV, live and streaming performances of your songs pay nothing to you.",
+      return {
+        ...base,
+        dx: "No heartbeat yet.",
+        what: "None of your songs can collect performance royalties.",
+        symptom: "Radio, TV, live and streaming performances of your songs pay nothing to you.",
         cause: "You haven't joined a PRO.",
-        steps: [{ title: "Join a PRO", text: "Pick and join one: BMI, ASCAP and more from the worldwide list.", action: { kind: "join" } }, fix("Add it to your profile", "Add your PRO and IPI in Catalog Profile."), dl("pro", "Register your songs", "Use the cheat sheet to register every song.")] };
+        steps: [
+          {
+            title: "Join a PRO",
+            text: "Pick and join one: BMI, ASCAP and more from the worldwide list.",
+            action: { kind: "join" },
+          },
+          fix("Add it to your profile", "Add your PRO and IPI in Catalog Profile."),
+          dl("pro", "Register your songs", "Use the cheat sheet to register every song."),
+        ],
+      };
     case "lungs-hold":
-      return { ...base, dx: "You're holding your breath.", what: `${songs(n)} earn a mechanical royalty on every stream, but ${mechName} doesn't have them.`,
-        symptom: "Streams and downloads of these songs pay you no mechanical royalties.", cause: `Not registered with ${mechName}.`,
-        steps: [dl("mlc", `Download the ${mechName} file`, "Your songs, filled in for bulk registration."), at(mech, `Upload it at ${mechName}`, `Upload it in ${mech ? portal(mech).name : mechName} (bulk work registration).`), tick()] };
+      return {
+        ...base,
+        dx: "You're holding your breath.",
+        what: `${songs(n)} earn a mechanical royalty on every stream, but ${mechName} doesn't have them.`,
+        symptom: "Streams and downloads of these songs pay you no mechanical royalties.",
+        cause: `Not registered with ${mechName}.`,
+        steps: [
+          dl(
+            "mlc",
+            `Download the ${mechName} file`,
+            "Your songs, filled in for bulk registration.",
+          ),
+          at(
+            mech,
+            `Upload it at ${mechName}`,
+            `Upload it in ${mech ? portal(mech).name : mechName} (bulk work registration).`,
+          ),
+          tick(),
+        ],
+      };
     case "lungs-one":
-      return { ...base, dx: "Your lungs are only breathing on one side.", what: `${songs(n)} ${n === 1 ? "is" : "are"} registered with ${mechName} but ${n === 1 ? "isn't" : "aren't"} linked to ${n === 1 ? "its recording" : "their recordings"}.`,
-        symptom: "Streams can't be matched to the song, so the mechanical royalty from each stream may sit unpaid.", cause: "No ISRC on file.",
-        steps: [fix("Add the ISRC", "Your distributor gives you one for every recording."), dl("mlc", `Download the ${mechName} file`, "With the ISRCs filled in."), at(mech, `Update at ${mechName}`, `Upload it in ${mech ? portal(mech).name : mechName} to update ${n === 1 ? "the song" : `those ${n} songs`}.`), tick("Tick Updated", "We'll remind you to confirm the link.")] };
+      return {
+        ...base,
+        dx: "Your lungs are only breathing on one side.",
+        what: `${songs(n)} ${n === 1 ? "is" : "are"} registered with ${mechName} but ${n === 1 ? "isn't" : "aren't"} linked to ${n === 1 ? "its recording" : "their recordings"}.`,
+        symptom:
+          "Streams can't be matched to the song, so the mechanical royalty from each stream may sit unpaid.",
+        cause: "No ISRC on file.",
+        steps: [
+          fix("Add the ISRC", "Your distributor gives you one for every recording."),
+          dl("mlc", `Download the ${mechName} file`, "With the ISRCs filled in."),
+          at(
+            mech,
+            `Update at ${mechName}`,
+            `Upload it in ${mech ? portal(mech).name : mechName} to update ${n === 1 ? "the song" : `those ${n} songs`}.`,
+          ),
+          tick("Tick Updated", "We'll remind you to confirm the link."),
+        ],
+      };
     case "kidney-none":
-      return { ...base, dx: "Your kidneys aren't filtering.", what: `${recs(n)} ${n === 1 ? "isn't" : "aren't"} with ${digName}, so internet and satellite radio plays can't reach you.`,
-        symptom: "Nothing from internet and satellite radio, even when these recordings play there.", cause: `Not registered with ${digName}.`,
-        steps: [dl("soundexchange", `Download the ${digName} file`, "Your recordings, filled in."), at(dig, `Upload it at ${digName}`, `Upload it in ${dig ? portal(dig).name : digName}, as the artist and as the rights owner if you own your masters.`), tick()] };
+      return {
+        ...base,
+        dx: "Your kidneys aren't filtering.",
+        what: `${recs(n)} ${n === 1 ? "isn't" : "aren't"} with ${digName}, so internet and satellite radio plays can't reach you.`,
+        symptom:
+          "Nothing from internet and satellite radio, even when these recordings play there.",
+        cause: `Not registered with ${digName}.`,
+        steps: [
+          dl("soundexchange", `Download the ${digName} file`, "Your recordings, filled in."),
+          at(
+            dig,
+            `Upload it at ${digName}`,
+            `Upload it in ${dig ? portal(dig).name : digName}, as the artist and as the rights owner if you own your masters.`,
+          ),
+          tick(),
+        ],
+      };
     case "kidney-one":
-      return { ...base, dx: "Only one kidney is working.", what: `You're paid as the artist, but nobody collects the master owner's share on ${recs(n)}.`,
-        symptom: "The master owner's half of digital radio royalties goes uncollected.", cause: `${first.why.replace(/^./, (c) => c.toUpperCase())}.`,
-        steps: [fix("Add it", "Add the UPC and the share of the master you own."), dl("soundexchange", `Download the ${digName} file`, "With the rights owner details."), at(dig, "Register as the rights owner too", `In ${dig ? portal(dig).name : digName}.`)],
-        note: "If you own your masters, that's you twice." };
+      return {
+        ...base,
+        dx: "Only one kidney is working.",
+        what: `You're paid as the artist, but nobody collects the master owner's share on ${recs(n)}.`,
+        symptom: "The master owner's half of digital radio royalties goes uncollected.",
+        cause: `${first.why.replace(/^./, (c) => c.toUpperCase())}.`,
+        steps: [
+          fix("Add it", "Add the UPC and the share of the master you own."),
+          dl("soundexchange", `Download the ${digName} file`, "With the rights owner details."),
+          at(dig, "Register as the rights owner too", `In ${dig ? portal(dig).name : digName}.`),
+        ],
+        note: "If you own your masters, that's you twice.",
+      };
     case "brain-fog": {
       const codes = [...new Set(list.flatMap((s) => s.why.replace(" missing", "").split(" and ")))];
-      return { ...base, dx: "A little foggy.", what: `${songs(n)} ${n === 1 ? "is" : "are"} missing codes agencies use to recognize them: ${plain(codes)}.`,
-        symptom: "Agencies may not recognize these songs when plays come in.", cause: "Codes not entered yet.",
-        steps: [fix("Add the codes", "The ISRC comes from your distributor. The ISWC appears after your PRO registers the song."), { title: "Update each agency", text: "Download the agency files again and update your registrations.", action: { kind: "download", agency: "pro" } }] };
+      return {
+        ...base,
+        dx: "A little foggy.",
+        what: `${songs(n)} ${n === 1 ? "is" : "are"} missing codes agencies use to recognize them: ${plain(codes)}.`,
+        symptom: "Agencies may not recognize these songs when plays come in.",
+        cause: "Codes not entered yet.",
+        steps: [
+          fix(
+            "Add the codes",
+            "The ISRC comes from your distributor. The ISWC appears after your PRO registers the song.",
+          ),
+          {
+            title: "Update each agency",
+            text: "Download the agency files again and update your registrations.",
+            action: { kind: "download", agency: "pro" },
+          },
+        ],
+      };
     }
     case "brain-mixed": {
       const who = first.why.split(":")[0]!;
-      return { ...base, dx: "Mixed signals from the brain.", what: `${who} ${first.why.includes("IPI") ? "has two different IPI numbers" : "is spelled different ways"} across your songs.`,
-        symptom: "Agencies can split one writer into two people, and pay neither in full.", cause: "Entered differently on different songs.",
-        steps: [{ title: "Check the right one", text: `Look it up in ${who}'s PRO account.` }, fix("Correct it here", "Fix every song that has it wrong."), dl("pro", "Update the registrations", "Update the songs registered with the wrong one.")] };
+      return {
+        ...base,
+        dx: "Mixed signals from the brain.",
+        what: `${who} ${first.why.includes("IPI") ? "has two different IPI numbers" : "is spelled different ways"} across your songs.`,
+        symptom: "Agencies can split one writer into two people, and pay neither in full.",
+        cause: "Entered differently on different songs.",
+        steps: [
+          { title: "Check the right one", text: `Look it up in ${who}'s PRO account.` },
+          fix("Correct it here", "Fix every song that has it wrong."),
+          dl("pro", "Update the registrations", "Update the songs registered with the wrong one."),
+        ],
+      };
     }
     case "brain-double": {
       const [a, b] = names(list);
-      return { ...base, dx: "Double vision.", what: `${a} and ${b ?? "another song"} share one ISRC, so plays can be paid to the wrong song.`,
-        symptom: "Plays of one song can be counted for the other.", cause: "The same code was entered twice.",
-        steps: [{ title: "Check with your distributor", text: "Ask for the right ISRC for each recording." }, fix("Fix it here", "Each recording gets its own ISRC."), dl("soundexchange", "Update the agencies", `Update ${digName} and ${mechName}.`)] };
+      return {
+        ...base,
+        dx: "Double vision.",
+        what: `${a} and ${b ?? "another song"} share one ISRC, so plays can be paid to the wrong song.`,
+        symptom: "Plays of one song can be counted for the other.",
+        cause: "The same code was entered twice.",
+        steps: [
+          {
+            title: "Check with your distributor",
+            text: "Ask for the right ISRC for each recording.",
+          },
+          fix("Fix it here", "Each recording gets its own ISRC."),
+          dl("soundexchange", "Update the agencies", `Update ${digName} and ${mechName}.`),
+        ],
+      };
     }
     case "brain-tag":
-      return { ...base, dx: "You're wearing someone else's name tag.", what: `${names(list).slice(0, 1)[0]} shows up on streaming differently: ${first.why.replace(/\.$/, "")}.`,
-        symptom: "Agencies match plays by what streaming shows, so the wrong details can send money elsewhere.", cause: "Your distributor sent different details.",
-        steps: [{ title: "Ask your distributor to fix it", text: "Copy our ready-made correction message to their support.", action: { kind: "distributor", trackId: first.id } }, { title: "Then update the agencies", text: "Once streaming shows the right details.", action: { kind: "download", agency: "pro" } }] };
+      return {
+        ...base,
+        dx: "You're wearing someone else's name tag.",
+        what: `${names(list).slice(0, 1)[0]} shows up on streaming differently: ${first.why.replace(/\.$/, "")}.`,
+        symptom:
+          "Agencies match plays by what streaming shows, so the wrong details can send money elsewhere.",
+        cause: "Your distributor sent different details.",
+        steps: [
+          {
+            title: "Ask your distributor to fix it",
+            text: "Copy our ready-made correction message to their support.",
+            action: { kind: "distributor", trackId: first.id },
+          },
+          {
+            title: "Then update the agencies",
+            text: "Once streaming shows the right details.",
+            action: { kind: "download", agency: "pro" },
+          },
+        ],
+      };
     case "spine-align":
-      return { ...base, dx: "Your spine is out of alignment.", what: n > 1 ? `${songs(n)} have splits that don't add up to 100%.` : first.why.startsWith("no shares") ? `${names(list)[0]} has co-writers but no shares entered.` : `${names(list)[0]} splits total ${first.why.replace(/^\w+ total /, "")}.`,
-        symptom: "Agencies can hold every payment for the song until the splits add up.", cause: "Shares don't add up to 100%.",
-        steps: [fix("Make it 100%", "Lower or raise a share until they add up."), dl("pro", "Update your PRO", "Update the registration with the new splits."), dl("mlc", `Update ${mechName}`, "Update the shares there too.")] };
+      return {
+        ...base,
+        dx: "Your spine is out of alignment.",
+        what:
+          n > 1
+            ? `${songs(n)} have splits that don't add up to 100%.`
+            : first.why.startsWith("no shares")
+              ? `${names(list)[0]} has co-writers but no shares entered.`
+              : `${names(list)[0]} splits total ${first.why.replace(/^\w+ total /, "")}.`,
+        symptom: "Agencies can hold every payment for the song until the splits add up.",
+        cause: "Shares don't add up to 100%.",
+        steps: [
+          fix("Make it 100%", "Lower or raise a share until they add up."),
+          dl("pro", "Update your PRO", "Update the registration with the new splits."),
+          dl("mlc", `Update ${mechName}`, "Update the shares there too."),
+        ],
+      };
     case "spine-back":
-      return { ...base, dx: "Nothing's holding your back up.", what: `${songs(n)} with co-writers ${n === 1 ? "has" : "have"} no signed split sheet, so splits can be disputed and payments frozen.`,
-        symptom: "A disagreement over shares can freeze every payment for the song.", cause: "No signed agreement on file.",
-        steps: [{ title: "Send a split sheet", text: "Everyone signs the shares you agreed.", action: { kind: "split", trackId: first.id } }, dl("pro", "Register with the agreed splits", "At your PRO and every agency.")] };
+      return {
+        ...base,
+        dx: "Nothing's holding your back up.",
+        what: `${songs(n)} with co-writers ${n === 1 ? "has" : "have"} no signed split sheet, so splits can be disputed and payments frozen.`,
+        symptom: "A disagreement over shares can freeze every payment for the song.",
+        cause: "No signed agreement on file.",
+        steps: [
+          {
+            title: "Send a split sheet",
+            text: "Everyone signs the shares you agreed.",
+            action: { kind: "split", trackId: first.id },
+          },
+          dl("pro", "Register with the agreed splits", "At your PRO and every agency."),
+        ],
+      };
     case "pulse-skip":
-      return { ...base, dx: "Your pulse skipped a beat.", what: `${songs(n)} changed after you registered ${n === 1 ? "it" : "them"}. The agencies still have the old details.`,
-        symptom: "Royalties can be paid on old details, or held while the agency and your catalog disagree.", cause: "Changes made here haven't reached the agencies.",
-        steps: [{ title: "See what changed", text: "The song's checklist shows which registrations need updating.", action: { kind: "changes", trackId: first.id } }, dl("pro", "Download the updated file", "For each agency the song is registered with."), { title: "Update each registration", text: "Change the same details in each agency's portal." }, tick("Tick Updated", "The pulse steadies once every agency has the new details.")] };
+      return {
+        ...base,
+        dx: "Your pulse skipped a beat.",
+        what: `${songs(n)} changed after you registered ${n === 1 ? "it" : "them"}. The agencies still have the old details.`,
+        symptom:
+          "Royalties can be paid on old details, or held while the agency and your catalog disagree.",
+        cause: "Changes made here haven't reached the agencies.",
+        steps: [
+          {
+            title: "See what changed",
+            text: "The song's checklist shows which registrations need updating.",
+            action: { kind: "changes", trackId: first.id },
+          },
+          dl("pro", "Download the updated file", "For each agency the song is registered with."),
+          {
+            title: "Update each registration",
+            text: "Change the same details in each agency's portal.",
+          },
+          tick("Tick Updated", "The pulse steadies once every agency has the new details."),
+        ],
+      };
     case "brain-agency": {
-      const s = first.society, name = s?.name ?? first.why.split(":")[0]!;
-      return { ...base, dx: "Mixed signals from the brain.", what: `${songs(n)} ${n === 1 ? "doesn't" : "don't"} match what ${name} has on file.`,
-        symptom: "Agencies pay by what they have on file, so money can go to the wrong people or in the wrong shares.",
+      const s = first.society,
+        name = s?.name ?? first.why.split(":")[0]!;
+      return {
+        ...base,
+        dx: "Mixed signals from the brain.",
+        what: `${songs(n)} ${n === 1 ? "doesn't" : "don't"} match what ${name} has on file.`,
+        symptom:
+          "Agencies pay by what they have on file, so money can go to the wrong people or in the wrong shares.",
         cause: `Your catalog and your registration say different things: ${first.why.slice(name.length + 2)}.`,
-        steps: [{ title: "See the differences", text: "Each song's checklist lists exactly what's different.", action: { kind: "changes", trackId: first.id } },
-          { title: "Decide which is right", text: "If your catalog is right, update the registration. If the agency is right, fix it here." },
-          at(s, `Update at ${name}`, `Change the registration in ${s ? portal(s).name : name}.`), tick("Tick Updated", "Then upload a fresh list to confirm.")] };
+        steps: [
+          {
+            title: "See the differences",
+            text: "Each song's checklist lists exactly what's different.",
+            action: { kind: "changes", trackId: first.id },
+          },
+          {
+            title: "Decide which is right",
+            text: "If your catalog is right, update the registration. If the agency is right, fix it here.",
+          },
+          at(s, `Update at ${name}`, `Change the registration in ${s ? portal(s).name : name}.`),
+          tick("Tick Updated", "Then upload a fresh list to confirm."),
+        ],
+      };
     }
     case "pulse-missing": {
-      const s = first.society, name = s?.name ?? "the agency";
+      const s = first.society,
+        name = s?.name ?? "the agency";
       const file = s?.id === "mlc" ? "mlc" : s?.id === "soundexchange" ? "soundexchange" : "pro";
-      return { ...base, dx: "Your pulse is faint.", what: `${songs(n)} you marked registered ${n === 1 ? "isn't" : "aren't"} on your ${name} list.`,
-        symptom: "If a registration didn't go through, the money for it isn't coming.", cause: `${name}'s list doesn't have ${n === 1 ? "it" : "them"}.`,
-        steps: [at(s, `Check at ${name}`, "It may still be processing, or it didn't go through."), dl(file, "Register again if it's missing", "Download the file and register the songs that aren't there."), tick()] };
+      return {
+        ...base,
+        dx: "Your pulse is faint.",
+        what: `${songs(n)} you marked registered ${n === 1 ? "isn't" : "aren't"} on your ${name} list.`,
+        symptom: "If a registration didn't go through, the money for it isn't coming.",
+        cause: `${name}'s list doesn't have ${n === 1 ? "it" : "them"}.`,
+        steps: [
+          at(s, `Check at ${name}`, "It may still be processing, or it didn't go through."),
+          dl(
+            file,
+            "Register again if it's missing",
+            "Download the file and register the songs that aren't there.",
+          ),
+          tick(),
+        ],
+      };
     }
     case "pulse-faint":
-      return { ...base, dx: "Your pulse is faint.", what: `${songs(n)} ${n === 1 ? "was" : "were"} registered over ${CONFIRM_AFTER_DAYS / 7} weeks ago but ${n === 1 ? "hasn't" : "haven't"} been confirmed.`,
-        symptom: "If a registration didn't go through, you won't know until the money doesn't come.", cause: "Not confirmed yet.",
-        steps: [{ title: "Search for them", text: "Use the search links in each song's checklist.", action: { kind: "changes", trackId: first.id } }, { title: "Or upload your agency lists", text: "Confirm them all at once.", action: { kind: "upload" } }] };
+      return {
+        ...base,
+        dx: "Your pulse is faint.",
+        what: `${songs(n)} ${n === 1 ? "was" : "were"} registered over ${CONFIRM_AFTER_DAYS / 7} weeks ago but ${n === 1 ? "hasn't" : "haven't"} been confirmed.`,
+        symptom:
+          "If a registration didn't go through, you won't know until the money doesn't come.",
+        cause: "Not confirmed yet.",
+        steps: [
+          {
+            title: "Search for them",
+            text: "Use the search links in each song's checklist.",
+            action: { kind: "changes", trackId: first.id },
+          },
+          {
+            title: "Or upload your agency lists",
+            text: "Confirm them all at once.",
+            action: { kind: "upload" },
+          },
+        ],
+      };
   }
   throw new Error(`Unknown condition ${id as string}`);
 }
@@ -420,20 +1034,44 @@ export function diagnosisLine(f: { organ: OrganId; dx: string }): string {
 
 /** The headline when nothing is wrong. */
 export const CLEAR_DX = "Clean bill of health. Strong pulse.";
-export const CLEAR_WHAT = "Every song is registered and confirmed, so every royalty it earns can reach you. Came Through Audio came through for your catalog.";
+export const CLEAR_WHAT =
+  "Every song is registered and confirmed, so every royalty it earns can reach you. Came Through Audio came through for your catalog.";
 
 /** What a saved report keeps: enough to compare the next checkup and to list it under Past reports. */
-export type CheckupSummary = { score: number; songs: number; lead: string | null; organs: Partial<Record<OrganId, { state: OrganState; findings: { id: ConditionId; songs: number }[] }>> };
+export type CheckupSummary = {
+  score: number;
+  songs: number;
+  lead: string | null;
+  organs: Partial<
+    Record<OrganId, { state: OrganState; findings: { id: ConditionId; songs: number }[] }>
+  >;
+};
 export const summarize = (c: Checkup): CheckupSummary => ({
-  score: c.score, songs: c.songs, lead: c.lead?.dx ?? null,
-  organs: Object.fromEntries(c.organs.map((o) => [o.id, { state: o.state, findings: o.findings.map((f) => ({ id: f.id, songs: f.songs.length })) }])),
+  score: c.score,
+  songs: c.songs,
+  lead: c.lead?.dx ?? null,
+  organs: Object.fromEntries(
+    c.organs.map((o) => [
+      o.id,
+      { state: o.state, findings: o.findings.map((f) => ({ id: f.id, songs: f.songs.length })) },
+    ]),
+  ),
 });
 
 /** "Since last checkup": organs that healed, and findings that are new. */
 export function sinceLast(now: CheckupSummary, before?: CheckupSummary | null) {
   if (!before) return null;
-  const healed = ORGAN_ORDER.filter((id) => before.organs[id] && before.organs[id]!.state !== "healthy" && now.organs[id]?.state === "healthy").map((id) => ORGAN_NAME[id]);
-  const was = new Set(Object.values(before.organs).flatMap((o) => o?.findings.map((f) => f.id) ?? []));
-  const fresh = Object.values(now.organs).flatMap((o) => o?.findings ?? []).filter((f) => !was.has(f.id)).length;
+  const healed = ORGAN_ORDER.filter(
+    (id) =>
+      before.organs[id] &&
+      before.organs[id]!.state !== "healthy" &&
+      now.organs[id]?.state === "healthy",
+  ).map((id) => ORGAN_NAME[id]);
+  const was = new Set(
+    Object.values(before.organs).flatMap((o) => o?.findings.map((f) => f.id) ?? []),
+  );
+  const fresh = Object.values(now.organs)
+    .flatMap((o) => o?.findings ?? [])
+    .filter((f) => !was.has(f.id)).length;
   return { healed, fresh, delta: now.score - before.score };
 }

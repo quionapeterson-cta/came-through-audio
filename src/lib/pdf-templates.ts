@@ -291,13 +291,17 @@ export function fillTokens(text: string, data: Record<string, string> = SAMPLE_D
 
 /** The words a block can hold a token in, for the scanner; decoration (header, seal art) is left out. */
 function blockTokenText(block: TemplateBlock): string {
-  if (block.kind === "meta") return [block.heading, ...block.rows.flatMap((r) => [r.label, r.value])].join(" ");
+  if (block.kind === "meta")
+    return [block.heading, ...block.rows.flatMap((r) => [r.label, r.value])].join(" ");
   if (block.kind === "clause") return [block.heading, block.body, block.help].join(" ");
-  if (block.kind === "signatures") return [block.heading, ...block.parties.map((p) => p.label)].join(" ");
+  if (block.kind === "signatures")
+    return [block.heading, ...block.parties.map((p) => p.label)].join(" ");
   if (block.kind === "seal") return block.label;
   if (block.kind === "section") return [block.title, block.subtitle].join(" ");
-  if (block.kind === "fields") return [block.heading, ...block.fields.map((f) => f.label)].join(" ");
-  if (block.kind === "checkboxes") return [block.heading, ...block.options.map((o) => o.label)].join(" ");
+  if (block.kind === "fields")
+    return [block.heading, ...block.fields.map((f) => f.label)].join(" ");
+  if (block.kind === "checkboxes")
+    return [block.heading, ...block.options.map((o) => o.label)].join(" ");
   if (block.kind === "signature") return block.heading;
   if (block.kind === "date") return block.label;
   if (block.kind === "printName") return block.label;
@@ -311,7 +315,9 @@ function blockTokenText(block: TemplateBlock): string {
  */
 export function templateTokens(template: PdfTemplate): string[] {
   const found: string[] = [];
-  const add = (token: string) => { if (!found.includes(token)) found.push(token); };
+  const add = (token: string) => {
+    if (!found.includes(token)) found.push(token);
+  };
   for (const block of template.blocks) {
     if (block.kind === "signatures" && block.enabled === false) continue;
     if (block.kind === "printName") add("PRINT_LEGAL_NAME");
@@ -363,7 +369,10 @@ export function insertTokenAt(
   const after = text.slice(to);
   const lead = before && !/\s$/.test(before) ? " " : "";
   const trail = after && !/^\s/.test(after) ? " " : "";
-  return { text: `${before}${lead}${token}${trail}${after}`, caret: from + lead.length + token.length };
+  return {
+    text: `${before}${lead}${token}${trail}${after}`,
+    caret: from + lead.length + token.length,
+  };
 }
 
 const sameWords = (a: string, b: string) =>
@@ -374,14 +383,18 @@ const sameWords = (a: string, b: string) =>
  * title never appears twice (founder, 2026-11-21). The block itself is kept: only its repeated heading is blanked in the
  * preview, and the PDF (which has no outer title) still prints it.
  */
-export function withoutRepeatedLeadingTitle(blocks: TemplateBlock[], title: string): TemplateBlock[] {
+export function withoutRepeatedLeadingTitle(
+  blocks: TemplateBlock[],
+  title: string,
+): TemplateBlock[] {
   if (!title.trim()) return blocks;
   const index = blocks.findIndex(
     (b) => b.kind !== "header" && !(b.kind === "signatures" && b.enabled === false),
   );
   const first = blocks[index];
   if (!first) return blocks;
-  const heading = first.kind === "clause" ? first.heading : first.kind === "section" ? first.title : "";
+  const heading =
+    first.kind === "clause" ? first.heading : first.kind === "section" ? first.title : "";
   if (!heading.trim() || !sameWords(heading, title)) return blocks;
   return blocks.map((block, i) =>
     i !== index

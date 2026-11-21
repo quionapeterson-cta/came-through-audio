@@ -29,7 +29,12 @@ export function LaunchBanner() {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
   if (!IS_PRELAUNCH) return null;
 
   async function copyLink() {
@@ -61,8 +66,15 @@ export function LaunchBanner() {
     >
       <style>{WAVE_CSS}</style>
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
-        <span className="cta-wave flex h-4 items-center gap-[3px] text-[#1D4ED8] dark:text-[#00F0FF]" aria-hidden>
-          <span /><span /><span /><span /><span />
+        <span
+          className="cta-wave flex h-4 items-center gap-[3px] text-[#1D4ED8] dark:text-[#00F0FF]"
+          aria-hidden
+        >
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
         </span>
 
         {unlocked ? (

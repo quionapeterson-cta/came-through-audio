@@ -1,11 +1,26 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import type { CatalogTrack } from "@/lib/catalog";
 import type { PdfBrand } from "@/lib/brand-kit";
-import { accentOf, brandFooter, brandHeader, ensureSpace, headerDate, font, INK, label, MARGIN, MUTED, newBrandedPdf, prettyDate, RULE } from "@/lib/brand-pdf";
+import {
+  accentOf,
+  brandFooter,
+  brandHeader,
+  ensureSpace,
+  headerDate,
+  font,
+  INK,
+  label,
+  MARGIN,
+  MUTED,
+  newBrandedPdf,
+  prettyDate,
+  RULE,
+} from "@/lib/brand-pdf";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 import { saveBlob } from "@/lib/catalog";
 
-const names = (rows: Contributor[] | undefined) => (rows ?? []).map(creditName).filter(Boolean).join(", ");
+const names = (rows: Contributor[] | undefined) =>
+  (rows ?? []).map(creditName).filter(Boolean).join(", ");
 
 /** Writers with their role, e.g. "Jane Doe (Author/Composer)". Legal names only. */
 export function writerCredits(t: CatalogTrack) {
@@ -27,7 +42,10 @@ function groupByRelease(tracks: CatalogTrack[]) {
   }
   return [...groups.entries()]
     .sort(([a], [b]) => (a ? 0 : 1) - (b ? 0 : 1) || a.localeCompare(b))
-    .map(([album, list]) => ({ album, tracks: list.sort((a, b) => trackNo(a) - trackNo(b) || a.title.localeCompare(b.title)) }));
+    .map(([album, list]) => ({
+      album,
+      tracks: list.sort((a, b) => trackNo(a) - trackNo(b) || a.title.localeCompare(b.title)),
+    }));
 }
 
 const mostCommon = (values: string[]) => {
@@ -48,27 +66,64 @@ function songCard(pdf: JsPDF, y: number, t: CatalogTrack) {
   const w = pdf.internal.pageSize.getWidth() - MARGIN * 2;
   const inner = w - PAD * 2;
   const colW = inner / 3;
-  const ids: [string, string][] = [["ISRC", m.isrc], ["UPC", m.upc], ["ISWC", m.iswc], ["Genre", m.primaryGenre], ["Released", prettyDate(m.releaseDate)], ["Label", m.label]];
+  const ids: [string, string][] = [
+    ["ISRC", m.isrc],
+    ["UPC", m.upc],
+    ["ISWC", m.iswc],
+    ["Genre", m.primaryGenre],
+    ["Released", prettyDate(m.releaseDate)],
+    ["Label", m.label],
+  ];
   font(pdf, "regular", 11.5);
-  const idCells = ids.map(([l, v]) => ({ label: l, lines: (pdf.splitTextToSize(v || "—", colW - 4) as string[]).slice(0, 2) }));
-  const idRowH = [0, 3].map((s) => 5 + Math.max(...idCells.slice(s, s + 3).map((c) => c.lines.length)) * ID_LINE + 3);
-  const credits: [string, string][] = [["Writers", writerCredits(t)], ["Produced by", names(m.producers)], ["Publishers", names(m.publishers)]];
-  const creditCells = credits.map(([l, v]) => ({ label: l, lines: pdf.splitTextToSize(v || "—", inner - CREDIT_LABEL_W) as string[] }));
+  const idCells = ids.map(([l, v]) => ({
+    label: l,
+    lines: (pdf.splitTextToSize(v || "—", colW - 4) as string[]).slice(0, 2),
+  }));
+  const idRowH = [0, 3].map(
+    (s) => 5 + Math.max(...idCells.slice(s, s + 3).map((c) => c.lines.length)) * ID_LINE + 3,
+  );
+  const credits: [string, string][] = [
+    ["Writers", writerCredits(t)],
+    ["Produced by", names(m.producers)],
+    ["Publishers", names(m.publishers)],
+  ];
+  const creditCells = credits.map(([l, v]) => ({
+    label: l,
+    lines: pdf.splitTextToSize(v || "—", inner - CREDIT_LABEL_W) as string[],
+  }));
   const featured = m.featured?.filter(Boolean) ?? [];
   const titleText = `${t.title}${featured.length ? ` (feat. ${featured.join(", ")})` : ""}`;
   font(pdf, "semibold", 14);
   const titleLines = (pdf.splitTextToSize(titleText, inner - 12 - 18) as string[]).slice(0, 2);
 
-  const height = PAD + titleLines.length * 6.4 + 4 + idRowH[0]! + idRowH[1]! + 3 + creditCells.reduce((n, c) => n + c.lines.length * CREDIT_LINE + 2.5, 0) + PAD - 2;
+  const height =
+    PAD +
+    titleLines.length * 6.4 +
+    4 +
+    idRowH[0]! +
+    idRowH[1]! +
+    3 +
+    creditCells.reduce((n, c) => n + c.lines.length * CREDIT_LINE + 2.5, 0) +
+    PAD -
+    2;
   y = ensureSpace(pdf, y, height);
 
-  pdf.setDrawColor(...RULE).setLineWidth(0.35).roundedRect(MARGIN, y, w, height, 2.5, 2.5, "S");
+  pdf
+    .setDrawColor(...RULE)
+    .setLineWidth(0.35)
+    .roundedRect(MARGIN, y, w, height, 2.5, 2.5, "S");
   const x = MARGIN + PAD;
   let yy = y + PAD + 4.2;
-  if (m.trackNumber) font(pdf, "semibold", 14).setTextColor(...accentOf(pdf)).text(m.trackNumber, x, yy);
+  if (m.trackNumber)
+    font(pdf, "semibold", 14)
+      .setTextColor(...accentOf(pdf))
+      .text(m.trackNumber, x, yy);
   font(pdf, "semibold", 14).setTextColor(...INK);
   titleLines.forEach((line, i) => pdf.text(line, x + 12, yy + i * 6.4));
-  if (m.duration) font(pdf, "medium", 11.5).setTextColor(...MUTED).text(m.duration, x + inner, yy, { align: "right" });
+  if (m.duration)
+    font(pdf, "medium", 11.5)
+      .setTextColor(...MUTED)
+      .text(m.duration, x + inner, yy, { align: "right" });
   yy += (titleLines.length - 1) * 6.4 + 5.5;
 
   // Identifiers: a fixed 3 × 2 grid, label above value, so every card lines up.
@@ -82,18 +137,26 @@ function songCard(pdf: JsPDF, y: number, t: CatalogTrack) {
     yy += idRowH[ri]!;
   }
 
-  pdf.setDrawColor(...RULE).setLineWidth(0.25).line(x, yy, x + inner, yy);
+  pdf
+    .setDrawColor(...RULE)
+    .setLineWidth(0.25)
+    .line(x, yy, x + inner, yy);
   yy += 3 + 3.6;
   // Credits: labels in one fixed column, a thin blue rule, then names; long names wrap under the value, never under the label.
   const creditsTop = yy - 4;
   for (const c of creditCells) {
     // Accent credit labels match their entries in size.
-    font(pdf, "semibold", 11.5).setTextColor(...accentOf(pdf)).text(c.label, x, yy);
+    font(pdf, "semibold", 11.5)
+      .setTextColor(...accentOf(pdf))
+      .text(c.label, x, yy);
     font(pdf, "regular", 11.5).setTextColor(...(c.lines[0] === "—" ? MUTED : INK));
     c.lines.forEach((line, li) => pdf.text(line, x + CREDIT_LABEL_W, yy + li * CREDIT_LINE));
     yy += c.lines.length * CREDIT_LINE + 2.5;
   }
-  pdf.setDrawColor(...accentOf(pdf)).setLineWidth(0.5).line(x + CREDIT_RULE_X, creditsTop, x + CREDIT_RULE_X, yy - 2.5 - CREDIT_LINE + 1.6);
+  pdf
+    .setDrawColor(...accentOf(pdf))
+    .setLineWidth(0.5)
+    .line(x + CREDIT_RULE_X, creditsTop, x + CREDIT_RULE_X, yy - 2.5 - CREDIT_LINE + 1.6);
   return y + height + 5;
 }
 
@@ -103,11 +166,19 @@ function releaseHeading(pdf: JsPDF, y: number, album: string, tracks: CatalogTra
   y = ensureSpace(pdf, y, 60);
   const first = tracks[0]?.metadata;
   const year = /^\d{4}/.exec(first?.releaseDate ?? "")?.[0];
-  const detail = [album ? first?.releaseType : "", year, `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}`].filter(Boolean).join("  ·  ");
+  const detail = [
+    album ? first?.releaseType : "",
+    year,
+    `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}`,
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
   font(pdf, "bold", 14).setTextColor(...INK);
   const name = album || "Singles";
   pdf.text(name, MARGIN, y);
-  font(pdf, "regular", 10).setTextColor(...MUTED).text(detail, w - MARGIN, y, { align: "right" });
+  font(pdf, "regular", 10)
+    .setTextColor(...MUTED)
+    .text(detail, w - MARGIN, y, { align: "right" });
   pdf.setFillColor(...accentOf(pdf)).rect(MARGIN, y + 2.8, 14, 0.8, "F");
   return y + 9;
 }
@@ -117,7 +188,13 @@ export async function buildCatalogPdf(tracks: CatalogTrack[], brand?: PdfBrand |
   const pdf = await newBrandedPdf(brand);
   const artist = mostCommon(tracks.map((t) => t.artist));
   // Today's date sits at the top; the footer never carries one (founder, 2026-11-06).
-  let y = brandHeader(pdf, artist || "Catalog", "Master Catalog", `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}  ·  ${headerDate()}`, brand);
+  let y = brandHeader(
+    pdf,
+    artist || "Catalog",
+    "Master Catalog",
+    `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}  ·  ${headerDate()}`,
+    brand,
+  );
   for (const g of groupByRelease(tracks)) {
     y = releaseHeading(pdf, y, g.album, g.tracks);
     for (const t of g.tracks) y = songCard(pdf, y, t);
@@ -127,7 +204,11 @@ export async function buildCatalogPdf(tracks: CatalogTrack[], brand?: PdfBrand |
   return pdf;
 }
 
-export async function downloadCatalogPdf(tracks: CatalogTrack[], filename = "Catalog", brand?: PdfBrand | null) {
+export async function downloadCatalogPdf(
+  tracks: CatalogTrack[],
+  filename = "Catalog",
+  brand?: PdfBrand | null,
+) {
   const pdf = await buildCatalogPdf(tracks, brand);
   // Save through our own link rather than jsPDF's helper, so a blocked or suspended download raises instead of
   // silently doing nothing (founder, 2026-11-06: the buttons looked like they were sticking).

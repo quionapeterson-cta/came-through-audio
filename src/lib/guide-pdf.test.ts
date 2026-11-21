@@ -15,6 +15,11 @@ describe("blueprint PDF", () => {
   it("hands back a PDF with one tickable box per checklist item", async () => {
     const guide = BLUEPRINT_GUIDES.find((g) => g.id === "royalty-registration")!;
     const doc = await PDFDocument.load(await buildGuidePdfBytes(guide));
-    expect(doc.getForm().getFields().filter((f) => f instanceof PDFCheckBox)).toHaveLength(guide.checklist!.length);
+    expect(
+      doc
+        .getForm()
+        .getFields()
+        .filter((f) => f instanceof PDFCheckBox),
+    ).toHaveLength(guide.checklist!.length);
   });
 });

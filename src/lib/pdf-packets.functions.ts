@@ -495,7 +495,14 @@ export const emailPacketLink = createServerFn({ method: "POST" })
         recipientName: packet.recipient_name,
         link,
       }),
-      key: mailKey("pdf", "packet", packet.id, packet.recipient_email, "again", crypto.randomUUID()),
+      key: mailKey(
+        "pdf",
+        "packet",
+        packet.id,
+        packet.recipient_email,
+        "again",
+        crypto.randomUUID(),
+      ),
     });
     await recordPacketEmail(context, packet, res);
     return { emailed: res.ok, emailError: emailErrorText(res), link };
@@ -606,7 +613,9 @@ async function deliverCompleted(
     emailed: res.ok,
     resendId: res.id,
     // A staff member reads this, so it is our own sentence and never the provider's raw reply.
-    emailError: res.ok ? null : (emailErrorText(res) ?? "The email could not be sent. Copy the link instead."),
+    emailError: res.ok
+      ? null
+      : (emailErrorText(res) ?? "The email could not be sent. Copy the link instead."),
     pdfBase64: toBase64(pdf),
   };
 }
@@ -697,9 +706,7 @@ export const counterSignPacket = createServerFn({ method: "POST" })
  */
 export const emailPacketCopy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ id: z.string().uuid(), email: emailSchema }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), email: emailSchema }).parse(d))
   .handler(async ({ data, context }) => {
     await requirePacketSender(context);
     const { data: row, error } = await context.supabase

@@ -8,8 +8,10 @@
  */
 
 export type ReminderPriority = "standard" | "gold" | "urgent";
-export type ReminderDestination = "general" | "catalog" | "health" | "splits" | "contracts" | "blueprints" | "pdf";
-export type ReminderContextType = "custom" | "catalog" | "health_check" | "split_sheet" | "contract" | "blueprint";
+export type ReminderDestination =
+  "general" | "catalog" | "health" | "splits" | "contracts" | "blueprints" | "pdf";
+export type ReminderContextType =
+  "custom" | "catalog" | "health_check" | "split_sheet" | "contract" | "blueprint";
 export type ReminderState = "completed" | "snoozed" | "due" | "upcoming";
 export type CalendarTarget = "ics" | "google";
 
@@ -120,7 +122,8 @@ export const CONTEXT_DESTINATION: Record<ReminderContextType, ReminderDestinatio
 };
 
 export function makeId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+    return crypto.randomUUID();
   return `rem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
@@ -132,7 +135,11 @@ export function atDaysFromNow(days: number, hour = 10): string {
   return d.toISOString();
 }
 
-export function contextKeyFor(contextType: ReminderContextType, contextId: string, key: string): string {
+export function contextKeyFor(
+  contextType: ReminderContextType,
+  contextId: string,
+  key: string,
+): string {
   return `${contextType}:${contextId}:${key}`;
 }
 
@@ -152,40 +159,137 @@ export function buildHref(destination: ReminderDestination, link: ReminderLink =
 }
 
 /** The six smart presets that sit beside a module's own cards, tailored to what that module is for. */
-export function presetsFor(contextType: ReminderContextType, opts: { stepTitle?: string | undefined } = {}): ReminderPreset[] {
+export function presetsFor(
+  contextType: ReminderContextType,
+  opts: { stepTitle?: string | undefined } = {},
+): ReminderPreset[] {
   switch (contextType) {
     case "catalog":
       return [
-        { key: "in-14-days", label: "In 14 Days", title: "Check PRO registration approval & add ISWC to catalog", days: 14, destination: "catalog", priority: "standard", focusField: "iswc" },
-        { key: "in-30-days", label: "In 30 Days", title: "Audit MLC / SoundExchange / agency registration & distributor metadata sync", days: 30, destination: "catalog", priority: "gold", focusField: "metadata" },
+        {
+          key: "in-14-days",
+          label: "In 14 Days",
+          title: "Check PRO registration approval & add ISWC to catalog",
+          days: 14,
+          destination: "catalog",
+          priority: "standard",
+          focusField: "iswc",
+        },
+        {
+          key: "in-30-days",
+          label: "In 30 Days",
+          title: "Audit MLC / SoundExchange / agency registration & distributor metadata sync",
+          days: 30,
+          destination: "catalog",
+          priority: "gold",
+          focusField: "metadata",
+        },
       ];
     case "health_check":
       return [
-        { key: "in-7-days", label: "In 7 Days", title: "Re-run Royalty Health Check after updating writer/publisher splits", days: 7, destination: "health", priority: "standard" },
-        { key: "in-21-days", label: "In 21 Days", title: "Verify missing repertoire matches across BMI, ASCAP, MLC & SoundExchange", days: 21, destination: "health", priority: "gold" },
+        {
+          key: "in-7-days",
+          label: "In 7 Days",
+          title: "Re-run Royalty Health Check after updating writer/publisher splits",
+          days: 7,
+          destination: "health",
+          priority: "standard",
+        },
+        {
+          key: "in-21-days",
+          label: "In 21 Days",
+          title: "Verify missing repertoire matches across BMI, ASCAP, MLC & SoundExchange",
+          days: 21,
+          destination: "health",
+          priority: "gold",
+        },
       ];
     case "split_sheet":
       return [
-        { key: "in-3-days", label: "In 3 Days", title: "Resend pending split sheet signature email", days: 3, destination: "splits", priority: "standard", focusField: "collaborators" },
-        { key: "in-7-days", label: "In 7 Days", title: "Final follow-up before locking royalty splits", days: 7, destination: "splits", priority: "gold" },
+        {
+          key: "in-3-days",
+          label: "In 3 Days",
+          title: "Resend pending split sheet signature email",
+          days: 3,
+          destination: "splits",
+          priority: "standard",
+          focusField: "collaborators",
+        },
+        {
+          key: "in-7-days",
+          label: "In 7 Days",
+          title: "Final follow-up before locking royalty splits",
+          days: 7,
+          destination: "splits",
+          priority: "gold",
+        },
       ];
     case "contract":
       return [
-        { key: "in-3-days", label: "In 3 Days", title: "Resend pending contract signature request", days: 3, destination: "contracts", priority: "standard" },
-        { key: "in-30-days", label: "In 30 Days", title: "Review contract renewal / reversion window", days: 30, destination: "contracts", priority: "gold" },
+        {
+          key: "in-3-days",
+          label: "In 3 Days",
+          title: "Resend pending contract signature request",
+          days: 3,
+          destination: "contracts",
+          priority: "standard",
+        },
+        {
+          key: "in-30-days",
+          label: "In 30 Days",
+          title: "Review contract renewal / reversion window",
+          days: 30,
+          destination: "contracts",
+          priority: "gold",
+        },
       ];
     case "blueprint": {
       const step = opts.stepTitle?.trim() || "next Blueprint step";
       return [
-        { key: "tomorrow", label: "Tomorrow", title: `Complete next Blueprint step: ${step}`, days: 1, destination: "blueprints", priority: "standard" },
-        { key: "in-3-days", label: "In 3 Days", title: `Complete next Blueprint step: ${step}`, days: 3, destination: "blueprints", priority: "gold" },
+        {
+          key: "tomorrow",
+          label: "Tomorrow",
+          title: `Complete next Blueprint step: ${step}`,
+          days: 1,
+          destination: "blueprints",
+          priority: "standard",
+        },
+        {
+          key: "in-3-days",
+          label: "In 3 Days",
+          title: `Complete next Blueprint step: ${step}`,
+          days: 3,
+          destination: "blueprints",
+          priority: "gold",
+        },
       ];
     }
     default:
       return [
-        { key: "tomorrow", label: "Tomorrow", title: "Follow up in the workspace", days: 1, destination: "general", priority: "standard" },
-        { key: "in-3-days", label: "In 3 Days", title: "Follow up in the workspace", days: 3, destination: "general", priority: "standard" },
-        { key: "in-7-days", label: "Next Week", title: "Follow up in the workspace", days: 7, destination: "general", priority: "gold" },
+        {
+          key: "tomorrow",
+          label: "Tomorrow",
+          title: "Follow up in the workspace",
+          days: 1,
+          destination: "general",
+          priority: "standard",
+        },
+        {
+          key: "in-3-days",
+          label: "In 3 Days",
+          title: "Follow up in the workspace",
+          days: 3,
+          destination: "general",
+          priority: "standard",
+        },
+        {
+          key: "in-7-days",
+          label: "Next Week",
+          title: "Follow up in the workspace",
+          days: 7,
+          destination: "general",
+          priority: "gold",
+        },
       ];
   }
 }
@@ -214,7 +318,10 @@ export function isReminderOverdue(reminder: WorkspaceReminder, now = Date.now())
 const PRIORITY_RANK: Record<ReminderPriority, number> = { urgent: 0, gold: 1, standard: 2 };
 
 /** Due reminders, hottest first: priority, then the one that has waited longest. */
-export function dueReminders(reminders: WorkspaceReminder[], now = Date.now()): WorkspaceReminder[] {
+export function dueReminders(
+  reminders: WorkspaceReminder[],
+  now = Date.now(),
+): WorkspaceReminder[] {
   return reminders
     .filter((r) => isReminderDue(r, now))
     .sort((a, b) => {
@@ -241,8 +348,10 @@ export function formatReminderTime(iso: string): string {
 }
 
 export function dueText(reminder: WorkspaceReminder, now = Date.now()): string {
-  if (isReminderOverdue(reminder, now)) return `Overdue · ${formatReminderDate(reminderDueAt(reminder))}`;
-  if (isReminderDue(reminder, now)) return `Due now · ${formatReminderTime(reminderDueAt(reminder))}`;
+  if (isReminderOverdue(reminder, now))
+    return `Overdue · ${formatReminderDate(reminderDueAt(reminder))}`;
+  if (isReminderDue(reminder, now))
+    return `Due now · ${formatReminderTime(reminderDueAt(reminder))}`;
   return `${formatReminderDate(reminderDueAt(reminder))} · ${formatReminderTime(reminderDueAt(reminder))}`;
 }
 
@@ -270,8 +379,23 @@ export function makeReminder(input: NewReminder): WorkspaceReminder {
   };
 }
 
-const DESTINATION_SET = new Set<ReminderDestination>(["general", "catalog", "health", "splits", "contracts", "blueprints", "pdf"]);
-const CONTEXT_SET = new Set<ReminderContextType>(["custom", "catalog", "health_check", "split_sheet", "contract", "blueprint"]);
+const DESTINATION_SET = new Set<ReminderDestination>([
+  "general",
+  "catalog",
+  "health",
+  "splits",
+  "contracts",
+  "blueprints",
+  "pdf",
+]);
+const CONTEXT_SET = new Set<ReminderContextType>([
+  "custom",
+  "catalog",
+  "health_check",
+  "split_sheet",
+  "contract",
+  "blueprint",
+]);
 const PRIORITY_SET = new Set<ReminderPriority>(["standard", "gold", "urgent"]);
 
 function str(value: unknown): string {
@@ -292,9 +416,15 @@ export function normalizeReminders(value: unknown): WorkspaceReminder[] {
     const title = str(row["title"]).trim();
     const dueAt = validIso(row["dueAt"]);
     if (!title || !dueAt) continue;
-    const destination = DESTINATION_SET.has(row["destination"] as ReminderDestination) ? (row["destination"] as ReminderDestination) : "general";
-    const contextType = CONTEXT_SET.has(row["contextType"] as ReminderContextType) ? (row["contextType"] as ReminderContextType) : "custom";
-    const priority = PRIORITY_SET.has(row["priority"] as ReminderPriority) ? (row["priority"] as ReminderPriority) : "standard";
+    const destination = DESTINATION_SET.has(row["destination"] as ReminderDestination)
+      ? (row["destination"] as ReminderDestination)
+      : "general";
+    const contextType = CONTEXT_SET.has(row["contextType"] as ReminderContextType)
+      ? (row["contextType"] as ReminderContextType)
+      : "custom";
+    const priority = PRIORITY_SET.has(row["priority"] as ReminderPriority)
+      ? (row["priority"] as ReminderPriority)
+      : "standard";
     const contextId = str(row["contextId"]);
     const created = validIso(row["createdAt"]) || dueAt;
     out.push({
@@ -312,7 +442,10 @@ export function normalizeReminders(value: unknown): WorkspaceReminder[] {
       updatedAt: validIso(row["updatedAt"]) || created,
       snoozedUntil: validIso(row["snoozedUntil"]) || null,
       completedAt: validIso(row["completedAt"]) || null,
-      calendarExported: row["calendarExported"] === "ics" || row["calendarExported"] === "google" ? (row["calendarExported"] as CalendarTarget) : null,
+      calendarExported:
+        row["calendarExported"] === "ics" || row["calendarExported"] === "google"
+          ? (row["calendarExported"] as CalendarTarget)
+          : null,
     });
   }
   return out;

@@ -13,7 +13,9 @@ describe("emailLayout footer", () => {
   });
 
   it("still refuses marketing mail without an unsubscribe link", () => {
-    expect(() => emailLayout("<p>hi</p>", { kind: "marketing", reason: "Because." })).toThrow(/unsubscribe/i);
+    expect(() => emailLayout("<p>hi</p>", { kind: "marketing", reason: "Because." })).toThrow(
+      /unsubscribe/i,
+    );
   });
 });
 
@@ -24,7 +26,9 @@ describe("resolveSiteUrl", () => {
   });
 
   it("uses the address the deployment was given, with no trailing slash", () => {
-    expect(resolveSiteUrl("https://came-through-audio.example.workers.dev")).toBe("https://came-through-audio.example.workers.dev");
+    expect(resolveSiteUrl("https://came-through-audio.example.workers.dev")).toBe(
+      "https://came-through-audio.example.workers.dev",
+    );
     expect(resolveSiteUrl("https://camethroughaudio.com/")).toBe("https://camethroughaudio.com");
   });
 });

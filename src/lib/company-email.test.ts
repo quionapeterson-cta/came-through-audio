@@ -58,8 +58,12 @@ describe("who may send company mail", () => {
   });
 
   it("stops general staff sending outbound company correspondence", () => {
-    expect(companyMailboxesFor(resolveAccess([{ role: "employee", departments: ["support"] }]))).toEqual([]);
-    expect(companyMailboxesFor(resolveAccess([{ role: "employee", departments: ["marketing"] }]))).toEqual([]);
+    expect(
+      companyMailboxesFor(resolveAccess([{ role: "employee", departments: ["support"] }])),
+    ).toEqual([]);
+    expect(
+      companyMailboxesFor(resolveAccess([{ role: "employee", departments: ["marketing"] }])),
+    ).toEqual([]);
     expect(companyMailboxesFor(resolveAccess([{ role: "project_manager" }]))).toEqual([]);
     expect(companyMailboxesFor(null)).toEqual([]);
   });
@@ -68,7 +72,9 @@ describe("who may send company mail", () => {
     expect(companyMailReadScope(lead(["support"]))).toEqual(["info", "support"]);
     // A lead whose department owns no mailbox, and every employee, sees only what they sent themselves.
     expect(companyMailReadScope(lead(["hr"]))).toBe("own");
-    expect(companyMailReadScope(resolveAccess([{ role: "employee", departments: ["marketing"] }]))).toBe("own");
+    expect(
+      companyMailReadScope(resolveAccess([{ role: "employee", departments: ["marketing"] }])),
+    ).toBe("own");
     expect(companyMailReadScope(null)).toBe("own");
   });
 

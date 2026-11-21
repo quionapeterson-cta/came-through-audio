@@ -19,9 +19,16 @@ import { DEFAULT_TESTIMONIAL_FILTER, type EditableTestimonial } from "./testimon
 const access = (
   role: StaffAccess["role"],
   departments: StaffAccess["departments"] = [],
-): StaffAccess => ({ role, departments, canManageStaff: role === "hr_admin" || role === "super_admin" });
+): StaffAccess => ({
+  role,
+  departments,
+  canManageStaff: role === "hr_admin" || role === "super_admin",
+});
 
-const review = (patch: Partial<TestimonialReview> = {}): TestimonialReview => ({ ...STARTING_REVIEW, ...patch });
+const review = (patch: Partial<TestimonialReview> = {}): TestimonialReview => ({
+  ...STARTING_REVIEW,
+  ...patch,
+});
 
 const card = (id: string, published: boolean): EditableTestimonial => ({
   id,
@@ -71,31 +78,59 @@ describe("testimonial review rules", () => {
   });
 
   it("submits one version at a time", () => {
-    expect(submitTestimonialsError(review({ status: "pending_approval" }))).toMatch(/already waiting/i);
+    expect(submitTestimonialsError(review({ status: "pending_approval" }))).toMatch(
+      /already waiting/i,
+    );
     expect(submitTestimonialsError(review({ status: "draft" }))).toBeNull();
     expect(submitTestimonialsError(review({ status: "changes_requested" }))).toBeNull();
     expect(submitTestimonialsError(review({ status: "denied" }))).toBeNull();
   });
 
   it("decides only what is waiting, and a decline or send-back says why", () => {
-    expect(decideTestimonialsError(review({ status: "draft" }), "approve", "")).toMatch(/nothing is waiting/i);
-    expect(decideTestimonialsError(review({ status: "pending_approval" }), "approve", "")).toBeNull();
-    expect(decideTestimonialsError(review({ status: "pending_approval" }), "changes", "")).toMatch(/note/i);
-    expect(decideTestimonialsError(review({ status: "pending_approval" }), "deny", "  ")).toMatch(/note/i);
-    expect(decideTestimonialsError(review({ status: "pending_approval" }), "changes", "Add the signed release.")).toBeNull();
-    expect(decideTestimonialsError(review({ status: "pending_approval" }), "deny", "This quote was edited.")).toBeNull();
+    expect(decideTestimonialsError(review({ status: "draft" }), "approve", "")).toMatch(
+      /nothing is waiting/i,
+    );
+    expect(
+      decideTestimonialsError(review({ status: "pending_approval" }), "approve", ""),
+    ).toBeNull();
+    expect(decideTestimonialsError(review({ status: "pending_approval" }), "changes", "")).toMatch(
+      /note/i,
+    );
+    expect(decideTestimonialsError(review({ status: "pending_approval" }), "deny", "  ")).toMatch(
+      /note/i,
+    );
+    expect(
+      decideTestimonialsError(
+        review({ status: "pending_approval" }),
+        "changes",
+        "Add the signed release.",
+      ),
+    ).toBeNull();
+    expect(
+      decideTestimonialsError(
+        review({ status: "pending_approval" }),
+        "deny",
+        "This quote was edited.",
+      ),
+    ).toBeNull();
   });
 
   it("cleans a saved review without unlocking the section on junk", () => {
     expect(cleanReview(null)).toEqual(STARTING_REVIEW);
     expect(cleanReview({ status: "made_up" }).status).toBe("draft");
-    expect(cleanReview({ status: "pending_approval", submittedAt: "not a date" }).submittedAt).toBeNull();
-    expect(cleanReview({ note: "  too   long  ".repeat(200) }).note.length).toBeLessThanOrEqual(500);
+    expect(
+      cleanReview({ status: "pending_approval", submittedAt: "not a date" }).submittedAt,
+    ).toBeNull();
+    expect(cleanReview({ note: "  too   long  ".repeat(200) }).note.length).toBeLessThanOrEqual(
+      500,
+    );
     expect(cleanReview({ status: "approved", note: " okay " }).note).toBe("okay");
   });
 
   it("publishes only the cards ticked for the homepage", () => {
-    expect(publishableTestimonials([card("a", true), card("b", false)]).map((t) => t.id)).toEqual(["a"]);
+    expect(publishableTestimonials([card("a", true), card("b", false)]).map((t) => t.id)).toEqual([
+      "a",
+    ]);
   });
 
   it("counts a photo-filter change as an unsaved version", () => {
@@ -105,7 +140,9 @@ describe("testimonial review rules", () => {
       filter: DEFAULT_TESTIMONIAL_FILTER,
     };
     expect(testimonialsChanged(ws, ws.items, DEFAULT_TESTIMONIAL_FILTER)).toBe(false);
-    expect(testimonialsChanged(ws, ws.items, { ...DEFAULT_TESTIMONIAL_FILTER, tint: 20 })).toBe(true);
+    expect(testimonialsChanged(ws, ws.items, { ...DEFAULT_TESTIMONIAL_FILTER, tint: 20 })).toBe(
+      true,
+    );
     expect(testimonialsChanged(ws, [card("a", false)], DEFAULT_TESTIMONIAL_FILTER)).toBe(true);
   });
 });

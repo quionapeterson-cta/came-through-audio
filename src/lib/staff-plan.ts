@@ -34,7 +34,10 @@ const addMonths = (d: Date, months: number) => {
  * - Not paying: it starts now and runs twelve months.
  * The paid period always wins if the two disagree, so a grant can never cut paid time short.
  */
-export function staffPlanWindow(input: { cycleStart?: string | null; cycleEnd?: string | null }, now = new Date()): StaffPlanWindow {
+export function staffPlanWindow(
+  input: { cycleStart?: string | null; cycleEnd?: string | null },
+  now = new Date(),
+): StaffPlanWindow {
   const end = input.cycleEnd ? new Date(input.cycleEnd) : null;
   const start = input.cycleStart ? new Date(input.cycleStart) : null;
   if (end && end.getTime() > now.getTime()) {
@@ -45,11 +48,18 @@ export function staffPlanWindow(input: { cycleStart?: string | null; cycleEnd?: 
       fromPaidPlan: true,
     };
   }
-  return { startsAt: now.toISOString(), endsAt: addMonths(now, 12).toISOString(), fromPaidPlan: false };
+  return {
+    startsAt: now.toISOString(),
+    endsAt: addMonths(now, 12).toISOString(),
+    fromPaidPlan: false,
+  };
 }
 
 /** The staff plan is live between those two dates. */
-export function staffPlanActive(grant: { starts_at: string; ends_at: string; ended_at?: string | null } | null, now = new Date()): boolean {
+export function staffPlanActive(
+  grant: { starts_at: string; ends_at: string; ended_at?: string | null } | null,
+  now = new Date(),
+): boolean {
   if (!grant || grant.ended_at) return false;
   const t = now.getTime();
   return Date.parse(grant.starts_at) <= t && Date.parse(grant.ends_at) > t;
@@ -61,10 +71,14 @@ export function registrationBatchAllowed(left: number): number {
 }
 
 /** A short line for the panel: what the grant gives and when it runs out. */
-export function staffPlanLabel(grant: { starts_at: string; ends_at: string } | null, now = new Date()) {
+export function staffPlanLabel(
+  grant: { starts_at: string; ends_at: string } | null,
+  now = new Date(),
+) {
   if (!grant) return "No staff plan yet.";
   const start = new Date(grant.starts_at);
-  if (start.getTime() > now.getTime()) return `Starts ${start.toLocaleDateString()} when the paid plan ends.`;
+  if (start.getTime() > now.getTime())
+    return `Starts ${start.toLocaleDateString()} when the paid plan ends.`;
   return `Free while you work here, next review ${new Date(grant.ends_at).toLocaleDateString()}.`;
 }
 
@@ -73,7 +87,9 @@ export function staffPlanLabel(grant: { starts_at: string; ends_at: string } | n
  * account is treated as a member account, because an unrecognised address must never grant management features.
  */
 export function memberEmailProblem(email: string, known: boolean): string | null {
-  if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Enter the email on the account you already use.";
-  if (known) return "That email is already marked as a staff account. Ask a super admin if it looks wrong.";
+  if (!/^\S+@\S+\.\S+$/.test(email.trim()))
+    return "Enter the email on the account you already use.";
+  if (known)
+    return "That email is already marked as a staff account. Ask a super admin if it looks wrong.";
   return null;
 }

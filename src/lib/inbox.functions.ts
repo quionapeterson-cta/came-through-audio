@@ -71,17 +71,27 @@ type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supab
  * Who may read the inbox, and how much of it. The service role is used below, so this gate is the rule rather than a
  * convenience: it returns the mailboxes this person may open, and every query is narrowed to exactly that list.
  */
-async function inboxDb(context: { supabase: unknown; userId: string }): Promise<{ db: Db; mailboxes: InboxMailbox[] }> {
-  const client = context.supabase as { // eslint-disable-line @typescript-eslint/no-explicit-any
+async function inboxDb(context: {
+  supabase: unknown;
+  userId: string;
+}): Promise<{ db: Db; mailboxes: InboxMailbox[] }> {
+  const client = context.supabase as {
     from: (table: string) => {
-      select: (columns: string) => { eq: (column: string, value: string) => PromiseLike<{ data: unknown }> };
+      select: (columns: string) => {
+        eq: (column: string, value: string) => PromiseLike<{ data: unknown }>;
+      };
     };
   };
-  const { data: roles } = await client.from("user_roles").select("role, departments").eq("user_id", context.userId);
+  const { data: roles } = await client
+    .from("user_roles")
+    .select("role, departments")
+    .eq("user_id", context.userId);
   const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
   const mailboxes = mailboxesFor(access);
   if (!mailboxes.length) {
-    throw new Error("Only a super admin, the registration desk or the marketing team can read the company inbox.");
+    throw new Error(
+      "Only a super admin, the registration desk or the marketing team can read the company inbox.",
+    );
   }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return { db: supabaseAdmin, mailboxes };
@@ -224,7 +234,8 @@ export const openInboxThread = createServerFn({ method: "POST" })
       .maybeSingle();
     const row = thread as unknown as ThreadRow | null;
     if (!row) throw new Error("That conversation is no longer here.");
-    if (!mailboxes.includes(row.mailbox)) throw new Error("That conversation belongs to another mailbox.");
+    if (!mailboxes.includes(row.mailbox))
+      throw new Error("That conversation belongs to another mailbox.");
 
     const { data: messages, error } = await db
       .from("admin_inbox_messages" as never)
@@ -330,7 +341,8 @@ export const replyToInboxThread = createServerFn({ method: "POST" })
       "id" | "mailbox" | "subject" | "counterpart_email"
     > | null;
     if (!row) throw new Error("That conversation is no longer here.");
-    if (!mailboxes.includes(row.mailbox)) throw new Error("That conversation belongs to another mailbox.");
+    if (!mailboxes.includes(row.mailbox))
+      throw new Error("That conversation belongs to another mailbox.");
 
     // The reply leaves from the mailbox the mail arrived at, so the answer comes back to the desk that owns it. The
     // mailbox is already one this person may read, and reading it is what grants answering it.
