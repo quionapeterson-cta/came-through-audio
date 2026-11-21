@@ -43,6 +43,12 @@ const GLINTS = [
   { left: "88%", top: "-1px" },
 ];
 
+/** The disc's clamp, in px, and the label width it may never eat into. */
+const DISC_PHONE = 56;
+const DISC_DESKTOP = 72;
+const DISC_MAX = 112;
+const LABEL_MIN = 132;
+
 const lastEarned = (s: BadgeState) =>
   Date.parse(s.earned?.log?.[s.earned.log.length - 1]?.at ?? s.earned?.earnedAt ?? "") || 0;
 
@@ -82,11 +88,55 @@ export function PrestigeBadgeCapsule({
   const [preview, setPreview] = useState<{ frame: FrameId; until: number } | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => Date.now());
+  // The disc grows with the row it sits in, measured rather than declared: CSS cannot do it, because a wider disc
+  // narrows the words, longer words make the row taller, and a taller row widens the disc again.
+  const innerRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const discRef = useRef<HTMLSpanElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const studioRef = useRef<HTMLButtonElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const [discPx, setDiscPx] = useState(0);
 
   useEffect(() => {
     setStyle(loadPrestigeStyle(userId));
     setPreview(null);
   }, [userId]);
+
+  /**
+   * The smallest disc that is at least as tall as the words beside it (founder, 2026-11-21). A short action keeps the
+   * 56px phone disc and the 72px one on a desktop; a three-line action grows the disc until it matches the block, so the
+   * left side is never left with a small icon in a tall pill. Grown any further and the disc would narrow the words,
+   * which would make the row taller again, so the search stops at the first size that fits.
+   */
+  const fitDisc = useRef(() => {});
+  fitDisc.current = () => {
+    const row = rowRef.current;
+    const disc = discRef.current;
+    const label = labelRef.current;
+    const studio = studioRef.current;
+    if (!row || !disc || !label || !studio) return;
+    const style = window.getComputedStyle(row);
+    const gap = parseFloat(style.columnGap || "0") || 0;
+    const floor = window.matchMedia("(min-width: 640px)").matches ? DISC_DESKTOP : DISC_PHONE;
+    const room = row.clientWidth - studio.offsetWidth - gap * 2 - LABEL_MIN;
+    const limit = Math.min(DISC_MAX, Math.max(floor, Math.floor(room)));
+    // If no size can hold the words, stay at the floor: a bigger disc there only squeezes the words into more lines and
+    // makes the pill taller for nothing.
+    let best = floor;
+    for (let size = floor; size <= limit; size += 2) {
+      disc.style.width = `${size}px`;
+      disc.style.height = `${size}px`;
+      // +1 absorbs the rounding of a line box, so a block that exactly fits is not pushed one step up.
+      if (label.getBoundingClientRect().height <= size + 1) {
+        best = size;
+        break;
+      }
+    }
+    disc.style.width = `${best}px`;
+    disc.style.height = `${best}px`;
+    setDiscPx((previous) => (previous === best ? previous : best));
+  };
 
   // Both are read from this browser on every render, the way the badge settings already do: a seat switch or a cloud
   // sync then shows up without the capsule holding a stale copy.
@@ -136,6 +186,45 @@ export function PrestigeBadgeCapsule({
     )?.state;
   }, [inTab, prefs]);
   const show = next ?? featured;
+
+  // Re-fit when the pill changes width or the badge (and so the words) changes. Watching the inner pill, not the row:
+  // the row's height is what this changes, and observing that would call itself back.
+  useEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) return;
+    let width = 0;
+    const run = () => {
+      const next = inner.clientWidth;
+      if (Math.abs(next - width) < 2) return;
+      width = next;
+      fitDisc.current();
+    };
+    run();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(run);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, [show?.badge.id, style.liquid]);
+
+  // A taller pill curves further in at the bottom, so the bar and its number step in with it: their row has to clear the
+  // rounded end without the count being shaved (founder, 2026-11-21). Inset only, so it cannot change the height.
+  useEffect(() => {
+    const inner = innerRef.current;
+    const controls = controlsRef.current;
+    if (!inner || !controls) return;
+    const fit = () => {
+      controls.style.paddingLeft = "";
+      controls.style.paddingRight = "";
+      const inset = Math.max(10, Math.round(inner.clientHeight * 0.11));
+      controls.style.paddingLeft = `${inset}px`;
+      controls.style.paddingRight = `${inset}px`;
+    };
+    fit();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(fit);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, [show?.badge.id, style.liquid]);
 
   // A locked frame may be worn for five seconds; the pill returns to what the member owns on its own.
   useEffect(() => {
@@ -197,7 +286,12 @@ export function PrestigeBadgeCapsule({
   return (
     <TooltipProvider delayDuration={150}>
       <div
-        className={cn("relative mx-auto w-full max-w-[20rem] sm:mx-0 sm:max-w-[22rem]", className)}
+        className={cn(
+          // Wide enough on a desktop that a long action still fits beside the disc without a fourth line; tablets keep the
+          // 22rem pill they had, so the header never has to squeeze the artist's name (see .prestige-capsule-shell).
+          "prestige-capsule-shell relative mx-auto w-full sm:mx-0",
+          className,
+        )}
         data-prestige-capsule=""
       >
         <div className={cn("prestige-capsule", `prestige-frame-${activeFrame}`)}>
@@ -209,7 +303,7 @@ export function PrestigeBadgeCapsule({
               style={{ left: g.left, top: g.top, animationDelay: `${i * 0.9}s` }}
             />
           ))}
-          <div className="prestige-capsule-inner px-5 py-3">
+          <div ref={innerRef} className="prestige-capsule-inner px-4 pt-3 pb-4 sm:px-5 sm:pb-3.5">
             {/* The pill opens the profile shelf, the way the next-badge card did (founder, 2026-11-21). The stepper
               and the studio button sit above it, so their own clicks never navigate. */}
             <Tooltip>
@@ -237,12 +331,15 @@ export function PrestigeBadgeCapsule({
                 ) : null}
               </TooltipContent>
             </Tooltip>
-            <div className="flex items-center gap-3">
-              {/* Sized by its row, not by a fixed pixel box (founder, 2026-11-21): the disc fills the left side of the
-                pill, keeps an even gap from the border, and its own circle never stretches or crops the art. */}
+            <div ref={rowRef} className="flex items-center gap-2 sm:gap-3">
+              {/* The disc takes the row's height and its face is the square inside it (founder, 2026-11-21): the face
+                derives its width from that height, so a wrapped action grows the icon with it. Sizing the disc from the
+                row alone is what collapsed it to a sliver when the art had no intrinsic width. */}
               <span
+                ref={discRef}
+                style={discPx ? { width: discPx, height: discPx } : undefined}
                 className={cn(
-                  "prestige-medallion aspect-square max-h-[4.5rem] shrink-0 self-stretch",
+                  "prestige-medallion size-14 shrink-0 sm:size-[4.5rem]",
                   style.liquid === "gold" && "prestige-medallion-gold",
                 )}
                 aria-hidden
@@ -258,7 +355,7 @@ export function PrestigeBadgeCapsule({
                 </span>
               </span>
 
-              <span className="prestige-iced-label min-w-0 flex-1">
+              <span ref={labelRef} className="prestige-iced-label min-w-0 flex-1">
                 {/* Inline, not a nowrap row (founder, 2026-11-21): a phone's font scaling stretches the micro-label past
                   the plate, so it wraps onto the next line instead of running outside the border. */}
                 <span className="block leading-none [overflow-wrap:anywhere]">
@@ -273,10 +370,12 @@ export function PrestigeBadgeCapsule({
                 </span>
                 {/* The title is the small line; the action is the biggest text on the pill, because the step to take
                   is what the member has to read (founder, 2026-11-21). Both wrap rather than clipping mid-word. */}
-                <span className="mt-1 block text-[12px] font-semibold leading-tight text-[#E5E4E2]/85 [overflow-wrap:anywhere]">
+                <span className="mt-1 block text-[11px] font-semibold leading-tight text-[#E5E4E2]/85 [overflow-wrap:anywhere] sm:text-[12px]">
                   {badge?.title ?? "Your first badge"}
                 </span>
-                <span className="mt-0.5 block text-[20px] font-extrabold leading-[1.05] text-white [overflow-wrap:anywhere]">
+                {/* Breaks between words, never through one (founder, 2026-11-21): at phone width the action column is
+                  narrow enough that "registration" used to split as "registratio / n". */}
+                <span className="mt-0.5 block text-[17px] font-extrabold leading-[1.1] text-white break-words sm:text-[20px] sm:leading-[1.05]">
                   {badge ? badge.action : "Earn one to start"}
                 </span>
               </span>
@@ -284,10 +383,11 @@ export function PrestigeBadgeCapsule({
               <Popover>
                 <PopoverTrigger asChild>
                   <button
+                    ref={studioRef}
                     type="button"
                     aria-label="Open Badge Studio"
                     title="Badge Studio"
-                    className="prestige-icon-button relative z-20 shrink-0 self-start text-[#E5E4E2]/80 hover:text-white"
+                    className="prestige-icon-button relative z-20 h-9 w-9 shrink-0 self-start text-[#E5E4E2]/80 hover:text-white sm:h-10 sm:w-10"
                   >
                     <Sparkles className="h-4 w-4" />
                   </button>
@@ -475,7 +575,9 @@ export function PrestigeBadgeCapsule({
               </Popover>
             </div>
 
-            <div className="prestige-controls mt-2 flex items-center gap-2">
+            {/* Held clear of the pill's rounded ends (founder, 2026-11-21): the bar has to reach the settings icon without
+              the count being shaved by the curve on a narrow phone. */}
+            <div ref={controlsRef} className="prestige-controls mt-2 flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div

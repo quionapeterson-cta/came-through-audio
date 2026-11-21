@@ -951,6 +951,16 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
  * bubbly liquid-metal bar. Frames unlock with ecosystem badges: electric glow (Starter), diamond bezel (Pro) and the
  * iced-out pave surface (Master). Only transform and opacity animate, so the wave, bubbles and glints stay on the GPU.
  */
+/* The pill's width: 22rem on a phone and a tablet, 24rem from 900px up — enough that a long action fits beside the disc
+   without a fourth line, and still narrow enough to sit beside the artist's name in the workspace header. */
+.prestige-capsule-shell {
+  max-width: 22rem;
+}
+@media (min-width: 900px) {
+  .prestige-capsule-shell {
+    max-width: 24rem;
+  }
+}
 .prestige-capsule {
   position: relative;
   isolation: isolate;
