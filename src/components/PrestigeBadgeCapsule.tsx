@@ -74,7 +74,7 @@ export function PrestigeBadgeCapsule({
   collections?: CollectionId[];
   className?: string;
 }) {
-  const { states } = useBadgeStates(userId);
+  const { states, data } = useBadgeStates(userId);
   const [style, setStyle] = useState<PrestigeStyle>(() => loadPrestigeStyle(userId));
   const [index, setIndex] = useState(0);
   const [preview, setPreview] = useState<{ frame: FrameId; until: number } | null>(null);
@@ -96,6 +96,11 @@ export function PrestigeBadgeCapsule({
   const earnedCount = earned.length;
   const total = live.length;
   const completion = ecosystemCompletion(earnedCount, total);
+
+  // A frame kept in storage is only worn while the ecosystem still says it is earned: disabling a badge or resetting a
+  // shelf can take one back, and a saved choice is not proof of it. Until the badges have loaded, keep what was chosen.
+  const savedFrame = frameById(style.frame) ?? frameById(DEFAULT_PRESTIGE_STYLE.frame)!;
+  const mayWearSaved = !data || frameUnlocked(savedFrame, earnedCount, total);
 
   const equipped = onboard?.avatar
     ? earned.find(
@@ -156,7 +161,11 @@ export function PrestigeBadgeCapsule({
     : 0;
 
   const previewLeft = preview ? Math.max(0, preview.until - now) : 0;
-  const activeFrame = preview ? preview.frame : style.frame;
+  const activeFrame = preview
+    ? preview.frame
+    : mayWearSaved
+      ? style.frame
+      : DEFAULT_PRESTIGE_STYLE.frame;
   const activeFrameDef = frameById(activeFrame) ?? frameById(DEFAULT_PRESTIGE_STYLE.frame)!;
   const previewFrameDef = preview ? frameById(preview.frame) : undefined;
   const previewMissing = previewFrameDef ? badgesToUnlock(previewFrameDef, earnedCount, total) : 0;
@@ -278,7 +287,7 @@ export function PrestigeBadgeCapsule({
                       <div className="prestige-preview" role="status" aria-live="polite">
                         <div className="flex items-center justify-between text-[11px] font-semibold">
                           <span className="truncate">Previewing {previewFrameDef.name}</span>
-                          <span className="tabular-nums text-[#4D8CFF]">
+                          <span className="tabular-nums text-[#4D8CFF]" aria-hidden>
                             {Math.ceil(previewLeft / 1000)}s
                           </span>
                         </div>
@@ -338,7 +347,8 @@ export function PrestigeBadgeCapsule({
                       <div className="space-y-0.5">
                         {PRESTIGE_FRAMES.map((frame) => {
                           const unlocked = frameUnlocked(frame, earnedCount, total);
-                          const active = style.frame === frame.id;
+                          // The check marks the frame actually worn, so a frame that was taken back never reads as on.
+                          const active = !preview && activeFrame === frame.id;
                           const isPreviewing = preview?.frame === frame.id;
                           const needed = badgesToUnlock(frame, earnedCount, total);
                           return (
@@ -509,7 +519,7 @@ export function PrestigeBadgeCapsule({
         {preview && (
           <p
             className="mt-1 truncate text-center text-[9px] font-semibold text-[#4D8CFF] sm:text-right"
-            aria-live="polite"
+            aria-hidden
           >
             {activeFrameDef.name} · {Math.ceil(previewLeft / 1000)}s preview
           </p>
