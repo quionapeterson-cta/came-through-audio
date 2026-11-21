@@ -533,13 +533,14 @@ describe("every-time task badges", () => {
         .filter((x) => x.earned && x.badge.collection === "ai")
         .map((x) => [x.badge.id, x.times]);
     // AI Slayer ships with every certificate, so it comes with the first protected song (founder, 2026-11-07).
+    // Time Witness waits for 10 protected songs, then repeats every 10 (founder, 2026-11-21).
+    expect(badgeById("time_witness")).toMatchObject({ goal: 10, every: 10 });
     expect(earned(m)).toEqual([
-      ["time_witness", 1],
       ["ai_slayer", 2],
       ["sound_sealed", 1],
     ]);
     expect(earned({ protected: 50, timestamped: 50 })).toEqual([
-      ["time_witness", 6],
+      ["time_witness", 5],
       ["ai_slayer", 50],
       ["shield_up", 5],
       ["sound_sealed", 1],

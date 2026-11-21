@@ -621,7 +621,9 @@ const CORE: BadgeDef[] = [
     milestone: "Every 10 songs protected in the AI Protection Hub",
     action: "Protect 10 songs",
     metric: "protected",
-    goal: 1,
+    // Ten songs first, then every 10 more (founder, 2026-11-21): the first earning waits with the rest, so the badge
+    // never lands on a member's first protected song.
+    goal: 10,
     every: 10,
     src: `${S}/time_witness.png`,
     rotation: ["shield_up", "sound_sealed", "key_keeper"],
