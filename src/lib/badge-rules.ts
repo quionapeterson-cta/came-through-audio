@@ -21,6 +21,8 @@ export type BadgeData = {
     parties: { isOwner: boolean; signedAt: string | null }[];
   }[];
   checks: RepertoireCheck[];
+  /** Saved Royalty Health Reports (public.royalty_health_reports): the score and scope each one was run with. */
+  healthReports?: { score: number; createdAt: string; scope: string }[];
   certificates: { catalogId: string | null; trackTitle: string; timestamped: boolean }[];
   events: { agency_export: number; master_download: number; blueprint_read: number };
   /** The member's own blueprint rows: one per run, with its ticks (public.workbench_items). */
@@ -164,6 +166,14 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
   const checkMonths = new Set(
     d.checks.map((c) => localTime(c.checkedAt, d.timeZone).date.slice(0, 7)),
   );
+  // Fully Matched is one earning per month whose own saved report was a whole-catalog examination scoring 100%, not
+  // every month a check happened to run: a catalogue that is healthy today must not retroactively clean up old months,
+  // and a single-song report is not the whole catalog (founder, 2026-11-21).
+  const cleanReportMonths = new Set(
+    (d.healthReports ?? [])
+      .filter((r) => r.scope === "catalog" && r.score === 100)
+      .map((r) => localTime(r.createdAt, d.timeZone).date.slice(0, 7)),
+  );
 
   // Signatures from anyone else on the user's own split sheets and contracts.
   const signatures =
@@ -300,7 +310,7 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     protectionTrophies: (defaultsBoth ? 1 : 0) + fullEntries,
     brandKits: d.brandKits ?? 0,
     seatKeys: (d.seatsInvited ?? 0) + (d.seatsAccepted ?? 0),
-    healthyReports: d.tracks.length > 0 && healthy === d.tracks.length ? checkMonths.size : 0,
+    healthyReports: d.tracks.length > 0 ? cleanReportMonths.size : 0,
     contractsDrafted: d.contracts.length,
     contractsSent: d.contracts.filter((c) => c.status === "sent" || c.status === "signed").length,
     contractsSigned: signedContracts,

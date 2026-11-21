@@ -126,7 +126,7 @@ export const checkBadges = createServerFn({ method: "POST" })
     if (held.error) fail("badges");
 
     // Songs already sent to the agencies for registration assistance: a submission is stamped, a saved draft isn't.
-    const [registrationSubmissions, brandBuys, seats] = await Promise.all([
+    const [registrationSubmissions, brandBuys, seats, healthReports] = await Promise.all([
       db
         .from("registration_songs" as never)
         .select("submitted_at")
@@ -161,6 +161,18 @@ export const checkBadges = createServerFn({ method: "POST" })
           r.error
             ? []
             : ((r.data ?? []) as { invite_email: string | null; accepted_at: string | null }[]),
+        ),
+      // Each saved Royalty Health Report keeps the score it was run with (public.royalty_health_reports), so a month's
+      // clean report can be trusted instead of looking back at today's catalog. Reports saved before the scope column
+      // existed are whole-catalog reports.
+      db
+        .from("royalty_health_reports" as never)
+        .select("score, created_at, scope")
+        .eq("user_id", uid)
+        .then((r) =>
+          r.error
+            ? []
+            : ((r.data ?? []) as { score: number; created_at: string; scope: string | null }[]),
         ),
     ]);
     const seatsInvited = seats.filter((s) => !!s.invite_email).length;
@@ -209,6 +221,11 @@ export const checkBadges = createServerFn({ method: "POST" })
         workId: r.work_id,
         details: r.details,
         checkedAt: r.checked_at,
+      })),
+      healthReports: healthReports.map((r) => ({
+        score: r.score,
+        createdAt: r.created_at,
+        scope: r.scope ?? "catalog",
       })),
       certificates: (certs.data ?? []).map((c) => ({
         catalogId: c.catalog_id,

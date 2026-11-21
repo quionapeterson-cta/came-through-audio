@@ -413,6 +413,49 @@ describe("badge metrics", () => {
     expect(m["healthCheckMonths"]).toBe(2);
   });
 
+  it("earns Fully Matched only from a clean whole-catalog report, once per month", () => {
+    const report = (createdAt: string, score = 100, scope = "catalog") => ({
+      createdAt,
+      score,
+      scope,
+    });
+    const m = badgeMetrics(
+      data({
+        tracks: [track()],
+        healthReports: [
+          report("2026-09-02T12:00:00Z"),
+          // A second clean run in the same month is still one earning for that month.
+          report("2026-09-20T12:00:00Z"),
+          // A report that came back at 92% never earns, whatever today's catalog looks like.
+          report("2026-10-02T12:00:00Z", 92),
+          // A single-song examination is not the whole catalog.
+          report("2026-10-20T12:00:00Z", 100, "song"),
+          report("2026-11-02T12:00:00Z"),
+        ],
+      }),
+    );
+    expect(m["healthyReports"]).toBe(2);
+  });
+
+  it("does not treat months of health checks as fully healthy reports", () => {
+    // The old rule counted every month a check ran whenever the catalog happened to be healthy at award time.
+    const check = (checkedAt: string) => ({
+      trackId: "t",
+      society: "BMI",
+      status: "found" as const,
+      source: "self" as const,
+      checkedAt,
+    });
+    const m = badgeMetrics(
+      data({
+        tracks: [ready()],
+        checks: [check("2026-09-02T12:00:00Z"), check("2026-10-01T12:00:00Z")],
+      }),
+    );
+    expect(m["healthCheckMonths"]).toBe(2);
+    expect(m["healthyReports"]).toBe(0);
+  });
+
   it("counts whole member years", () => {
     expect(badgeMetrics(data({ accountCreatedAt: "2024-10-01T00:00:00Z" }))["memberYears"]).toBe(2);
   });
