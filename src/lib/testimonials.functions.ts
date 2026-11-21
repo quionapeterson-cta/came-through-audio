@@ -1,5 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveAccess, type StaffAccess } from "@/lib/departments";
+import {
+  canDecideTestimonials,
+  canEditTestimonials,
+  canSubmitTestimonials,
+  cleanReview,
+  decideTestimonialsError,
+  publishableTestimonials,
+  STARTING_REVIEW,
+  submitTestimonialsError,
+  testimonialsEditable,
+  type TestimonialReview,
+  type TestimonialWorkspace,
+} from "@/lib/testimonial-review";
 import {
   cleanFilter,
   cleanTestimonials,
@@ -10,7 +25,98 @@ import {
   type TestimonialFilter,
 } from "@/lib/testimonials";
 
-const SETTING_ID = "testimonial_filter";
+const FILTER_ID = "testimonial_filter";
+/** The cards the homepage shows, written only when a super admin approves a version. */
+const LIVE_ID = "testimonials";
+/** The working copy Marketing and Branding edit, with its review state. Never read by the public page. */
+const DRAFT_ID = "testimonial_drafts";
+
+type Ctx = {
+  supabase: {
+    from: (table: "user_roles") => {
+      select: (columns: string) => {
+        eq: (column: string, value: unknown) => PromiseLike<{ data: unknown }>;
+      };
+    };
+  };
+  userId: string;
+};
+
+const adminDb = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+
+async function accessOf(context: Ctx): Promise<StaffAccess | null> {
+  const { data } = await context.supabase.from("user_roles").select("role, departments").eq("user_id", context.userId);
+  return resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]);
+}
+
+/** Marketing, Branding and super admins: who may open the section, drafts included. */
+async function requireEditor(context: Ctx): Promise<void> {
+  if (!canEditTestimonials(await accessOf(context))) {
+    throw new Error("Homepage testimonials are for Marketing, Branding and super admins.");
+  }
+}
+
+/** A Marketing or Branding lead (or a super admin) sends a version to a super admin. */
+async function requireSubmitter(context: Ctx): Promise<void> {
+  const access = await accessOf(context);
+  if (!canEditTestimonials(access)) throw new Error("Homepage testimonials are for Marketing, Branding and super admins.");
+  if (!canSubmitTestimonials(access)) {
+    throw new Error("Only a Marketing or Branding lead can send the section for approval.");
+  }
+}
+
+/** Only a super admin approves, declines or sends it back. */
+async function requireDecider(context: Ctx): Promise<void> {
+  if (!canDecideTestimonials(await accessOf(context))) {
+    throw new Error("Only a super admin can approve the homepage testimonials.");
+  }
+}
+
+type SettingContent = Record<string, unknown> | null;
+
+async function readContent(id: string): Promise<SettingContent> {
+  const db = await adminDb();
+  const { data } = await db.from("site_settings").select("content").eq("id", id).maybeSingle();
+  return ((data?.content ?? null) as SettingContent) ?? null;
+}
+
+const itemsOf = (content: SettingContent): unknown => (content && "items" in content ? content["items"] : null);
+
+/**
+ * What the editor works on: the saved draft, or the live cards, or the file's list. The review state is separate so a
+ * card can never be auto-published by a save, and the photo filter rides with the cards as part of the same version.
+ */
+async function workspace(): Promise<TestimonialWorkspace> {
+  const [draft, live, liveFilter] = await Promise.all([
+    readContent(DRAFT_ID),
+    readContent(LIVE_ID),
+    readContent(FILTER_ID),
+  ]);
+  const draftItems = itemsOf(draft);
+  const liveItems = itemsOf(live);
+  const items: EditableTestimonial[] = Array.isArray(draftItems)
+    ? cleanTestimonials(draftItems)
+    : Array.isArray(liveItems)
+      ? cleanTestimonials(liveItems)
+      : SEED_TESTIMONIALS;
+  // An edit starts from the draft's own filter when it has one, otherwise from the look the homepage shows today.
+  const filter = cleanFilter(draft && "filter" in draft ? draft["filter"] : liveFilter);
+  return { items, review: cleanReview(draft?.["review"]), filter };
+}
+
+/** Writes the working copy only. Nothing on the homepage is touched until a super admin approves. */
+async function writeDraft(items: EditableTestimonial[], review: TestimonialReview, filter: TestimonialFilter) {
+  const db = await adminDb();
+  const { error } = await db.from("site_settings").upsert({
+    id: DRAFT_ID,
+    content: { items, review, filter } as never,
+    updated_at: new Date().toISOString(),
+  } as never);
+  if (error) {
+    console.error("[testimonials] draft save failed", error.message);
+    throw new Error("Couldn't save the testimonial section.");
+  }
+}
 
 /** Public: the shared testimonial photo filter for the homepage (defaults until someone saves one). */
 export const getTestimonialFilter = createServerFn({ method: "GET" }).handler(
@@ -20,7 +126,7 @@ export const getTestimonialFilter = createServerFn({ method: "GET" }).handler(
       const { data } = await supabaseAdmin
         .from("site_settings")
         .select("content")
-        .eq("id", SETTING_ID)
+        .eq("id", FILTER_ID)
         .maybeSingle();
       return cleanFilter(data?.content);
     } catch {
@@ -29,41 +135,10 @@ export const getTestimonialFilter = createServerFn({ method: "GET" }).handler(
   },
 );
 
-/** Marketing & Social Media, Branding and super admins: save the one filter every testimonial photo uses. */
-export const setTestimonialFilter = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d) => cleanFilter(d))
-  .handler(async ({ data, context }) => {
-    const can = async (dept: string) =>
-      (await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: dept })).data;
-    if (!(await can("marketing")) && !(await can("branding"))) throw new Error("Forbidden");
-    // Written on the editor's own session: the homepage editor policy lets Marketing and Branding write this one row,
-    // so saving never depends on the service key being present in the runtime.
-    const { error } = await context.supabase.from("site_settings").upsert({
-      id: SETTING_ID,
-      content: { ...data, updatedBy: context.userId } as never,
-      updated_at: new Date().toISOString(),
-    });
-    if (error) throw new Error("Couldn't save the filter.");
-    return data;
-  });
+// The filter is never saved on its own (founder, 2026-11-21): it is edited in the same draft as the cards, and
+// `decideTestimonials` writes it to the homepage when the version is approved. There is no direct write path.
 
-const LIST_ID = "testimonials";
-const canEditHomepage = async (context: {
-  supabase: {
-    rpc: (
-      fn: "in_department",
-      args: { _user_id: string; _dept: string },
-    ) => PromiseLike<{ data: unknown }>;
-  };
-  userId: string;
-}) =>
-  !!(await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "marketing" }))
-    .data ||
-  !!(await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "branding" }))
-    .data;
-
-/** Public: the published homepage testimonials (the file's list until Marketing saves one). */
+/** Public: the published homepage testimonials (the file's list until a version is approved). */
 export const getTestimonials = createServerFn({ method: "GET" }).handler(
   async (): Promise<Testimonial[]> => {
     try {
@@ -71,12 +146,11 @@ export const getTestimonials = createServerFn({ method: "GET" }).handler(
       const { data } = await supabaseAdmin
         .from("site_settings")
         .select("content")
-        .eq("id", LIST_ID)
+        .eq("id", LIVE_ID)
         .maybeSingle();
       const items = (data?.content as { items?: unknown } | null)?.items;
       if (!Array.isArray(items)) return TESTIMONIALS;
-      return cleanTestimonials(items)
-        .filter((t) => t.published)
+      return publishableTestimonials(cleanTestimonials(items))
         .map(({ id: _id, published: _p, releaseSignedOn: _r, ...t }) => t);
     } catch {
       return TESTIMONIALS;
@@ -84,40 +158,148 @@ export const getTestimonials = createServerFn({ method: "GET" }).handler(
   },
 );
 
-/** Marketing, Branding and super admins: every card, drafts included, for the editor. */
+/**
+ * Marketing, Branding and super admins: the working copy and where its review stands. An ordinary staff member can
+ * neither read this nor reach it through `site_settings`, which the new policy narrows.
+ */
 export const getTestimonialDrafts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<EditableTestimonial[]> => {
-    if (!(await canEditHomepage(context))) throw new Error("Forbidden");
-    const { data } = await context.supabase
-      .from("site_settings")
-      .select("content")
-      .eq("id", LIST_ID)
-      .maybeSingle();
-    const items = (data?.content as { items?: unknown } | null)?.items;
-    return Array.isArray(items) ? cleanTestimonials(items) : SEED_TESTIMONIALS;
+  .handler(async ({ context }): Promise<TestimonialWorkspace> => {
+    await requireEditor(context as unknown as Ctx);
+    return workspace();
   });
 
-/** Save the cards. Cards that aren't ready (missing release date, too long, no photo) are saved as drafts, never published. */
+/** Save the working copy: the cards and the photo filter together. Neither reaches the homepage without approval. */
 export const saveTestimonials = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => cleanTestimonials(d))
-  .handler(async ({ data, context }) => {
-    if (!(await canEditHomepage(context))) throw new Error("Forbidden");
-    const { error } = await context.supabase.from("site_settings").upsert({
-      id: LIST_ID,
-      content: {
-        items: data,
-        updatedBy: context.userId,
-        updatedAt: new Date().toISOString(),
-      } as never,
-      updated_at: new Date().toISOString(),
-    });
-    if (error) {
-      console.error("[testimonials] save failed", error.message);
-      throw new Error("Couldn't save the testimonials.");
+  .inputValidator((d: unknown) => {
+    const o = (d && typeof d === "object" ? d : {}) as { items?: unknown; filter?: unknown };
+    return { items: cleanTestimonials(o.items), filter: cleanFilter(o.filter) };
+  })
+  .handler(async ({ data, context }): Promise<TestimonialWorkspace> => {
+    await requireEditor(context as unknown as Ctx);
+    const { review } = await workspace();
+    if (!testimonialsEditable(review.status)) {
+      throw new Error("This version is with a super admin. Edits open again when they decide.");
     }
-    return data;
+    const now = new Date().toISOString();
+    // A save is a new version: the old decision is spent, while the reviewer's note stays as context.
+    await writeDraft(
+      data.items,
+      {
+        ...STARTING_REVIEW,
+        note: review.note,
+        updatedBy: context.userId,
+        updatedAt: now,
+      },
+      data.filter,
+    );
+    return workspace();
+  });
+
+/** Send the saved version to a super admin. Only one version can wait for a decision at a time. */
+export const requestTestimonialApproval = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<TestimonialWorkspace> => {
+    await requireSubmitter(context as unknown as Ctx);
+    const current = await workspace();
+    const problem = submitTestimonialsError(current.review);
+    if (problem) throw new Error(problem);
+    const draft = await readContent(DRAFT_ID);
+    if (!draft) throw new Error("Save the section before sending it for approval.");
+    const now = new Date().toISOString();
+    await writeDraft(
+      current.items,
+      {
+        status: "pending_approval",
+        submittedBy: context.userId,
+        submittedAt: now,
+        decidedBy: null,
+        decidedAt: null,
+        note: current.review.note,
+        updatedBy: context.userId,
+        updatedAt: now,
+      },
+      current.filter,
+    );
+    return workspace();
+  });
+
+/**
+ * A super admin's decision (founder, 2026-11-21): approve puts the ticked cards on the homepage, decline closes the
+ * version, and sending it back reopens the editor with the note attached.
+ */
+export const decideTestimonials = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        decision: z.enum(["approve", "deny", "changes"]),
+        note: z.string().trim().max(500).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<TestimonialWorkspace> => {
+    await requireDecider(context as unknown as Ctx);
+    const current = await workspace();
+    const note = (data.note ?? "").trim();
+    const problem = decideTestimonialsError(current.review, data.decision, note);
+    if (problem) throw new Error(problem);
+    const draft = await readContent(DRAFT_ID);
+    if (!draft) throw new Error("Nothing is waiting for approval.");
+
+    const now = new Date().toISOString();
+    if (data.decision === "approve") {
+      const db = await adminDb();
+      // The live rows are what the homepage reads, and the approved version is both of them: the cards and the filter.
+      // Unticked cards travel with the cards row but are never shown.
+      const { error } = await db.from("site_settings").upsert({
+        id: LIVE_ID,
+        content: {
+          items: current.items,
+          updatedBy: context.userId,
+          updatedAt: now,
+          approvedBy: context.userId,
+          approvedAt: now,
+        } as never,
+        updated_at: now,
+      } as never);
+      if (error) {
+        console.error("[testimonials] approval failed", error.message);
+        throw new Error("Couldn't put the approved cards on the homepage.");
+      }
+      const { error: filterError } = await db.from("site_settings").upsert({
+        id: FILTER_ID,
+        content: {
+          ...current.filter,
+          updatedBy: context.userId,
+          updatedAt: now,
+          approvedBy: context.userId,
+          approvedAt: now,
+        } as never,
+        updated_at: now,
+      } as never);
+      if (filterError) {
+        console.error("[testimonials] filter approval failed", filterError.message);
+        throw new Error("Couldn't put the approved photo filter on the homepage.");
+      }
+    }
+
+    await writeDraft(
+      current.items,
+      {
+        status: data.decision === "approve" ? "approved" : data.decision === "deny" ? "denied" : "changes_requested",
+        submittedBy: current.review.submittedBy,
+        submittedAt: current.review.submittedAt,
+        decidedBy: context.userId,
+        decidedAt: now,
+        note,
+        updatedBy: context.userId,
+        updatedAt: now,
+      },
+      current.filter,
+    );
+    return workspace();
   });
 
 /** Upload a testimonial photo (JPEG/PNG/WebP, up to 5 MB) to the public site-media bucket; returns its public URL. */
@@ -131,7 +313,7 @@ export const uploadTestimonialPhoto = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
-    if (!(await canEditHomepage(context))) throw new Error("Forbidden");
+    await requireEditor(context as unknown as Ctx);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const ext = data.type === "image/png" ? "png" : data.type === "image/webp" ? "webp" : "jpg";
     const path = `testimonials/${crypto.randomUUID()}.${ext}`;

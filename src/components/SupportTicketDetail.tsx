@@ -39,6 +39,8 @@ import {
   ticketScriptValues,
   type SupportScript,
 } from "@/lib/support-scripts";
+// The script catalog itself is server-side (founder, 2026-11-21), so no script body ships in the admin bundle.
+import { useSupportScripts } from "@/hooks/useSupportScripts";
 
 const when = (iso: string) => new Date(iso).toLocaleString();
 
@@ -98,14 +100,14 @@ function Bubble({ name, at, body, internal, staff }: { name: string; at: string;
  * The scripts rail, on the right of the message box (founder, 2026-11-08). Owner's wording, the likely three first,
  * its own scroll so the reply never scrolls away; one click puts the words in the reply box.
  */
-function ScriptRail({ ticket, onInsert }: { ticket: TicketRecord; onInsert: (script: SupportScript) => void }) {
+function ScriptRail({ ticket, scripts, loading, onInsert }: { ticket: TicketRecord; scripts: SupportScript[]; loading: boolean; onInsert: (script: SupportScript) => void }) {
   const [query, setQuery] = useState("");
   const owner = ticketOwnerDepartment(ticket.category);
   const groups = useMemo(() => {
     const term = query.trim();
-    if (term) return [{ title: "Matching scripts", rows: searchScripts(term, owner) }];
-    const suggested = suggestedScripts(ticket.category);
-    const all = scriptsForTicket(ticket.category);
+    if (term) return [{ title: "Matching scripts", rows: searchScripts(scripts, term, owner) }];
+    const suggested = suggestedScripts(scripts, ticket.category);
+    const all = scriptsForTicket(scripts, ticket.category);
     const first = new Set(suggested.map((s) => s.id));
     const rest = all.filter((s) => !first.has(s.id) && !s.internal);
     const staffOnly = all.filter((s) => s.internal);
@@ -114,7 +116,7 @@ function ScriptRail({ ticket, onInsert }: { ticket: TicketRecord; onInsert: (scr
       { title: `${owner === "billing" ? "Billing" : "Support"}'s scripts`, rows: rest },
       ...(staffOnly.length ? [{ title: "Staff only", rows: staffOnly }] : []),
     ];
-  }, [query, ticket.category, owner]);
+  }, [query, ticket.category, owner, scripts]);
 
   async function copy(script: SupportScript) {
     try {
@@ -136,6 +138,7 @@ function ScriptRail({ ticket, onInsert }: { ticket: TicketRecord; onInsert: (scr
         </label>
       </div>
       <div className="max-h-[26rem] overflow-y-auto p-2 lg:max-h-[calc(100vh-16rem)]">
+        {loading ? <p className="px-2 py-1 text-xs text-muted-foreground">Loading the scripts…</p> : null}
         {groups.map((group) => (
           <div key={group.title} className="mb-2">
             <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{group.title}</p>
@@ -408,6 +411,8 @@ export function SupportTicketDetail({ ticket, onClose, readOnly = false }: {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["ticket-thread", ticket.id], queryFn: () => fetchThread({ data: { ticketId: ticket.id } }) });
   const messages = q.data?.messages ?? [];
+  // The script catalog is fetched from the server; nothing internal is in the bundle any more.
+  const { scripts, loading: scriptsLoading } = useSupportScripts();
 
   // "Viewing: Mrs. Peterson" (founder, 2026-11-19): this window claims the thread while it is open, and shows whoever
   // else is in it. The claim expires on its own, so a closed tab never leaves a name behind.
@@ -518,7 +523,7 @@ export function SupportTicketDetail({ ticket, onClose, readOnly = false }: {
 
         <div className="space-y-3">
           {!readOnly && channelOf(ticket) === "info" ? <EscalatePanel ticket={ticket} onDone={refresh} /> : null}
-          {!readOnly ? <ScriptRail ticket={ticket} onInsert={insert} /> : null}
+          {!readOnly ? <ScriptRail ticket={ticket} scripts={scripts} loading={scriptsLoading} onInsert={insert} /> : null}
           {!readOnly ? (
             <details className="rounded-xl border border-border bg-card p-3">
               <summary className="cursor-pointer text-sm font-semibold">Unlock a badge</summary>

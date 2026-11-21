@@ -386,6 +386,31 @@ announcement or anything a named recipient did not ask for.
 - **Admin explains a signed-out visit** (founder, 2026-11-10): `/admin` says "Staff sign-in needed" with Log in and Back
   to the site, instead of redirecting to the homepage with no explanation and looking like a broken bookmark.
 
+## Homepage Testimonials & Gated Staff Copy (always follow)
+
+- **A testimonial change reaches the homepage only with a super admin's approval** (founder, 2026-11-21): Marketing and
+  Branding edit and see the working copy, drafts included; a Marketing or Branding **lead** (or a super admin) sends a
+  version for approval; a super admin approves it, declines it, or sends it back with a note. `saveTestimonials` writes
+  only `site_settings.testimonial_drafts`; the live `testimonials` and `testimonial_filter` rows are written inside
+  `decideTestimonials` when a version is approved, so no Save publishes anything. The section is locked while a version
+  is waiting. The rules live in `src/lib/testimonial-review.ts` with their test — never inline a second copy in the
+  panel or a function.
+- **The photo filter is part of that version, never a save of its own** (founder, 2026-11-21): `TestimonialFilterPanel`
+  is controlled by `TestimonialsEditor` and edits the same draft as the cards, so tuning it counts as an unsaved change
+  (`testimonialsChanged`) and it reaches the homepage only when the version carrying it is approved. Never give the
+  filter a direct write path again, and never leave it out of the approval payload.
+- **Homepage is not a write path at all**: no session writes `testimonials`, `testimonial_drafts` or
+  `testimonial_filter`. The whole section is server-written, and a super admin is the approver.
+- **site_settings is row-scoped, never staff-wide** (founder, 2026-11-21, migration 20261121130000): a super admin reads
+  every row, Marketing and Branding read the three homepage rows, any staff member reads `pdf_inbox`, and nothing else is
+  granted. `payments` is read by the server (`readCountedPaymentsEnvironment`), never by a session. Never widen the read
+  back to `is_staff`: that exposed testimonial drafts and the payment mode to every staff member.
+- **Restricted staff copy lives in a `.server` module** (founder, 2026-11-21): the Holiday Cover plan
+  (`holiday-coverage.server.ts`, served by `getHolidayPlan`) and the support script catalog
+  (`support-scripts.server.ts`, served by `listSupportScripts`) are fetched, not imported by a component, because a
+  static import ships the text in the public admin chunk — the `internal: true` script wording above all. Scheduled
+  content like this never goes back into a client module.
+
 ## Blueprint Checklists & Working On (always follow)
 
 - **Saving is a click, never a side effect** (founder, 2026-11-06): a tick keeps its progress and nothing more; a

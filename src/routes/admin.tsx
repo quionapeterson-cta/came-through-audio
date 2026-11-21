@@ -40,7 +40,6 @@ import { StaffSubmissionsPanel } from "@/components/StaffSubmissionsPanel";
 import { RetiredIscrsPanel } from "@/components/RetiredIscrsPanel";
 import { BillingConsolePanel } from "@/components/BillingConsolePanel";
 import { PlansPanel } from "@/components/PlansPanel";
-import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TestimonialsEditor } from "@/components/TestimonialsEditor";
 import { AdminWelcome, TaskBell, WelcomeSwitch } from "@/components/AdminWelcome";
 import { GlobalReminderBanner } from "@/components/GlobalReminderBanner";
@@ -316,7 +315,7 @@ function AdminPage() {
             </TabsContent>
           )}
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /><BadgeProtocolPanel isSuper={isSuper} /></TabsContent>}
-          {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /><SocialPanel /></TabsContent>}
+          {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor access={access} /><SocialPanel /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={access.allTeams && access.role !== "super_admin" ? [...ASSIGNABLE_DEPARTMENTS] : viewDepartments(access, view)} editable={viewDepartments(access, view)} /></TabsContent>}
           {show("company") && <TabsContent value="company"><Contracts userId={user.id} unlocked company canApprove={isSuper} onUpgrade={() => {}} /></TabsContent>}
           {show("submissions") && <TabsContent value="submissions"><StaffSubmissionsPanel isSuper={isSuper} /></TabsContent>}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type Department } from "@/lib/departments";
 import { SCRIPT_VARIABLES, fillScript, scriptDepartments, searchScripts, type SupportScript } from "@/lib/support-scripts";
+import { useSupportScripts } from "@/hooks/useSupportScripts";
 
 const chip = (on: boolean) => `rounded-full border px-3 py-1 text-sm font-semibold ${on ? "border-primary bg-primary text-primary-foreground" : "border-border"}`;
 
@@ -58,8 +59,10 @@ export function SupportScriptsPanel() {
   const [department, setDepartment] = useState<Department | "all">("all");
   const [query, setQuery] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
-  const departments = useMemo(() => scriptDepartments(), []);
-  const rows = useMemo(() => searchScripts(query, department), [query, department]);
+  // The catalog is server-side now: no script body ships in the bundle (founder, 2026-11-21).
+  const { scripts, loading, error } = useSupportScripts();
+  const departments = useMemo(() => scriptDepartments(scripts), [scripts]);
+  const rows = useMemo(() => searchScripts(scripts, query, department), [scripts, query, department]);
 
   return (
     <div className="space-y-4">
@@ -94,7 +97,9 @@ export function SupportScriptsPanel() {
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search the scripts — 'hold', 'prorated', 'ISRC', 'split'" className="max-w-md" />
       </label>
 
-      {!rows.length ? <p className="text-sm text-muted-foreground">No script matches that. Try another word, or All departments.</p> : null}
+      {loading ? <p className="text-sm text-muted-foreground">Loading the scripts…</p> : null}
+      {error ? <p className="text-sm text-destructive">Couldn't load the scripts. Try again in a moment.</p> : null}
+      {!loading && !error && !rows.length ? <p className="text-sm text-muted-foreground">No script matches that. Try another word, or All departments.</p> : null}
       <div className="space-y-3">
         {rows.map((s) => <ScriptCard key={s.id} script={s} values={values} />)}
       </div>

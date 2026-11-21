@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS } from "./departments";
 import {
-  SUPPORT_SCRIPTS, fillScript, isBillingTicket, scriptDepartments, scriptVariables, scriptsFor, scriptsForTicket,
+  fillScript, isBillingTicket, scriptDepartments, scriptVariables, scriptsFor, scriptsForTicket,
   searchScripts, ticketOwnerDepartment, ticketScriptValues,
 } from "./support-scripts";
+// The catalog moved to a server-only module (2026-11-21); the pure helpers above take the list they are given.
+import { SUPPORT_SCRIPTS } from "./support-scripts.server";
 
 describe("the script catalog", () => {
   it("has unique ids and a real department on every script", () => {
@@ -36,19 +38,19 @@ describe("the script catalog", () => {
 
 describe("scriptsFor and searchScripts", () => {
   it("filters by department", () => {
-    expect(scriptsFor("billing").every((s) => s.department === "billing")).toBe(true);
-    expect(scriptsFor("billing").length).toBeGreaterThan(0);
-    expect(scriptsFor("all").length).toBe(SUPPORT_SCRIPTS.length);
+    expect(scriptsFor(SUPPORT_SCRIPTS, "billing").every((s) => s.department === "billing")).toBe(true);
+    expect(scriptsFor(SUPPORT_SCRIPTS, "billing").length).toBeGreaterThan(0);
+    expect(scriptsFor(SUPPORT_SCRIPTS, "all").length).toBe(SUPPORT_SCRIPTS.length);
   });
 
   it("searches the words, not just the title, and respects the department filter", () => {
-    expect(searchScripts("authorization").some((s) => s.id === "billing-duplicate-is-a-hold")).toBe(true);
-    expect(searchScripts("authorization", "support").some((s) => s.id === "billing-duplicate-is-a-hold")).toBe(false);
-    expect(searchScripts("   ").length).toBe(SUPPORT_SCRIPTS.length);
+    expect(searchScripts(SUPPORT_SCRIPTS, "authorization").some((s) => s.id === "billing-duplicate-is-a-hold")).toBe(true);
+    expect(searchScripts(SUPPORT_SCRIPTS, "authorization", "support").some((s) => s.id === "billing-duplicate-is-a-hold")).toBe(false);
+    expect(searchScripts(SUPPORT_SCRIPTS, "   ").length).toBe(SUPPORT_SCRIPTS.length);
   });
 
   it("orders the department chips by first appearance and counts each one", () => {
-    const depts = scriptDepartments();
+    const depts = scriptDepartments(SUPPORT_SCRIPTS);
     expect(depts[0]?.department).toBe("billing");
     const total = depts.reduce((sum, d) => sum + d.count, 0);
     expect(total).toBe(SUPPORT_SCRIPTS.length);
@@ -78,10 +80,10 @@ describe("who answers a ticket", () => {
 
 describe("scripts one click from a ticket", () => {
   it("offers the queue owner's scripts and nothing from the other queue", () => {
-    const billing = scriptsForTicket("Account & billing · A charge, invoice or refund");
+    const billing = scriptsForTicket(SUPPORT_SCRIPTS, "Account & billing · A charge, invoice or refund");
     expect(billing.length).toBeGreaterThan(0);
     expect(billing.every((s) => s.department === "billing")).toBe(true);
-    const support = scriptsForTicket("My Catalog · A song won't save or upload");
+    const support = scriptsForTicket(SUPPORT_SCRIPTS, "My Catalog · A song won't save or upload");
     expect(support.length).toBeGreaterThan(0);
     expect(support.every((s) => s.department === "support")).toBe(true);
   });

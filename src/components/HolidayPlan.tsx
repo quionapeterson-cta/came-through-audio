@@ -1,11 +1,21 @@
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Badge } from "@/components/ui/badge";
-import { COVERAGE_SECTIONS, HOLIDAY_BREAKS, HOLIDAY_PAY_STATUS } from "@/lib/holiday-coverage";
+import { getHolidayPlan } from "@/lib/holiday-coverage.functions";
 
 /**
  * Admin → Holiday Cover: how the team staffs a break and who covers what, for super admins and department leads.
  * Deliberately carries no pay figure: the rate is undecided until the founder approves one.
+ *
+ * The plan's wording is fetched from the server (founder, 2026-11-21), so a restricted plan no longer ships inside the
+ * public admin bundle; `getHolidayPlan` applies `canSeeHolidayPlan` before it answers.
  */
 export function HolidayPlan() {
+  const load = useServerFn(getHolidayPlan);
+  const q = useQuery({ queryKey: ["holiday-plan"], queryFn: () => load(), staleTime: Infinity });
+  if (q.isLoading) return <p className="mt-6 text-muted-foreground">Loading…</p>;
+  if (q.isError || !q.data) return <p className="mt-6 text-destructive">Couldn't load the holiday plan.</p>;
+  const { breaks, payStatus, sections } = q.data;
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-border bg-card p-5">
@@ -15,13 +25,13 @@ export function HolidayPlan() {
           Members are told we are away and given a typical wait, never a promise.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          {HOLIDAY_BREAKS.map((b) => <Badge key={b} variant="secondary">{b}</Badge>)}
+          {breaks.map((b) => <Badge key={b} variant="secondary">{b}</Badge>)}
           <Badge variant="outline">Super admins and department leads</Badge>
-          {HOLIDAY_PAY_STATUS === "undecided" && <Badge variant="outline">Holiday pay: undecided</Badge>}
+          {payStatus === "undecided" && <Badge variant="outline">Holiday pay: undecided</Badge>}
         </div>
       </section>
 
-      {COVERAGE_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <section key={section.title} className="rounded-2xl border border-border bg-card p-5">
           <h3 className="text-lg font-bold">{section.title}</h3>
           <ul className="mt-3 space-y-2 text-sm">
