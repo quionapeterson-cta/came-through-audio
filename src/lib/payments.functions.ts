@@ -267,9 +267,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       if (!g || g.company || !g.draft) throw new Error("That draft wasn't found. Draft it again and try once more.");
       if (g.contract_id) throw new Error("You already have this contract. Open it in My Contracts.");
     }
-    // The pause's own monthly Vault subscription: where it starts and ends, and whether the first month waits for the
-    // renewal date or is charged today (founder, 2026-11-20).
-    let vault: { starts: string; ends: string; trialEnd: number | null; idempotencyKey: string } | null = null;
+    // The pause's own monthly Vault subscription: where it starts, and whether the first month waits for the renewal
+    // date or is charged today (founder, 2026-11-20). It has no end date: it runs until the member resumes
+    // (founder, 2026-11-21).
+    let vault: { starts: string; trialEnd: number | null; idempotencyKey: string } | null = null;
     if (data.kind === "vault") {
       // Pause is only sold when it can start: around renewal, after a failed renewal or during the grace period.
       const [{ admin, loadState, liveVaultPause, liveVaultSubscription }, { offers, pauseSpan }, { pauseCheckoutRefusal }] = await Promise.all([
@@ -287,15 +288,14 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       ]);
       const refusal = pauseCheckoutRefusal({ livePause: !!pause, liveSubscription: !!subscription });
       if (refusal) throw new Error(refusal);
-      const span = pauseSpan(s.sub, data.months);
+      const span = pauseSpan(s.sub);
       // Ten-minute bucket: a double click and an immediate retry share one Stripe session, while a genuinely later
       // attempt (after the dialog was closed) gets a fresh one instead of replaying a session that may have expired.
       const bucket = Math.floor(Date.now() / (10 * 60 * 1000));
       vault = {
         starts: span.starts.toISOString(),
-        ends: span.ends.toISOString(),
         trialEnd: vaultTrialEnd(span.starts),
-        idempotencyKey: `vault-${context.userId}-${env}-${data.months}-${span.starts.toISOString()}-${bucket}`,
+        idempotencyKey: `vault-${context.userId}-${env}-${span.starts.toISOString()}-${bucket}`,
       };
     }
 
@@ -345,7 +345,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const metadata = {
         ...plan.metadata,
         priceIds: plan.items.map((i) => i.lookupKey).join(","),
-        ...(vault ? { pauseStarts: vault.starts, pauseEnds: vault.ends } : {}),
+        ...(vault ? { pauseStarts: vault.starts } : {}),
       };
 
       const session = await stripe.checkout.sessions.create({

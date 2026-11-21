@@ -40,7 +40,7 @@ import { listSeatState, seatArtistsFor } from "@/lib/seats";
 import { AddArtistDialog } from "@/components/ArtistSeats";
 import { PRICE_TIER, TIER_LABEL, hasTier, planIntentFromSearch, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
-import { readWorkingAs, rememberWorkingAs, scopedTier, workingProfiles, type WorkingProfile } from "@/lib/profile-switch";
+import { readWorkingAs, rememberWorkingAs, workTierFor, workingProfiles, type WorkingProfile } from "@/lib/profile-switch";
 import { BadgeWatcher } from "@/components/Badges";
 import { Confetti } from "@/components/Confetti";
 import { celebrateReturn } from "@/lib/celebrate";
@@ -271,14 +271,17 @@ function Workspace() {
   // workspace works at the seat's own tier, so an owner never borrows their plan's tools inside someone else's account.
   const actingSeat = seatArtists.find((a) => a.userId === actingId) ?? null;
   const actingAs: WorkingProfile | null = actingSeat ? { ...actingSeat, seat: true } : null;
-  const workTier: Tier = scopedTier(actingAs, tier);
+  // A paused account stays Free even inside a seat (founder, 2026-11-21): the switch can read and download that
+  // catalog, but it never borrows the seat's paid tools while the account's own plan is paused.
+  const pausedNow = isPaused(pauses);
+  const workTier: Tier = workTierFor(actingAs, tier, pausedNow);
   // Every catalog read and write inside the two working tabs follows this id, never the browser's own account.
   const catalogOwner = actingSeat?.userId ?? user?.id ?? "";
   const canCatalog = hasTier(workTier, "plus");
   const canSplit = hasTier(workTier, "plus");
   const canCollect = hasTier(workTier, "collaborate");
   // After a plan ends (30 days before emptying) or while paused, the catalog stays viewable and downloadable.
-  const catalogReadOnly = !canCatalog && (inGrace(lapse) || isPaused(pauses));
+  const catalogReadOnly = !canCatalog && (inGrace(lapse) || pausedNow);
   const [onboard, setOnboard] = useState<Onboarding | null>(null);
   const names = useArtistName(user, onboard?.stageName);
   const name = names.display;
@@ -442,7 +445,7 @@ function Workspace() {
                 {profiles.map((p) => (
                   <DropdownMenuItem key={p.userId} onSelect={() => void workAs(p)} className="justify-between gap-3">
                     <span className="truncate">{p.seat ? p.name : "You"}</span>
-                    <span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[p.tier]}</span>
+                    <span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[pausedNow ? "free" : p.tier]}</span>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
@@ -470,7 +473,7 @@ function Workspace() {
                   {profiles.map((p) => (
                     <DropdownMenuItem key={p.userId} onSelect={() => void workAs(p)} className="justify-between gap-3">
                       <span className="truncate">{p.seat ? p.name : "You"}</span>
-                      <span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[p.tier]}</span>
+                      <span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[pausedNow ? "free" : p.tier]}</span>
                     </DropdownMenuItem>
                   ))}
                   {actingAs && (<>
@@ -529,7 +532,7 @@ function Workspace() {
         {actingAs && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-accent/30 p-3 text-sm">
             <span>
-              Working in <b>{actingAs.name}</b>&rsquo;s catalog at {TIER_LABEL[actingAs.tier]}. Embed Metadata and My Catalog save to their
+              Working in <b>{actingAs.name}</b>&rsquo;s catalog at {TIER_LABEL[workTier]}. Embed Metadata and My Catalog save to their
               account; everything else in the workspace is still yours.
             </span>
             <Button variant="outline" size="sm" onClick={() => void workAs(profiles[0]!)}>Back to mine</Button>

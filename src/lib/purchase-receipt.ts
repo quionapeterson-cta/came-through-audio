@@ -86,9 +86,8 @@ export function receiptCopy(i: {
    * Stripe trial: the confirmation says "renews", because that is what the member is being told (founder, 2026-11-08).
    */
   renewsOn?: string | null;
-  /** For a pause: when it starts and ends, so the confirmation carries the monthly schedule (founder, 2026-11-20). */
+  /** For a pause: when it starts, so the confirmation carries the monthly schedule (founder, 2026-11-20). */
   pauseStarts?: string | null;
-  pauseEnds?: string | null;
 }): ReceiptCopy {
   const paid = i.paid ?? null;
   const money_line = paid ? `We charged ${paid}.` : "Your payment went through.";
@@ -125,10 +124,10 @@ export function receiptCopy(i: {
       };
       break;
     case "vault": {
-      // The pause fee is $1.99 a month while it runs (founder, 2026-11-20): the confirmation carries the schedule, not
-      // one lump sum. A pause that waits for a renewal date charges nothing today, so it never says "We charged $0.00".
+      // The pause fee is $1.99 a month for as long as the pause runs (founder, 2026-11-20, open-ended 2026-11-21): the
+      // confirmation carries the monthly schedule, not one lump sum. A pause that waits for a renewal date charges
+      // nothing today, so it never says "We charged $0.00".
       const starts = renewalDate(i.pauseStarts);
-      const ends = renewalDate(i.pauseEnds);
       const fee = `$${VAULT_PRICE.toFixed(2)}`;
       const first = paid && paid !== "$0.00"
         ? money_line
@@ -137,12 +136,12 @@ export function receiptCopy(i: {
           : "Your pause is in place.";
       copy = {
         ...base,
-        subject: starts && ends ? `Your pause runs from ${starts} to ${ends}` : "Your pause is in place",
+        subject: "Your pause is in place",
         heading: "Your pause is in place",
         paragraphs: [
           first,
-          `We charge ${fee} a month while the pause runs, and it stops on its own${ends ? ` on ${ends}` : " when the pause ends"} — nothing is charged after that. It is not a cancellation: your plan renews by itself when the pause ends.`,
-          "Your catalog is read-only while you're paused, and you can still download your masters, artwork and PDFs. Resume any time from Profile: that ends the pause, not the plan, and stops the next month's charge.",
+          `We charge ${fee} a month for as long as you're paused, and it stops the moment you resume — nothing is charged after that. There's no end date: your plan waits for you. It is not a cancellation.`,
+          "Your catalog is read-only while you're paused, and you can still download your masters, artwork and PDFs. Resume any time from Profile: that ends the pause, not the plan, charges a fresh year then, and stops the Vault charge.",
         ],
         cta: "Open your workspace",
       };

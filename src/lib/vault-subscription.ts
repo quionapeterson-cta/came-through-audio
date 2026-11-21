@@ -1,13 +1,14 @@
 /**
  * The Vault fee is a monthly subscription (founder, 2026-11-20, replacing the 2026-10-21 one-time charge): $1.99 a month
- * while a pause runs, billed once per month of the pause, cancelling itself at the pause end.
+ * for as long as a pause runs, billed once per month with no end date, cancelled on Resume or when the card fails
+ * (founder, 2026-11-21, replacing the 1–3 month pause).
  *
  * The rules live here, pure, because three things must never drift:
- *  - a pause bills once per month chosen, and never after the pause ends;
+ *  - a pause bills once per month for as long as it lasts, and nothing after it is ended;
  *  - a $0 invoice (the trial that waits for a renewal date) charges nothing and writes no purchase;
  *  - a refunded month is closed for good, and a month Stripe could not collect ends the pause instead of giving it away.
  */
-import { addMonths } from "./retention";
+import { addDays, addMonths, DAY, PAUSE_TRIAL_DAYS, PAUSE_TRIAL_TOPUP_DAYS } from "./retention";
 
 /** The parts of a Stripe subscription this module reads. */
 export type VaultSubLike = {
@@ -22,14 +23,14 @@ export function isVaultSubscription(sub: VaultSubLike, lookupKey: string): boole
 }
 
 /**
- * The dates a pause bills on: the pause's start, then the same day each month, never on or after the end date. A
- * 1/2/3-month pause therefore has exactly 1/2/3 charges, and the last month is the one that ends with the pause.
+ * The dates a pause bills on for a dated pause (one sold before 2026-11-21): the pause's start, then the same day each
+ * month, never on or after its end date. An open-ended pause has no end to list: it bills monthly until it is resumed.
  */
 export function vaultChargeDates(starts: string | Date, ends: string | Date): Date[] {
   const end = new Date(ends);
   const out: Date[] = [];
   let at = new Date(starts);
-  // Bounded: the pause is 1–3 months, so a bad pair of dates can never loop.
+  // Bounded: a dated pause was at most 3 months, so a bad pair of dates can never loop.
   while (at < end && out.length < 36) {
     out.push(new Date(at));
     at = addMonths(at, 1);
@@ -48,6 +49,39 @@ export function vaultTrialEnd(starts: string | Date, now = new Date()): number |
   const at = new Date(starts);
   if (Number.isNaN(at.getTime())) return null;
   return at.getTime() - now.getTime() >= VAULT_TRIAL_MIN_MS ? Math.floor(at.getTime() / 1000) : null;
+}
+
+/** The parts of a plan's Stripe subscription the pause rules read. */
+export type PausePlanTrial = { status: string; trialEnd: number | null };
+
+/** The trial the daily pass pushes a paused plan's charge behind: PAUSE_TRIAL_DAYS ahead of today. */
+export function pauseTrialTopUpEnd(now = new Date()): number {
+  return Math.floor(addDays(now, PAUSE_TRIAL_DAYS).getTime() / 1000);
+}
+
+/**
+ * What the daily pass should do with a paused plan's subscription: keep a running trial at least PAUSE_TRIAL_TOPUP_DAYS
+ * ahead, leave it alone, or the trial already lapsed and the plan is billing (or gone). Stripe refuses a new `trial_end`
+ * on a subscription it no longer treats as trialing, which is how a paused plan used to end up charged for a year it
+ * could not use — and then charged again on Resume.
+ */
+export function pauseTrialAction(i: PausePlanTrial, now = new Date()): "top-up" | "leave" | "lapsed" {
+  if (i.status === "trialing") {
+    const topUpAt = Math.floor(addDays(now, PAUSE_TRIAL_TOPUP_DAYS).getTime() / 1000);
+    return i.trialEnd == null || i.trialEnd < topUpAt ? "top-up" : "leave";
+  }
+  if (["active", "past_due", "unpaid", "canceled", "incomplete_expired"].includes(i.status)) return "lapsed";
+  return "leave";
+}
+
+/**
+ * Whether Resume should end the trial now and charge a fresh year. Only a still-running trial may be charged that way:
+ * once the trial has lapsed the year is already paid (or being collected), so ending the pause must use the time they
+ * have rather than charge a second year for one pause.
+ */
+export function resumeChargesFreshYear(i: PausePlanTrial, now = new Date()): boolean {
+  if (i.status !== "trialing") return false;
+  return i.trialEnd == null || i.trialEnd > Math.floor(now.getTime() / 1000);
 }
 
 /** One paid month is filed on `purchases` per invoice, never one row for the whole pause. */
@@ -123,7 +157,7 @@ export function vaultPriceShapeProblem(price: VaultPriceLike): string | null {
  */
 export function pauseCheckoutRefusal(i: { livePause?: boolean; liveSubscription?: boolean }): string | null {
   if (!i.livePause && !i.liveSubscription) return null;
-  return "You already have a pause. Resume it from Profile before starting another, or wait until this one ends.";
+  return "You already have a pause. Resume it from Profile before starting another.";
 }
 
 /** Whether this month still counts as paid: a refunded month is closed. */

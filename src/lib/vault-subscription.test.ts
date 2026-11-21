@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { DAY, PAUSE_TRIAL_DAYS } from "./retention";
 import {
   isVaultSubscription,
   pauseCheckoutRefusal,
+  pauseTrialAction,
+  pauseTrialTopUpEnd,
+  resumeChargesFreshYear,
   vaultChargeDates,
   vaultCollectionGaveUp,
   vaultMonthActive,
@@ -113,6 +117,29 @@ describe("the Vault subscription", () => {
       details,
     });
     expect(vaultMonthActive(details)).toBe(false);
+  });
+
+  it("keeps a paused plan's trial ahead of the top-up window, and never pretends to extend a lapsed one", () => {
+    const now = new Date("2026-11-21T00:00:00Z");
+    const at = (days: number) => Math.floor((now.getTime() + days * DAY) / 1000);
+    expect(pauseTrialAction({ status: "trialing", trialEnd: at(45) }, now)).toBe("leave");
+    expect(pauseTrialAction({ status: "trialing", trialEnd: at(20) }, now)).toBe("top-up");
+    expect(pauseTrialAction({ status: "trialing", trialEnd: null }, now)).toBe("top-up");
+    // Stripe refuses a new trial_end once the plan is billing: no top-up can hold it, so the pause must end rather
+    // than keep charging $1.99 a month for a plan that is already running.
+    expect(pauseTrialAction({ status: "active", trialEnd: null }, now)).toBe("lapsed");
+    expect(pauseTrialAction({ status: "canceled", trialEnd: null }, now)).toBe("lapsed");
+    expect(pauseTrialTopUpEnd(now)).toBe(at(PAUSE_TRIAL_DAYS));
+  });
+
+  it("charges a fresh year on Resume only while the trial is still running", () => {
+    const now = new Date("2026-11-21T00:00:00Z");
+    const at = (days: number) => Math.floor((now.getTime() + days * DAY) / 1000);
+    expect(resumeChargesFreshYear({ status: "trialing", trialEnd: at(30) }, now)).toBe(true);
+    // The trial lapsed and the year is already paid (or being collected): Resume must not take a second one.
+    expect(resumeChargesFreshYear({ status: "active", trialEnd: null }, now)).toBe(false);
+    expect(resumeChargesFreshYear({ status: "trialing", trialEnd: at(-1) }, now)).toBe(false);
+    expect(resumeChargesFreshYear({ status: "canceled", trialEnd: null }, now)).toBe(false);
   });
 
   it("keeps the pause while Stripe still has a retry, and ends it when it does not", () => {

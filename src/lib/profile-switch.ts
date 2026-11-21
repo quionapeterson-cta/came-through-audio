@@ -28,10 +28,21 @@ export function workingProfiles(
 
 /**
  * The tier the workspace works at while a profile is selected. A seat artist's account carries the seat's own tier, so
- * an owner is never given more than the seat pays for while standing in that catalog (founder, 2026-11-08).
+ * an owner is never given more than the seat pays for while standing in that catalog (founder, 2026-11-08). A paused
+ * owner is the exception, handled by `workTierFor`: paused is Free, seats included.
  */
 export function scopedTier(profile: WorkingProfile | null, ownTier: Tier): Tier {
   return profile ? profile.tier : ownTier;
+}
+
+/**
+ * The tier the workspace works at, with the pause on top (founder, 2026-11-21: "paused is Free, seats included"). A
+ * paused account stays Free even while it stands in an artist's seat, so switching profiles can never borrow the seat's
+ * paid tools (embedding, agency exports, split sheets, the utility suite) for a plan that is paused. The catalog it
+ * switches to stays readable and downloadable either way.
+ */
+export function workTierFor(profile: WorkingProfile | null, ownTier: Tier, paused: boolean): Tier {
+  return paused ? "free" : scopedTier(profile, ownTier);
 }
 
 /** A remembered pick, so a reload lands back on the artist being worked on. Only an id this account may work as. */

@@ -12,7 +12,8 @@ import { VAULT_LOOKUP_KEY, VAULT_PRICE } from "@/lib/retention";
 
 /**
  * How Stripe must hold the price: a yearly subscription, a monthly one, or a single charge. The Vault fee is monthly
- * (founder, 2026-11-20): $1.99 billed once per month of a pause, cancelled by Stripe at the pause end.
+ * (founder, 2026-11-20): $1.99 billed once per month for as long as the pause runs, cancelled on Resume
+ * (open-ended since 2026-11-21).
  */
 export type BillingType = "recurring-yearly" | "recurring-monthly" | "one-time";
 
@@ -92,7 +93,7 @@ export const PRICE_LIST: PriceGroup[] = [
       {
         item: "Pause (Vault fee)",
         price: `${usd(VAULT_PRICE)} / month`,
-        detail: "While a plan is paused, up to 3 months. Its own monthly subscription: billed once a month and stopped by Stripe when the pause ends, on Resume, or when the card cannot be charged. Keeps the catalog and Vault files in place, and downloads stay available.",
+        detail: "While a plan is paused, for as long as the member needs: its own monthly subscription, billed once a month and stopped on Resume or when the card cannot be charged. Keeps the catalog and Vault files in place, with downloads available and the paid tools waiting.",
         lookupKey: VAULT_LOOKUP_KEY,
         billing: "recurring-monthly",
       },

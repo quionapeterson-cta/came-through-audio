@@ -98,7 +98,8 @@ states."* It changes only with your approval.
   It is its own monthly subscription, cancelled by Stripe at the pause end, on Resume, or when the card cannot be charged;
   the month in progress isn't refunded. Lookup key `vault_month`.
   **Amended 2026-11-20:** the "paid up front / one-time price" rule here and in §17.5 is superseded by
-  `PLAN-vault-monthly-subscription.md`. A month that can't be collected ends the pause and moves the account to Free,
+  `PLAN-vault-monthly-subscription.md`. **Amended 2026-11-21:** the 1–3 month length is gone too — a pause runs as long
+  as the member needs, with no end date, and resuming charges a fresh year from that day. A month that can't be collected ends the pause and moves the account to Free,
   and downloads stay available while paused.
 - **When it ends:** the plan resumes and the renewal is charged automatically. **Resume now** in Profile ends it early
   (renewal charged that day). If that renewal fails, the normal failed-payment steps (§11) apply.

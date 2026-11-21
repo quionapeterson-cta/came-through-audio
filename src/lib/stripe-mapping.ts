@@ -17,9 +17,9 @@ export const checkoutInput = z.discriminatedUnion("kind", [
     package: z.enum(PACKAGES.map((p) => p.id) as [string, ...string[]]),
     trackIds: z.array(z.string().uuid()).max(20).optional(),
   }),
-  // Pause: the Vault fee, $1.99 a month for 1–3 months, billed monthly and cancelled at the pause end
-  // (founder, 2026-11-20, replacing the one-time charge). `months` picks the length, never the quantity.
-  z.object({ kind: z.literal("vault"), months: z.number().int().min(1).max(3) }),
+  // Pause: the Vault fee, $1.99 a month for as long as the member needs, billed monthly and stopped on Resume
+  // (founder, 2026-11-21, replacing the 1–3 month length of 2026-11-20). There is no length to choose.
+  z.object({ kind: z.literal("vault") }),
   // Personal Branding: its own yearly subscription, one per kit (founder, 2026-11-19, replacing the one-time
   // twelve-month purchase). It renews until the member cancels, so the kit never lapses for someone who wants it.
   // `kitId` names the kit this year is for, so the link is exact rather than guessed (founder, 2026-11-19).
@@ -85,9 +85,9 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
     return { mode: "subscription", items, metadata: { userId, kind: "seat", seats: String(total) }, managed: true };
   }
   if (input.kind === "vault") {
-    // Its own monthly subscription: one line, billed once a month while the pause runs. The pause dates are added by
-    // the server (payments.functions), which is the only place that knows when the pause starts and ends.
-    return { mode: "subscription", items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: 1 }], metadata: { userId, kind: "vault", months: String(input.months) }, managed: true };
+    // Its own monthly subscription: one line, billed once a month for as long as the pause runs. When the pause starts is
+    // added by the server (payments.functions), which is the only place that knows it; there is no end date to add.
+    return { mode: "subscription", items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: 1 }], metadata: { userId, kind: "vault" }, managed: true };
   }
   if (input.kind === "contract") {
     return { mode: "payment", items: [{ lookupKey: CONTRACT_LOOKUP_KEY, quantity: 1 }], metadata: { userId, kind: "contract", generation: input.generationId }, returnTab: "learn", managed: true };

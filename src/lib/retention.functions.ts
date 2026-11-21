@@ -46,6 +46,6 @@ export const setPlanCancelling = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ cancel: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => run(data.cancel ? "Cancelling" : "Keeping your plan", async () => {
     const { admin, setCancelling } = await import("@/lib/retention.server");
-    await setCancelling(await admin(), context.userId, getPaymentsEnvironment(), data.cancel);
-    return { ok: true };
+    const result = await setCancelling(await admin(), context.userId, getPaymentsEnvironment(), data.cancel);
+    return { ok: true, pauseEnded: result.pauseEnded, immediate: result.immediate };
   }));

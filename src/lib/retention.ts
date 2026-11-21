@@ -15,15 +15,22 @@ export const GRACE_DAYS = 30;
 export const EXTEND_DAYS = 30;
 /** Renewal reminders go out this many days before a yearly plan renews. */
 export const RENEWAL_REMINDER_DAYS = [90, 60, 30, 7, 1] as const;
-export const PAUSE_MONTHS = [1, 2, 3] as const;
 export const VAULT_PRICE = 1.99;
 export const VAULT_LOOKUP_KEY = "vault_month";
 /**
  * The Vault fee is a monthly subscription (founder, 2026-11-20, replacing the one-time charge of 2026-10-21): $1.99
- * billed once per month of the pause, cancelled by Stripe at the pause end, on Resume, or when its card cannot be
- * charged. The interval lives here so no surface repeats the string.
+ * billed once per month for as long as the pause runs, stopped by Stripe on Resume or when its card cannot be charged.
+ * A pause has no fixed length (founder, 2026-11-21): it lasts as long as the member needs it to. The interval lives here
+ * so no surface repeats the string.
  */
 export const VAULT_INTERVAL = "month";
+/**
+ * A pause has no end date, so the plan's own charge is held by pushing its trial forward instead of to a sold end date.
+ * Each paid Vault month tops it up to this many days ahead, and the daily job does the same before it gets within the
+ * top-up window. Resume ends the trial, which charges the new year (founder, 2026-11-21).
+ */
+export const PAUSE_TRIAL_DAYS = 60;
+export const PAUSE_TRIAL_TOPUP_DAYS = 30;
 
 /** The plan's Stripe subscription, as the subscriptions table stores it. */
 export type PlanSub = {
@@ -33,7 +40,19 @@ export type PlanSub = {
   current_period_end: string | null;
   cancel_at_period_end: boolean | null;
 };
-export type Pause = { id: string; kind: "extend" | "pause"; months: number | null; starts_at: string; ends_at: string; ended_at: string | null; created_at: string; /** The pause's own monthly Vault subscription (null on rows written before 2026-11-20). */ vault_subscription_id?: string | null };
+export type Pause = {
+  id: string;
+  kind: "extend" | "pause";
+  /** Null on an open-ended pause; the length is only recorded on pauses sold before 2026-11-21. */
+  months: number | null;
+  starts_at: string;
+  /** Null means the pause runs until the member resumes (founder, 2026-11-21). */
+  ends_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+  /** The pause's own monthly Vault subscription (null on rows written before 2026-11-20). */
+  vault_subscription_id?: string | null;
+};
 export type Lapse = { plan_ended_at: string; empty_after: string; emptied_at: string | null; kept_free_at?: string | null };
 
 export const addDays = (iso: string | Date, days: number) => new Date(new Date(iso).getTime() + days * DAY);
@@ -43,9 +62,12 @@ export function addMonths(iso: string | Date, months: number) {
   return d;
 }
 
-/** The pause in force or still to come (a pause chosen before renewal starts on the renewal date). */
+/**
+ * The pause in force or still to come (a pause chosen before renewal starts on the renewal date). An open-ended pause
+ * has no end date, so only resuming closes it.
+ */
 export const currentPause = (pauses: Pause[], now = new Date()) =>
-  pauses.find((p) => p.kind === "pause" && !p.ended_at && new Date(p.ends_at) > now);
+  pauses.find((p) => p.kind === "pause" && !p.ended_at && (!p.ends_at || new Date(p.ends_at) > now));
 export const isPaused = (pauses: Pause[], now = new Date()) => {
   const p = currentPause(pauses, now);
   return !!p && new Date(p.starts_at) <= now;
@@ -79,7 +101,7 @@ export type Offers = {
   failing: boolean;
   canExtend: boolean;
   canPause: boolean;
-  /** Each is once every 12 months; the date it opens again. */
+  /** Each is once every 12 months, measured from when it was last taken; the date it opens again. */
   extendAgain?: Date | undefined;
   pauseAgain?: Date | undefined;
 };
@@ -100,13 +122,22 @@ export function offers(sub: PlanSub | null, lapse: Lapse | null, pauses: Pause[]
 }
 
 /**
- * Where a pause sits. Before renewal it starts on the renewal date, so the paid time isn't lost; after a failed
- * renewal or a plan that has ended it starts now. Ends `months` later, when the plan renews.
+ * Cancelling a plan while paused ends the pause in the same step (founder, 2026-11-21). An open-ended pause has no end
+ * of its own, so leaving it alive would bill the $1.99 Vault fee forever with no plan to come back to; and cancelling
+ * the plan at a period end would hand back a paid tier from the trial the pause is holding. The caller cancels the plan
+ * now (not at a period end), cancels the Vault subscription, and ends this pause. Returns the live pause, or null.
  */
-export function pauseSpan(sub: PlanSub | null, months: number, now = new Date()) {
+export function pauseEndingOnCancel(pauses: Pause[], now = new Date()): Pause | null {
+  return currentPause(pauses, now) ?? null;
+}
+
+/**
+ * Where a pause starts. Before renewal it starts on the renewal date, so paid time isn't lost; after a failed renewal or
+ * a plan that has ended it starts now. It has no end date: it runs until the member resumes (founder, 2026-11-21).
+ */
+export function pauseSpan(sub: PlanSub | null, now = new Date()) {
   const renews = sub?.stripe_subscription_id && sub.status !== "past_due" ? renewalDate(sub) : null;
-  const starts = renews && renews > now ? renews : now;
-  return { starts, ends: addMonths(starts, months) };
+  return { starts: renews && renews > now ? renews : now };
 }
 
 /** Need more time: the new renewal date, 30 days after the current one (or after today, if that's already past). */

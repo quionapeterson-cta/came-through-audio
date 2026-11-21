@@ -176,6 +176,7 @@ export const DOCS: Doc[] = [
         "Catalog Plus: MP3 embedding, My Catalog with its downloads, and split sheet generation.",
         "Catalog & Collaborate: collaborator e-signatures, 1-Click Agency Exports, and the Royalty Utility Suite.",
         "Catalog Management: WAV embedding, PDF Fill & Sign, contracts and the Signed Vault, blueprints, and personal branding.",
+        "Pause: once every 12 months, for as long as you need, for a Vault fee of $1.99 a month. It is billed monthly and stops the moment you resume, so there is no end date. There is no plan charge while you are paused, your catalog stays read-only and is not emptied, and your downloads keep working, while embedding, uploads, new songs, split sheets, contracts and the other paid tools wait until you resume. Pausing is not cancelling: your plan renews from the day you resume, for a fresh year.",
         "Plans renew yearly and upgrades are prorated. See the Refund Policy for refund terms, and View Plans in the workspace for what you are on.",
       ] },
     ],

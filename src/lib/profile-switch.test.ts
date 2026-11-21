@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { readWorkingAs, rememberWorkingAs, scopedTier, switchable, workingProfiles, type WorkingProfile } from "./profile-switch";
+import { readWorkingAs, rememberWorkingAs, scopedTier, switchable, workTierFor, workingProfiles, type WorkingProfile } from "./profile-switch";
 
 // The switcher remembers its pick in this browser; node has no storage, so the test brings its own.
 beforeAll(() => {
@@ -40,6 +40,15 @@ describe("working as another artist", () => {
     expect(scopedTier(list[0]!, "management")).toBe("management");
     // A Plus seat never borrows the owner's Catalog Management tools.
     expect(scopedTier(list[1]!, "management")).toBe("plus");
+  });
+
+  it("stays Free inside a seat while the account's own plan is paused", () => {
+    const list = workingProfiles(own, seats);
+    // Paused is Free, seats included (founder, 2026-11-21): no paid tool is borrowed from the seat.
+    expect(workTierFor(null, "free", true)).toBe("free");
+    expect(workTierFor(list[1]!, "free", true)).toBe("free");
+    // Not paused: the seat's own tier still applies.
+    expect(workTierFor(list[1]!, "free", false)).toBe("plus");
   });
 
   it("only offers a seat while it is paid for", () => {

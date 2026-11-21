@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRenewEarly, dueRenewalReminder, dueReminder, earlyRenewalTarget, extendedRenewal, inGrace, isPaused, keptOnFree, offers, pauseSpan, shiftedEmptyAfter, type Pause, type PlanSub } from "@/lib/retention";
+import { canRenewEarly, currentPause, dueRenewalReminder, dueReminder, earlyRenewalTarget, extendedRenewal, inGrace, isPaused, keptOnFree, offers, pauseEndingOnCancel, pauseSpan, shiftedEmptyAfter, type Pause, type PlanSub } from "@/lib/retention";
 import { planCheckout, checkoutInput } from "@/lib/stripe-mapping";
 import { crc32, uniqueName, zipBytes } from "@/lib/zip";
 
@@ -19,6 +19,16 @@ describe("need more time and pause", () => {
     expect(offers(null, lapse, [], now).canPause).toBe(false);
     expect(offers(null, { ...lapse, emptied_at: "2026-11-09T00:00:00Z" }, [], now).canPause).toBe(false);
   });
+  it("cancelling a plan while paused ends the live pause, so the Vault fee can be stopped with it", () => {
+    const live = used("pause", "2026-10-01T00:00:00Z", { starts_at: "2026-10-01T00:00:00Z", ends_at: null });
+    expect(pauseEndingOnCancel([live], now)?.id).toBe("pause");
+    // Already ended, or not started yet: nothing to end with the plan.
+    expect(pauseEndingOnCancel([{ ...live, ended_at: "2026-10-02T00:00:00Z" }], now)).toBeNull();
+    // A pause scheduled for a later renewal is still a live Vault subscription: cancelling the plan must stop it before
+    // it ever starts, or it would begin billing against no plan.
+    expect(pauseEndingOnCancel([{ ...live, starts_at: "2027-01-01T00:00:00Z" }], now)?.id).toBe("pause");
+  });
+
   it("are each once every 12 months", () => {
     const o = offers(sub(), null, [used("extend", "2026-03-01T00:00:00Z")], now);
     expect(o).toMatchObject({ canExtend: false, canPause: true });
@@ -26,10 +36,21 @@ describe("need more time and pause", () => {
     expect(offers(sub(), null, [used("extend", "2025-09-01T00:00:00Z")], now).canExtend).toBe(true);
   });
   it("a pause chosen before renewal starts on the renewal date; after a failed renewal it starts now", () => {
-    expect(pauseSpan(sub(), 2, now)).toEqual({ starts: new Date("2026-11-10T00:00:00Z"), ends: new Date("2027-01-10T00:00:00Z") });
-    expect(pauseSpan(sub({ status: "past_due" }), 1, now).starts).toEqual(now);
+    // A pause has no end date (founder, 2026-11-21): it runs until the member resumes.
+    expect(pauseSpan(sub(), now)).toEqual({ starts: new Date("2026-11-10T00:00:00Z") });
+    expect(pauseSpan(sub({ status: "past_due" }), now).starts).toEqual(now);
     expect(isPaused([used("pause", "2026-10-01T00:00:00Z", { starts_at: "2026-11-10T00:00:00Z", ends_at: "2026-12-10T00:00:00Z" })], now)).toBe(false);
     expect(isPaused([used("pause", "2026-10-01T00:00:00Z", { starts_at: "2026-10-01T00:00:00Z", ends_at: "2026-12-10T00:00:00Z" })], now)).toBe(true);
+  });
+  it("an open-ended pause runs until the member resumes, however long that takes", () => {
+    const live = used("pause", "2026-10-01T00:00:00Z", { starts_at: "2026-10-01T00:00:00Z", ends_at: null });
+    expect(isPaused([live], now)).toBe(true);
+    expect(currentPause([live], now)?.id).toBe("pause");
+    // Years later it is still the live pause: nothing closes it but resuming.
+    expect(isPaused([live], new Date("2031-06-01T00:00:00Z"))).toBe(true);
+    // Not started yet, and ended, both read as not paused.
+    expect(isPaused([{ ...live, starts_at: "2027-01-01T00:00:00Z" }], now)).toBe(false);
+    expect(isPaused([{ ...live, ended_at: "2026-10-02T00:00:00Z" }], now)).toBe(false);
   });
   it("need more time moves the renewal 30 days", () => {
     expect(extendedRenewal(sub(), now).toISOString().slice(0, 10)).toBe("2026-12-10");
@@ -97,12 +118,12 @@ describe("renew now", () => {
 });
 
 describe("vault checkout", () => {
-  it("opens the pause's own monthly subscription, one month at a time", () => {
-    const plan = planCheckout(checkoutInput.parse({ kind: "vault", months: 3 }), "u1");
-    // The months pick the length of the pause; they are never a quantity on a one-time charge (founder, 2026-11-20).
-    expect(plan).toMatchObject({ mode: "subscription", items: [{ lookupKey: "vault_month", quantity: 1 }], metadata: { userId: "u1", kind: "vault", months: "3" }, managed: true });
-    expect(planCheckout(checkoutInput.parse({ kind: "vault", months: 1 }), "u1").items[0]?.quantity).toBe(1);
-    expect(() => checkoutInput.parse({ kind: "vault", months: 4 })).toThrow();
+  it("opens the pause's own monthly subscription, with no length to choose", () => {
+    const plan = planCheckout(checkoutInput.parse({ kind: "vault" }), "u1");
+    // A pause lasts as long as the member needs (founder, 2026-11-21): one monthly line, no months and no end date.
+    expect(plan).toMatchObject({ mode: "subscription", items: [{ lookupKey: "vault_month", quantity: 1 }], metadata: { userId: "u1", kind: "vault" }, managed: true });
+    expect(plan.metadata["months"]).toBeUndefined();
+    expect(plan.metadata["pauseEnds"]).toBeUndefined();
   });
 });
 

@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 import { createStripeClient, verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
 import { purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "@/lib/stripe-mapping";
-import { SEAT_MAX, SEAT_TIER } from "@/lib/plans";
+import { PRICE_TIER, SEAT_MAX, SEAT_TIER } from "@/lib/plans";
 import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
 import { isBrandingSubscription, kitYearRow } from "@/lib/branding-subscription";
 import { purchaseKind } from "@/lib/purchase-receipt";
@@ -49,9 +49,9 @@ async function sendReceipt(session: Stripe.Checkout.Session, env: StripeEnv) {
       // Renew now: the session carries the renewal it paid for, so the confirmation names the date the plan now
       // renews on rather than leaving the member to guess (founder, 2026-11-08).
       renewsOn: kind === "renew" && md["renews"] ? earlyRenewalTarget(md["renews"]).toISOString() : null,
-      // A pause's confirmation carries the monthly schedule, so it never claims a lump sum was taken.
+      // A pause's confirmation carries the monthly schedule, so it never claims a lump sum was taken. There is no end
+      // date: it runs until the member resumes (founder, 2026-11-21).
       pauseStarts: kind === "vault" ? (md["pauseStarts"] ?? null) : null,
-      pauseEnds: kind === "vault" ? (md["pauseEnds"] ?? null) : null,
     });
     if (!res.sent) console.warn(`Purchase confirmation for ${session.id} (${env}) not sent: ${res.reason}`);
   } catch (e) {
@@ -203,36 +203,29 @@ function invoicePaymentIntent(invoice: unknown): string | null {
 }
 
 /**
- * The pause's monthly Vault subscription (founder, 2026-11-20, replacing the one-time charge). It is never a plan: it
- * writes no `subscriptions` row and sends no plan email, it only starts the pause it was bought for and makes sure Stripe
- * will cancel it at the pause end.
+ * The pause's monthly Vault subscription (founder, 2026-11-20, open-ended since 2026-11-21). It is never a plan: it
+ * writes no `subscriptions` row and sends no plan email, it only starts the pause it was bought for and keeps billing
+ * $1.99 a month until the member resumes, which cancels it.
  */
 async function saveVaultSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted: boolean): Promise<boolean> {
   if (!isVaultSubscription(sub, VAULT_LOOKUP_KEY)) return false;
-  const { subscriptionId, starts, ends, userId, months } = {
+  const { subscriptionId, starts, userId } = {
     subscriptionId: sub.id,
     starts: sub.metadata?.["pauseStarts"],
-    ends: sub.metadata?.["pauseEnds"],
     userId: sub.metadata?.["userId"],
-    months: Number(sub.metadata?.["months"]) || 1,
   };
   const { admin, closeVaultPause, startVaultPause } = await import("@/lib/retention.server");
   const db = await admin();
-  // Stripe cancelled it at the pause end: the pause is closed, and the never-ending cron pass agrees.
+  // Cancelled from Stripe (a refund, a failed month, or a resume): the pause is closed, and the daily pass agrees.
   if (deleted) {
     await closeVaultPause(db, subscriptionId, new Date().toISOString());
     return true;
   }
-  if (!userId || !starts || !ends) {
-    console.warn(`Vault subscription ${subscriptionId} has no pause dates on it, so no pause was started.`);
+  if (!userId || !starts) {
+    console.warn(`Vault subscription ${subscriptionId} has no pause start on it, so no pause was started.`);
     return true;
   }
-  const cancelAt = Math.floor(new Date(ends).getTime() / 1000);
-  if (Number.isFinite(cancelAt) && sub.cancel_at !== cancelAt) {
-    // Stripe enforces the end of the pause itself, even if our worker is down. A failure returns 500 so Stripe retries.
-    await createStripeClient(env).subscriptions.update(subscriptionId, { cancel_at: cancelAt });
-  }
-  await startVaultPause(db, { user_id: userId, subscriptionId, months, starts, ends }, env);
+  await startVaultPause(db, { user_id: userId, subscriptionId, starts }, env);
   return true;
 }
 
@@ -423,7 +416,8 @@ async function sendKitPaymentFailed(env: StripeEnv, invoice: Stripe.Invoice, sub
 
 async function saveSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted = false) {
   // A pause's Vault subscription is neither a plan nor a seat: it starts and closes the pause it was bought for, and
-  // must never write a plan row or send the "your plan ends" email when Stripe cancels it at the pause end.
+  // must never write a plan row or send the "your plan ends" email when it is cancelled (a resume, a refund, a
+  // failed month, or a dated pause reaching its end).
   if (await saveVaultSubscription(sub, env, deleted)) return;
   // A kit subscription is neither a plan nor a seat: it unlocks one branding kit for the year it pays for.
   if (await saveBrandingSubscription(sub, env, deleted)) return;
@@ -561,7 +555,7 @@ async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
 /** A subscription just set to cancel (it wasn't before this event) gets the "your plan ends on DATE" email once. */
 async function cancelNotice(env: StripeEnv, sub: StripeSubscriptionLike, previous: Record<string, unknown> | undefined) {
   // A kit's own subscription is not the plan, so its cancellation never sends the "your plan ends" email, and neither
-  // does a pause's Vault subscription, which Stripe cancels at every pause end.
+  // does a pause's Vault subscription, which is cancelled whenever a pause ends.
   if (sub.items.data.some((i) => i.price.lookup_key === BRANDING_LOOKUP_KEY)) return;
   if (isVaultSubscription(sub, VAULT_LOOKUP_KEY)) return;
   const now = !!sub.cancel_at_period_end || !!sub.cancel_at;
@@ -616,9 +610,22 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
               try { await cancelNotice(env, event.data.object as StripeSubscriptionLike, event.data.previous_attributes); }
               catch (e) { console.error("Cancel email failed:", e); }
               break;
-            case "customer.subscription.deleted":
-              await saveSubscription(event.data.object as unknown as StripeSubscriptionLike, env, true);
+            case "customer.subscription.deleted": {
+              const sub = event.data.object as unknown as StripeSubscriptionLike;
+              await saveSubscription(sub, env, true);
+              // A plan that is gone (cancelled in the portal, or by us while paused) leaves a live pause nothing to return
+              // to: end it and stop the Vault fee rather than bill $1.99 a month forever (founder, 2026-11-21). A Vault,
+              // kit or seat subscription is not a plan and must not touch a pause.
+              const planGone = sub.metadata?.["kind"] === "plan" || !!PRICE_TIER[sub.items.data[0]?.price.lookup_key ?? ""];
+              const userId = sub.metadata?.["userId"];
+              if (planGone && userId) {
+                try {
+                  const { admin, endPauseWithoutPlan } = await import("@/lib/retention.server");
+                  await endPauseWithoutPlan(await admin(), userId, env);
+                } catch (e) { console.error("Ending the pause after its plan was deleted failed:", e); }
+              }
               break;
+            }
             case "invoice.paid": {
               const id = invoiceSubscriptionId(event.data.object);
               if (id) {

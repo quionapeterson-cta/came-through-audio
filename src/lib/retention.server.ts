@@ -2,9 +2,12 @@ import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import { isActiveSub, PLAN_TIERS, TIER_LABEL, TIER_RANK, tierFromPrice } from "@/lib/plans";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import {
-  addDays, dueRenewalReminder, earlyRenewalTarget, extendedRenewal, keptOnFree, RENEWAL_REMINDER_DAYS, GRACE_DAYS, offers, pauseSpan, shiftedEmptyAfter,
+  addDays, addMonths, dueRenewalReminder, earlyRenewalTarget, extendedRenewal, keptOnFree, PAUSE_TRIAL_DAYS,
+  RENEWAL_REMINDER_DAYS, GRACE_DAYS, offers, pauseEndingOnCancel, pauseSpan, shiftedEmptyAfter,
   type Lapse, type Pause, type PlanSub,
 } from "@/lib/retention";
+import { pauseTrialAction, pauseTrialTopUpEnd, resumeChargesFreshYear } from "@/lib/vault-subscription";
+import { VAULT_STILL_BILLING, closePauseSafely, vaultStopped, type VaultStopDeps } from "@/lib/pause-close";
 import { sendRetentionEmail } from "@/lib/retention-email.server";
 
 /**
@@ -44,13 +47,14 @@ async function emailOf(db: Admin, userId: string) {
  * (founder, 2026-11-20).
  */
 export async function liveVaultPause(db: Admin, userId: string, env: StripeEnv) {
+  // Open-ended or still ahead: an open-ended pause has no end date and is live until the member resumes.
   const { data, error } = await db.from("account_pauses" as never)
     .select("id, starts_at, ends_at, vault_subscription_id")
     .eq("user_id", userId).eq("environment", env).eq("kind", "pause")
-    .is("ended_at", null).gt("ends_at", new Date().toISOString())
-    .order("ends_at", { ascending: false }).limit(1).maybeSingle();
+    .is("ended_at", null).or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`)
+    .order("starts_at", { ascending: false }).limit(1).maybeSingle();
   if (error) throw error;
-  return (data ?? null) as { id: string; starts_at: string; ends_at: string; vault_subscription_id: string | null } | null;
+  return (data ?? null) as { id: string; starts_at: string; ends_at: string | null; vault_subscription_id: string | null } | null;
 }
 
 /**
@@ -125,7 +129,9 @@ export async function startPause(db: Admin, purchase: { id: string; user_id: str
   if (existing) return;
   const s = await loadState(db, purchase.user_id, env);
   if (!offers(s.sub, s.lapse, s.pauses).canPause) console.error(`Vault payment ${purchase.id}: pause outside the rules, starting it anyway (paid).`);
-  const { starts, ends } = pauseSpan(s.sub, months);
+  // A pause sold before 2026-11-21 has a length on the payment; it keeps the end date it was sold with.
+  const starts = pauseSpan(s.sub).starts;
+  const ends = addMonths(starts, months);
   // One row per Vault payment (unique), written before Stripe changes so a webhook retry can't pause twice.
   const record = await recordPause(db, { user_id: purchase.user_id, kind: "pause", months, starts_at: starts.toISOString(), ends_at: ends.toISOString(),
     stripe_subscription_id: s.sub?.stripe_subscription_id ?? null, purchase_id: purchase.id, environment: env });
@@ -143,21 +149,27 @@ export async function startPause(db: Admin, purchase: { id: string; user_id: str
 }
 
 /**
- * Starts the pause a Vault subscription bought (founder, 2026-11-20). The subscription is its own monthly $1.99 one,
- * already cancelled by Stripe at the pause end; this writes the pause the app reads and stops the plan's own charge for
- * the same span. Re-checked here, but never refused: it is already being billed, so a pause outside the rules is logged
- * for staff. Idempotent on the subscription id, so a retried webhook can't start a second pause or bill twice.
+ * Starts the pause a Vault subscription bought (founder, 2026-11-20, open-ended since 2026-11-21). The subscription is
+ * its own monthly $1.99 one; this writes the pause the app reads and holds the plan's own charge by pushing its trial
+ * forward, because there is no sold end date to set it to. Re-checked here, but never refused: it is already being
+ * billed, so a pause outside the rules is logged for staff. Idempotent on the subscription id, so a retried webhook
+ * can't start a second pause or bill twice.
  */
-export type VaultPauseInput = { user_id: string; subscriptionId: string; months: number; starts: string; ends: string };
+export type VaultPauseInput = { user_id: string; subscriptionId: string; starts: string };
+
+/**
+ * The trial the plan's charge is held behind while a pause runs: always PAUSE_TRIAL_DAYS ahead of the later of the pause
+ * start and today, so a pause that starts at a future renewal never shortens the paid period before it.
+ */
+const pauseTrialEnd = (starts: Date, now = new Date()) =>
+  unix(addDays(starts > now ? starts : now, PAUSE_TRIAL_DAYS));
 
 export async function startVaultPause(db: Admin, p: VaultPauseInput, env: StripeEnv) {
   const { data: existing } = await db.from("account_pauses" as never).select("id").eq("vault_subscription_id", p.subscriptionId).maybeSingle();
   if (existing) return;
-  const months = Math.min(3, Math.max(1, Number(p.months) || 1));
   const starts = new Date(p.starts);
-  const ends = new Date(p.ends);
-  if (Number.isNaN(starts.getTime()) || Number.isNaN(ends.getTime()) || ends <= starts) {
-    console.error(`Vault subscription ${p.subscriptionId}: its pause dates are unusable, so no pause was started.`);
+  if (Number.isNaN(starts.getTime())) {
+    console.error(`Vault subscription ${p.subscriptionId}: its pause start is unusable, so no pause was started.`);
     return;
   }
   const s = await loadState(db, p.user_id, env);
@@ -172,7 +184,8 @@ export async function startVaultPause(db: Admin, p: VaultPauseInput, env: Stripe
   // One row per Vault subscription (unique), written before Stripe changes so a retry can't pause twice.
   let record: string;
   try {
-    record = await recordPause(db, { user_id: p.user_id, kind: "pause", months, starts_at: starts.toISOString(), ends_at: ends.toISOString(),
+    // Open-ended: no length and no end date (founder, 2026-11-21). Only resuming closes it.
+    record = await recordPause(db, { user_id: p.user_id, kind: "pause", months: null, starts_at: starts.toISOString(), ends_at: null,
       stripe_subscription_id: s.sub?.stripe_subscription_id ?? null, vault_subscription_id: p.subscriptionId, environment: env });
   } catch (e) {
     // 23505: the other checkout won the race and its pause is the live one.
@@ -184,15 +197,101 @@ export async function startVaultPause(db: Admin, p: VaultPauseInput, env: Stripe
   }
   try {
     if (s.sub?.stripe_subscription_id) {
-      await createStripeClient(env).subscriptions.update(s.sub.stripe_subscription_id, { trial_end: unix(ends), proration_behavior: "none" });
+      await createStripeClient(env).subscriptions.update(s.sub.stripe_subscription_id, { trial_end: pauseTrialEnd(starts), proration_behavior: "none" });
       if (s.sub.status === "past_due") await voidOpenInvoices(env, s.sub.stripe_subscription_id);
-    } else if (s.lapse && !s.lapse.emptied_at) {
-      const { error } = await db.from("catalog_lapses" as never).update({ empty_after: shiftedEmptyAfter(s.lapse, ends).toISOString(), updated_at: new Date().toISOString() } as never).eq("user_id", p.user_id);
-      if (error) throw error;
     }
   } catch (e) { await db.from("account_pauses" as never).delete().eq("id", record); throw e; }
   const email = await emailOf(db, p.user_id);
-  if (email) await sendRetentionEmail(email, { kind: "paused", startsOn: starts.toISOString(), endsOn: ends.toISOString(), plan: !!s.sub }, `pause-${p.subscriptionId}`);
+  if (email) await sendRetentionEmail(email, { kind: "paused", startsOn: starts.toISOString(), plan: !!s.sub }, `pause-${p.subscriptionId}`);
+}
+
+/** One live pause, as the closing helpers need it. */
+type LivePause = { id: string; vault_subscription_id?: string | null };
+
+/**
+ * The durable staff alert for a refused Vault cancel: a `billing_actions` row Finance already reads in Admin → Billing,
+ * plus the log line. It never throws: a lost alert row must not turn into a closed pause.
+ */
+async function alertVaultRefused(db: Admin, env: StripeEnv, userId: string, pause: LivePause, error: unknown) {
+  const message = `Pause ${pause.id}: Stripe refused to cancel Vault subscription ${pause.vault_subscription_id}. The pause is left open so the $1.99/month charge cannot keep billing unseen; the daily pass and the next action retry it.`;
+  console.error(`ALERT ${message}`, error);
+  try {
+    const { error: logError } = await db.from("billing_actions" as never).insert({
+      actor_id: userId,
+      target_user_id: userId,
+      action: "pause_alert",
+      status: "failed",
+      target: pause.vault_subscription_id ?? pause.id,
+      reason: "pause_vault_cancel_refused",
+      error: message,
+      environment: env,
+    } as never);
+    if (logError) console.error("ALERT could not be written to billing_actions:", logError.message);
+  } catch (e) { console.error("ALERT could not be written to billing_actions:", e); }
+}
+
+/** The Stripe side of stopping one pause's Vault charge. */
+function vaultStopDeps(db: Admin, env: StripeEnv, userId: string, pause: LivePause, subscriptionId: string): VaultStopDeps {
+  const stripe = createStripeClient(env);
+  return {
+    cancel: async () => { await stripe.subscriptions.cancel(subscriptionId); },
+    status: async () => (await stripe.subscriptions.retrieve(subscriptionId)).status,
+    alert: (e) => alertVaultRefused(db, env, userId, pause, e),
+  };
+}
+
+/** True when the Vault charge is confirmed stopped; false leaves the pause open, already alerted. */
+async function stopVault(db: Admin, env: StripeEnv, userId: string, pause: LivePause): Promise<boolean> {
+  const subscriptionId = pause.vault_subscription_id;
+  if (!subscriptionId) return true;
+  return vaultStopped(vaultStopDeps(db, env, userId, pause, subscriptionId));
+}
+
+/** Ends the pause row. Only called once its Vault subscription is actually stopped. */
+async function endPauseRow(db: Admin, pause: LivePause, at = new Date()) {
+  const { error } = await db.from("account_pauses" as never)
+    .update({ ended_at: at.toISOString() } as never).eq("id", pause.id).is("ended_at", null);
+  if (error) throw error;
+}
+
+/**
+ * Stops the Vault fee, then ends the pause: the single place a plan cancellation, a lost plan and the daily pass all
+ * use. If Stripe refuses the stop, the pause row is left untouched so the charge is never left running unseen, and the
+ * caller can retry (the webhook returns 500 and the daily pass tries again).
+ */
+async function closePause(db: Admin, env: StripeEnv, userId: string, pause: LivePause, at = new Date()) {
+  const subscriptionId = pause.vault_subscription_id;
+  if (!subscriptionId) { await endPauseRow(db, pause, at); return; }
+  const closed = await closePauseSafely(
+    { ...vaultStopDeps(db, env, userId, pause, subscriptionId), end: () => endPauseRow(db, pause, at) },
+    subscriptionId,
+  );
+  if (!closed) throw new Error(VAULT_STILL_BILLING);
+}
+
+/**
+ * The confirmation for a pause ended by a plan cancellation, keyed per pause so the app path and the webhook path can
+ * never send it twice. A failure is logged, never a reason to fail the cancellation itself.
+ */
+async function confirmPauseEnded(db: Admin, userId: string, pauseId: string) {
+  try {
+    const email = await emailOf(db, userId);
+    if (email) await sendRetentionEmail(email, { kind: "pause-ended" }, `pause-ended-${pauseId}`);
+  } catch (e) { console.error(`Pause ${pauseId}: the confirmation email could not be sent`, e); }
+}
+
+/**
+ * A plan is gone while a pause is still live (cancelled in the app, in the Stripe portal, or by the daily pass noticing
+ * a lapsed trial): the pause has nothing to return to, so it ends here and its Vault subscription is cancelled. Without
+ * this an open-ended pause would bill $1.99 a month forever (founder, 2026-11-21). Returns whether a pause was ended.
+ */
+export async function endPauseWithoutPlan(db: Admin, userId: string, env: StripeEnv) {
+  const s = await loadState(db, userId, env);
+  const pause = pauseEndingOnCancel(s.pauses);
+  if (!pause) return false;
+  await closePause(db, env, userId, pause);
+  await confirmPauseEnded(db, userId, pause.id);
+  return true;
 }
 
 /** Closes the pause behind a Vault subscription that reached its end (Stripe cancelled it, or the cron did). */
@@ -225,38 +324,76 @@ export async function failVaultPause(db: Admin, subscriptionId: string, env: Str
 }
 
 /**
- * Resume now: ends the pause. A pause that has started charges the renewal today; one still waiting for the renewal
+ * Resume now: ends the pause. A pause that has started charges a fresh year today; one still waiting for the renewal
  * date is called off and the plan renews on its original date. The Vault subscription is cancelled either way, so no
  * later month is charged, and the month in progress isn't refunded.
  */
 export async function resume(db: Admin, userId: string, env: StripeEnv) {
   const s = await loadState(db, userId, env);
   const now = new Date();
-  const pause = s.pauses.find((p) => p.kind === "pause" && !p.ended_at && new Date(p.ends_at) > now);
+  const pause = s.pauses.find((p) => p.kind === "pause" && !p.ended_at && (!p.ends_at || new Date(p.ends_at) > now));
   if (!pause) throw new Error("There's no pause to resume.");
   const started = new Date(pause.starts_at) <= now;
-  // Its own subscription, so cancelling it is what stops the next month's Vault charge.
-  if (pause.vault_subscription_id) {
-    try { await createStripeClient(env).subscriptions.cancel(pause.vault_subscription_id); }
-    catch (e) { console.error(`Pause ${pause.id}: its Vault subscription could not be cancelled on resume`, e); }
-  }
+  // Stop the Vault fee before touching the plan: if Stripe refuses, nothing has changed and the pause stays on.
+  if (!(await stopVault(db, env, userId, pause))) throw new Error(VAULT_STILL_BILLING);
+  const stripe = createStripeClient(env);
   if (s.sub?.stripe_subscription_id) {
-    await createStripeClient(env).subscriptions.update(s.sub.stripe_subscription_id,
-      started ? { trial_end: "now", proration_behavior: "none" } : { trial_end: unix(new Date(pause.starts_at)), proration_behavior: "none" });
-  } else if (s.lapse && !s.lapse.emptied_at) {
-    // No plan to resume: the grace period picks up where it stopped.
+    if (!started) {
+      await stripe.subscriptions.update(s.sub.stripe_subscription_id, { trial_end: unix(new Date(pause.starts_at)), proration_behavior: "none" });
+    } else {
+      // Only a running trial may be ended into a fresh year. If the trial already lapsed (the daily top-up was missed),
+      // the plan is already billing; charging `trial_end: now` here would take a second year for the same pause, so the
+      // pause is simply ended and the year already paid is theirs (founder, 2026-11-21).
+      const plan = await stripe.subscriptions.retrieve(s.sub.stripe_subscription_id);
+      const state = { status: plan.status, trialEnd: (plan as unknown as { trial_end?: number | null }).trial_end ?? null };
+      if (resumeChargesFreshYear(state, now)) {
+        await stripe.subscriptions.update(s.sub.stripe_subscription_id, { trial_end: "now", proration_behavior: "none" });
+      } else {
+        console.warn(`Pause ${pause.id}: the plan is no longer trialing (${plan.status}), so Resume ends the pause without charging a second year.`);
+      }
+    }
+  } else if (s.lapse && !s.lapse.emptied_at && pause.ends_at) {
+    // No plan to resume: the grace period picks up where it stopped. Only a dated (legacy) pause has that span.
     const left = Math.max(0, new Date(s.lapse.empty_after).getTime() - new Date(pause.ends_at).getTime());
     await db.from("catalog_lapses" as never).update({ empty_after: new Date(now.getTime() + left).toISOString(), updated_at: now.toISOString() } as never).eq("user_id", userId);
   }
-  const { error } = await db.from("account_pauses" as never).update({ ended_at: now.toISOString() } as never).eq("id", pause.id);
-  if (error) throw error;
+  // The Vault subscription is already stopped above; closing the row is what makes the resume real.
+  await endPauseRow(db, pause, now);
 }
 
-/** Cancel (at the end of the paid year) or keep the plan. The webhook sends the "plan ends" email. */
+/**
+ * Cancel or keep the plan. Normally the plan runs to the end of the paid year; while paused it is cancelled now instead,
+ * because ending the pause would otherwise hand back a paid tier from the trial holding the pause. In that case the
+ * pause ends and its Vault subscription is cancelled in the same call (founder, 2026-11-21). The webhook sends the
+ * "plan ends" email.
+ */
 export async function setCancelling(db: Admin, userId: string, env: StripeEnv, cancel: boolean) {
   const s = await loadState(db, userId, env);
   if (!s.sub?.stripe_subscription_id) throw new Error("No plan to change.");
-  await createStripeClient(env).subscriptions.update(s.sub.stripe_subscription_id, { cancel_at_period_end: cancel });
+  const stripe = createStripeClient(env);
+  const planId = s.sub.stripe_subscription_id;
+  const pause = cancel ? pauseEndingOnCancel(s.pauses) : null;
+  if (!pause) {
+    await stripe.subscriptions.update(planId, { cancel_at_period_end: cancel });
+    return { pauseEnded: false, immediate: false };
+  }
+  // A pause that has already started holds the plan's charge as a trial and gives Free access, so the plan is cancelled
+  // now: ending the pause later would return a paid tier nobody is paying for. A pause still scheduled for the renewal
+  // date leaves the paid year running, so the plan keeps its normal end-of-period cancellation.
+  const started = new Date(pause.starts_at) <= new Date();
+  // Stop the Vault fee first. If Stripe refuses, the pause stays open and the plan is left exactly as it was, so the
+  // member can retry with nothing half-cancelled and no $1.99 charge running unseen.
+  if (!(await stopVault(db, env, userId, pause))) throw new Error(VAULT_STILL_BILLING);
+  if (started) await stripe.subscriptions.cancel(planId);
+  else {
+    // The pause held the plan's charge PAUSE_TRIAL_DAYS past its start, so restore the trial to that start as well as
+    // cancelling at the period end: otherwise the member would keep a paid tier for those extra days after their paid
+    // year, with nothing charged for them.
+    await stripe.subscriptions.update(planId, { trial_end: unix(new Date(pause.starts_at)), cancel_at_period_end: true });
+  }
+  await endPauseRow(db, pause);
+  await confirmPauseEnded(db, userId, pause.id);
+  return { pauseEnded: true, immediate: started };
 }
 
 /**
@@ -345,26 +482,49 @@ export async function runCatalogLapses(now = new Date()) {
 }
 
 /**
- * Daily job: the pause its own subscription did not close. Stripe cancels a Vault subscription at the pause end by
- * itself (`cancel_at`), so this is the reconciliation pass: a row past its end is closed, any subscription still live is
- * cancelled, and a missing `cancel_at` is logged so it can't happen twice.
+ * Daily job for pauses. An open-ended pause never ends on its own (founder, 2026-11-21), so its plan's trial is topped
+ * up here if it is getting close, and a pause sold with a date before 2026-11-21 is closed and its subscription
+ * cancelled at that date. Nothing is ever closed just because it has run a long time.
  */
 export async function runVaultEndings(now = new Date()) {
   const db = await admin();
   const env = getPaymentsEnvironment();
   const { data, error } = await db.from("account_pauses" as never)
-    .select("id, ends_at, vault_subscription_id")
-    .eq("kind", "pause").eq("environment", env).is("ended_at", null).lte("ends_at", now.toISOString());
+    .select("id, user_id, ends_at, vault_subscription_id, stripe_subscription_id")
+    .eq("kind", "pause").eq("environment", env).is("ended_at", null);
   if (error) throw error;
-  const rows = (data ?? []) as unknown as { id: string; ends_at: string; vault_subscription_id: string | null }[];
+  const rows = (data ?? []) as unknown as {
+    id: string; user_id: string; ends_at: string | null; vault_subscription_id: string | null; stripe_subscription_id: string | null;
+  }[];
   let ended = 0;
   let cancelled = 0;
+  let extended = 0;
   for (const p of rows) {
+    if (!p.ends_at) {
+      // Open-ended: keep the plan's own charge held. Only a plan that is running has a trial to push forward, and Stripe
+      // only accepts a new `trial_end` while the subscription is already trialing (it is, from the pause start).
+      if (!p.stripe_subscription_id) continue;
+      try {
+        const stripe = createStripeClient(env);
+        const sub = await stripe.subscriptions.retrieve(p.stripe_subscription_id);
+        const action = pauseTrialAction({ status: sub.status, trialEnd: (sub as unknown as { trial_end?: number | null }).trial_end ?? null }, now);
+        if (action === "top-up") {
+          await stripe.subscriptions.update(p.stripe_subscription_id, { trial_end: pauseTrialTopUpEnd(now), proration_behavior: "none" });
+          extended += 1;
+        } else if (action === "lapsed") {
+          // The trial ended and the plan is billing, or the plan is gone. The pause can no longer hold it, so end the
+          // pause and stop the Vault fee instead of billing $1.99 a month for nothing; a year already charged is theirs.
+          await closePause(db, env, p.user_id, p, now);
+          ended += 1;
+        }
+      } catch (e) { console.error(`Pause ${p.id}: its plan's trial could not be checked while paused`, e); }
+      continue;
+    }
+    if (new Date(p.ends_at) > now) continue;
     if (p.vault_subscription_id) {
       try {
         const stripe = createStripeClient(env);
         const sub = await stripe.subscriptions.retrieve(p.vault_subscription_id);
-        if (!sub.cancel_at) console.error(`Pause ${p.id}: its Vault subscription had no cancel_at, so the cron cancelled it at the pause end.`);
         if (["active", "trialing", "past_due", "unpaid"].includes(sub.status)) {
           await stripe.subscriptions.cancel(p.vault_subscription_id);
           cancelled += 1;
@@ -374,7 +534,7 @@ export async function runVaultEndings(now = new Date()) {
     await db.from("account_pauses" as never).update({ ended_at: p.ends_at } as never).eq("id", p.id).is("ended_at", null);
     ended += 1;
   }
-  return { vaultPausesEnded: ended, vaultSubscriptionsCancelled: cancelled };
+  return { vaultPausesEnded: ended, vaultSubscriptionsCancelled: cancelled, pauseTrialsExtended: extended };
 }
 
 /** The webhook's "your plan ends" email, sent once when a subscription is set to cancel. */

@@ -1171,7 +1171,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{full ? "My Catalog" : "Embed Metadata"}</h1>
         </div>
-        {full && userId && readOnly ? <div className="flex flex-wrap items-center gap-3"><span className="text-sm text-muted-foreground"><Lock className="mr-1 inline h-3.5 w-3.5" />Read-only</span><DownloadCatalogButton /></div>
+        {full && userId && readOnly ? <div className="flex flex-wrap items-center gap-3"><span className="text-sm text-muted-foreground"><Lock className="mr-1 inline h-3.5 w-3.5" />Read-only</span><DownloadCatalogButton ownerId={userId} /></div>
         : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 or WAV · ID3v2.3"}</span>}
       </div>
       {!full && <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6">

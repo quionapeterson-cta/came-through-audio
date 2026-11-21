@@ -27,12 +27,15 @@ const profile = `${SITE_URL}/profile`;
 export type RetentionEmail =
   | { kind: "cancelled"; endsOn: string }
   | { kind: "extended"; renewsOn: string; plan: boolean }
-  | { kind: "paused"; startsOn: string; endsOn: string; plan: boolean }
+  /** `endsOn` is only set on a pause sold with a length before 2026-11-21; a pause now runs until the member resumes. */
+  | { kind: "paused"; startsOn: string; endsOn?: string | null; plan: boolean }
   | { kind: "renewal"; plan: string; price: string; renewsOn: string; daysLeft: number }
   | { kind: "payment-failed"; plan: string; reminder: boolean }
   | { kind: "renewed"; renewsOn: string }
   | { kind: "kept-free" }
-  | { kind: "vault-failed" };
+  | { kind: "vault-failed" }
+  /** A pause ended because the member cancelled the plan: say the Vault fee stopped, so nothing looks still owed. */
+  | { kind: "pause-ended" };
 
 function render(e: RetentionEmail): { subject: string; html: string } {
   switch (e.kind) {
@@ -64,7 +67,7 @@ function render(e: RetentionEmail): { subject: string; html: string } {
       const plan = escapeHtml(e.plan);
       return { subject: e.reminder ? "Reminder: your renewal still didn't go through" : "Your renewal didn't go through", html: page("Renewal payment", e.reminder ? "Your renewal still didn't go through" : "Your renewal didn't go through", [
         `We couldn't charge your card for ${plan}. Update your card to keep your plan; Stripe will try again over the next few weeks, and you keep full access meanwhile.`,
-        "Need a little longer? You can move your renewal back 30 days free, or pause for 1 to 3 months, from Profile.",
+        "Need a little longer? You can move your renewal back 30 days free, or pause for as long as you need for $1.99 a month, from Profile.",
         "If it's never paid, your plan ends and your catalog stays read-only on Free. Nothing is emptied, and you can start a paid plan whenever you're ready.",
       ], [profile, "Update my card"]) };
     }
@@ -82,13 +85,24 @@ function render(e: RetentionEmail): { subject: string; html: string } {
         KEPT,
       ], [`${SITE_URL}/plans`, "See plans"]) };
     case "paused": {
-      const s = escapeHtml(longDate(e.startsOn)), end = escapeHtml(longDate(e.endsOn));
-      return { subject: `Your plan is paused until ${end}`, html: page("Pause", `Paused from ${s} to ${end}`, [
+      const s = escapeHtml(longDate(e.startsOn));
+      const end = e.endsOn ? escapeHtml(longDate(e.endsOn)) : null;
+      return { subject: end ? `Your plan is paused until ${end}` : "Your plan is paused", html: page("Pause", end ? `Paused from ${s} to ${end}` : `Paused from ${s}`, [
         "Your catalog is kept safe and read-only while you're paused: view and download, no adding or editing. Nothing is emptied, and your masters, artwork and PDFs stay downloadable.",
-        e.plan ? `Your plan resumes and renews on ${end}. Want it back sooner? Use Resume now in Profile.` : `After ${end}, renew to keep your catalog.`,
-        `The Vault fee is $1.99 a month while you're paused, charged monthly and stopped automatically on ${end}; nothing is charged after that. It isn't refundable once the month starts, and pausing is never cancelling. Pause can be used once every 12 months.`,
+        e.plan
+          ? end
+            ? `Your plan resumes and renews on ${end}. Want it back sooner? Use Resume now in Profile.`
+            : "Your plan waits for you: resume any time in Profile and it renews from that day, for a fresh year."
+          : "Renew whenever you're ready to keep your catalog.",
+        `The Vault fee is $1.99 a month for as long as you're paused, charged monthly and stopped the moment you resume${end ? ", with nothing taken after the pause ends" : ""}. It isn't refundable once the month starts, and pausing is never cancelling. Pause can be used once every 12 months.`,
       ], [profile, "Open Profile"]) };
     }
+    case "pause-ended":
+      return { subject: "Your pause has ended and the Vault fee is stopped", html: page("Pause ended", "Your pause has ended", [
+        "Your plan was cancelled, so the pause has ended with it and the $1.99 monthly Vault fee is stopped. Nothing more is charged for the pause.",
+        "Your account is on the Free plan: your catalog stays read-only and nothing is emptied, and your masters, artwork and PDFs are still downloadable. Start a paid plan whenever you're ready and pick up exactly where you left off.",
+        KEPT,
+      ], [`${SITE_URL}/plans`, "See plans"]) };
     case "vault-failed":
       return { subject: "Your pause has ended: the Vault fee couldn't be charged", html: page("Pause ended", "Your pause has ended", [
         "Stripe tried the monthly Vault fee several times and the card didn't go through, so the pause has ended and the account is now on the Free plan. Nothing else was charged.",

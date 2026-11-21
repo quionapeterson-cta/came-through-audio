@@ -15,7 +15,8 @@ type SubRow = PlanSub & { price_id: string; created_at?: string };
 /**
  * Current plan + one-time purchases for the signed-in user, refreshed after checkout. Also the plan's Stripe
  * subscription, Need more time / Pause history and the grace period, for Profile and the workspace banner.
- * A paused account counts as Free (the server's user_tier says the same).
+ * A paused account counts as Free, seats included: the plan's own tier waits, and downloads from the workspace stay
+ * available (founder, 2026-11-21; the server's user_tier says the same).
  */
 export function useBilling(userId: string | undefined) {
   const [tier, setTier] = useState<Tier>("free");
@@ -40,7 +41,8 @@ export function useBilling(userId: string | undefined) {
       // Missing until the founding migration runs; then empty for everyone outside the first 100.
       supabase.from("founding_upgrades" as never).select("paid_tier, granted_tier, seat").eq("user_id", userId).eq("environment", env).is("ended_at", null),
       // Add-on artist seats this account accepted. A seat IS their plan while it's paid for, so the app has to see it
-      // here too: the server's user_tier already counts it, and a page must never show a seat holder as Free.
+      // here too: the server's user_tier counts it, and a page must not show a seat holder as Free — except while the
+      // account's own plan is paused, when paused is Free, seats included (founder, 2026-11-21).
       supabase.from("artist_seats" as never).select("tier, status, current_period_end, environment").eq("member_user_id", userId).in("status", ["active", "canceled"]),
       // The database's own answer, which already counts staff (management for anyone on the team) and a live staff-plan
       // grant on a reported member account. Read from one place so the page can never disagree with the gates.
@@ -55,7 +57,8 @@ export function useBilling(userId: string | undefined) {
     // A founding seat for the tier they pay for lifts them one tier (the server's user_tier says the same).
     const seat = ((seats.data ?? []) as FoundingSeat[]).find((f) => f.paid_tier === best) ?? null;
     setFounding(seat);
-    setPaidTier(isPaused(pauseRows) ? "free" : best);
+    const onPause = isPaused(pauseRows);
+    setPaidTier(onPause ? "free" : best);
     // A seat the artist accepted lifts them to its tier, exactly like the server's user_tier: never lower than their own
     // plan. The seat is theirs whichever environment it was bought in, so this environment's rows are preferred only
     // when it has any: a preview/live mismatch must never make a paid seat read Free (founder, 2026-11-04).
@@ -63,7 +66,8 @@ export function useBilling(userId: string | undefined) {
       .filter((r) => r.status === "active" || (!!r.current_period_end && Date.parse(r.current_period_end) > Date.now()));
     const hereSeats = usableSeats.filter((r) => r.environment === env);
     const seatTiers = (hereSeats.length ? hereSeats : usableSeats).map((r) => r.tier);
-    setTier(isPaused(pauseRows) ? "free" : highestTier(seat ? seat.granted_tier : best, ...seatTiers, serverTier(serverTierRow.data)));
+    // Paused is Free, full stop: embeddings, uploads, new songs and every paid tool wait until they resume.
+    setTier(onPause ? "free" : highestTier(seat ? seat.granted_tier : best, ...seatTiers, serverTier(serverTierRow.data)));
     const row = live.find((r) => tierFromPrice(r.price_id) === best);
     // (plan and sub below follow the tier they pay for, so billing shows the real price)
     // orderedAt: when the plan was first bought, for the 30-day full refund countdown.
