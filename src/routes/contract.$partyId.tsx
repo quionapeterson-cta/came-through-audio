@@ -25,6 +25,8 @@ import { downloadContractPdf } from "@/lib/contract-pdf";
 import {
   templateToHtml,
   templateToSigningHtml,
+  tokenValues,
+  withoutRepeatedLeadingTitle,
   type BlockValues,
   type TemplateBlock,
 } from "@/lib/pdf-templates";
@@ -98,7 +100,7 @@ const pdf = async (i: ContractInvite) => {
         : null;
     const bytes = await templateToPdfBytes(
       { name: i.title, tier: "platinum", blocks: i.blocks },
-      {},
+      tokenValues(i.block_values ?? undefined),
       {
         values: i.block_values ?? {},
         signatures: {
@@ -198,8 +200,12 @@ function ContractView({
           srcDoc={
             doc ??
             templateToHtml(
-              { name: invite.title, tier: "platinum", blocks: invite.blocks },
-              {},
+              {
+                name: invite.title,
+                tier: "platinum",
+                blocks: withoutRepeatedLeadingTitle(invite.blocks, invite.title),
+              },
+              tokenValues(invite.block_values ?? undefined),
               invite.signed_at ? (invite.block_values ?? {}) : values,
             )
           }
@@ -305,8 +311,12 @@ function LinkSigning({ token }: { token: string }) {
     () =>
       invite?.blocks?.length && invite.can_sign && !signed
         ? templateToSigningHtml(
-            { name: invite.title, tier: "platinum", blocks: invite.blocks },
-            {},
+            {
+              name: invite.title,
+              tier: "platinum",
+              blocks: withoutRepeatedLeadingTitle(invite.blocks, invite.title),
+            },
+            tokenValues(invite.block_values ?? undefined),
             invite.block_values ?? {},
           )
         : "",

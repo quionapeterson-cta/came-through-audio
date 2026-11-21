@@ -30,6 +30,7 @@ const BLOCK_KINDS = [
   "checkboxes",
   "signature",
   "date",
+  "printName",
 ] as const;
 
 const blockSchema = z

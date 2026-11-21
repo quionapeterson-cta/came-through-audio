@@ -98,7 +98,7 @@ export async function getContract(id: string): Promise<Contract | null> {
 /** Saves a draft and its parties. Sent and signed contracts are frozen by the database, so only drafts come here. */
 export async function saveContract(c: Contract): Promise<Contract> {
   // brand_kit_id only when a kit was picked, so saving works before migration 20261027210000 runs.
-  const row = { blueprint: c.blueprint, title: c.title.trim() || "Untitled contract", catalog_id: c.catalogId, fields: c.fields, body: c.body, ...(c.brandKitId ? { brand_kit_id: c.brandKitId } : {}), ...(c.blocks?.length ? { blocks: c.blocks, template_id: c.templateId ?? null } : {}) };
+  const row = { blueprint: c.blueprint, title: c.title.trim() || "Untitled contract", catalog_id: c.catalogId, fields: c.fields, body: c.body, ...(c.brandKitId ? { brand_kit_id: c.brandKitId } : {}), ...(c.blocks?.length ? { blocks: c.blocks, template_id: c.templateId ?? null, block_values: c.blockValues ?? {} } : {}) };
   let id = c.id;
   if (id) {
     const { error } = await supabase.from("contracts" as never).update({ ...row, updated_at: new Date().toISOString() } as never).eq("id", id);

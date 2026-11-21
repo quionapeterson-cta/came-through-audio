@@ -19,7 +19,7 @@ import { InfoTip } from "@/components/InfoTip";
 import { Confetti } from "@/components/Confetti";
 import { StarSky } from "@/components/StarSky";
 import { listTracks, saveBlob, type CatalogTrack } from "@/lib/catalog";
-import { blocksToText, contractCardSummary, templateToHtml } from "@/lib/pdf-templates";
+import { blocksToText, contractCardSummary, missingTokens, templateTokens, templateToHtml, tokenLabel, tokenValues, withoutRepeatedLeadingTitle } from "@/lib/pdf-templates";
 import { listContractTemplates, type SavedTemplate } from "@/lib/pdf-templates.functions";
 import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
 import { getLaunchStatus } from "@/lib/gate.functions";
@@ -151,7 +151,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
       sentAt: null, completedAt: null, updatedAt: new Date().toISOString(),
       parties: [{ ...emptyParty("Company", true), legalName: company ? COMPANY_SIGNER_NAME : "" }, emptyParty("Recipient")],
       ...(company && { isCompany: true }),
-      blocks: t.blocks, templateId: t.id,
+      blocks: t.blocks, templateId: t.id, blockValues: {},
     });
   };
 
@@ -954,6 +954,28 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
   const [customized, setCustomized] = useState(!!initial.body && initial.body !== renderContract(bp, initial.fields, initial.parties));
   const blocks = c.blocks ?? [];
   const blocksMode = blocks.length > 0;
+  // Every token the document asks for, read from the blocks themselves — a custom token gets a Step 2 field too, and a
+  // Print Legal Name block always asks for {{PRINT_LEGAL_NAME}}. The title is only used for the save preflight.
+  const blockTemplate = useMemo(
+    () => ({ name: c.title, tier: c.isCompany ? ("platinum" as const) : ("standard" as const), blocks }),
+    [c.title, c.isCompany, blocks],
+  );
+  const blockTokens = useMemo(() => (blocksMode ? templateTokens(blockTemplate) : []), [blocksMode, blockTemplate]);
+  const unfilledTokens = useMemo(
+    () => (blocksMode ? missingTokens(blockTemplate, c.blockValues) : []),
+    [blocksMode, blockTemplate, c.blockValues],
+  );
+  /** A Print Legal Name block names its own field; every other token gets a readable label from the token itself. */
+  const printNameLabel = blocks.find(
+    (b): b is Extract<(typeof blocks)[number], { kind: "printName" }> =>
+      b.kind === "printName" && !!b.label.trim(),
+  )?.label.trim();
+  const tokenFieldLabel = (token: string) =>
+    token === "PRINT_LEGAL_NAME" && printNameLabel ? printNameLabel : tokenLabel(token);
+  const previewBlocks = useMemo(
+    () => (blocksMode ? withoutRepeatedLeadingTitle(blocks, c.title) : blocks),
+    [blocksMode, blocks, c.title],
+  );
   const [busy, setBusy] = useState(false);
   const [account, setAccount] = useState({ email: "", legalName: "" });
   const [typed, setTyped] = useState("");
@@ -992,7 +1014,9 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
   const others = c.parties.filter((p) => !p.isOwner || !signsHere);
   /** What still holds back signing: required details, and each party's legal name and email. Shown only when signing. */
   const missing: Missing[] = draft ? [
-    ...(blocksMode ? [] : missingFields(bp, c.fields).filter((f) => !customized || body.includes(`[${f.label}]`)).map((f) => ({ label: f.label, target: `cf-${f.key}`, section: "details" as const }))),
+    ...(blocksMode
+      ? unfilledTokens.map((token) => ({ label: tokenFieldLabel(token), target: `tok-${token}`, section: "details" as const }))
+      : missingFields(bp, c.fields).filter((f) => !customized || body.includes(`[${f.label}]`)).map((f) => ({ label: f.label, target: `cf-${f.key}`, section: "details" as const }))),
     ...(c.parties.length < 2 ? [{ label: "A second person to sign", target: "cp-add", section: "parties" as const }] : []),
     ...c.parties.flatMap((p, i): Missing[] => [
       ...(!p.legalName.trim() ? [{ label: `${p.isOwner ? "Your" : `${p.role || `Party ${i + 1}`}'s`} legal name`, target: `cp-${i}-name`, section: "parties" as const }] : []),
@@ -1010,6 +1034,8 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
   const filled = required.filter((f) => c.fields[f.key]?.trim()).length;
 
   const setField = (key: string, value: string) => setC((x) => ({ ...x, fields: { ...x.fields, [key]: value } }));
+  const setToken = (token: string, value: string) =>
+    setC((x) => ({ ...x, blockValues: { ...(x.blockValues ?? {}), [token]: value } }));
   const setParty = (i: number, patch: Partial<ContractParty>) => setC((x) => ({ ...x, parties: x.parties.map((p, idx) => idx === i ? { ...p, ...patch } : p) }));
   const markOwner = (i: number) => setC((x) => ({ ...x, parties: x.parties.map((p, idx) => idx === i
     ? { ...p, isOwner: true, email: account.email, legalName: p.legalName || account.legalName }
@@ -1129,7 +1155,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
         p?.signedAt && p.signatureName ? { kind: "type" as const, data: p.signatureName, name: p.signatureName, signedAt: p.signedAt, role } : null;
       const bytes = await templateToPdfBytes(
         { name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks },
-        {},
+        tokenValues(c.blockValues),
         {
           values: c.blockValues ?? {},
           signatures: { recipient: record(c.parties.find((p) => !p.isOwner && p.signedAt), "recipient"), admin: record(c.parties.find((p) => p.isOwner), "admin") },
@@ -1158,7 +1184,11 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
         </div>
 
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-primary">{bp.name}</p>
+          {/* A template-built contract has no separate blueprint name: its title is the blueprint, so printing both put the
+              same words at the top twice (founder, 2026-11-21). */}
+          {bp.name.trim().toLowerCase() !== c.title.trim().toLowerCase() && (
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">{bp.name}</p>
+          )}
           {draft
             ? <Input aria-label="Contract title" value={c.title} onChange={(e) => setC({ ...c, title: e.target.value })} className="mt-1 h-auto border-0 px-0 text-2xl font-bold shadow-none focus-visible:ring-0" />
             : <h2 className="mt-1 text-2xl font-bold">{c.title}</h2>}
@@ -1219,10 +1249,10 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
           {blocksMode
             ? <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Built from a template in Template Studio. Its blocks and their wording are fixed; the parties below are named on the signature lines.</p>
-                {/\{\{[A-Z0-9_]+\}\}/.test(body) && (
-                  <p className="flex items-start gap-2 rounded-lg border border-amber-500 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />This template still has a {"{{…}}"} placeholder in it. Fill it in Template Studio before sending; placeholders are printed exactly as they are, never with another song's details.</p>
+                {unfilledTokens.length > 0 && (
+                  <p className="flex items-start gap-2 rounded-lg border border-amber-500 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />This template still has {unfilledTokens.map((token) => `{{${token}}}`).join(", ")} unfilled. Fill {unfilledTokens.length === 1 ? "it" : "them"} in Step 2; a placeholder is printed exactly as it is, never with another song's details.</p>
                 )}
-                <iframe title="Contract preview" sandbox="" srcDoc={templateToHtml({ name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks }, {}, c.blockValues)} className="h-[30rem] w-full rounded-xl border border-border bg-white" />
+                <iframe title="Contract preview" sandbox="" srcDoc={templateToHtml({ name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks: previewBlocks }, tokenValues(c.blockValues), c.blockValues)} className="h-[30rem] w-full rounded-xl border border-border bg-white" />
               </div>
             : draft && customized
               ? <textarea aria-label="Contract text" rows={22} value={body} onChange={(e) => setC({ ...c, body: e.target.value })} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />
@@ -1231,9 +1261,28 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
         {draft && (
           <>
             <Step n={2} title="Details" open={sections.details} onToggle={() => setSections((x) => ({ ...x, details: !x.details }))}
-              summary={required.length ? `${filled} of ${required.length} required filled${filled === required.length ? " ✓" : ""}` : "Nothing required · common terms already filled in ✓"}
-              hint={required.length ? "Only the fields marked * are needed. Everything else is already filled in with common terms; change anything you like." : "Everything is already filled in with common terms. Change anything you like."}>
+              summary={blocksMode && blockTokens.length
+                ? `${blockTokens.length - unfilledTokens.length} of ${blockTokens.length} fields filled${unfilledTokens.length === 0 ? " ✓" : ""}`
+                : required.length ? `${filled} of ${required.length} required filled${filled === required.length ? " ✓" : ""}` : "Nothing required · common terms already filled in ✓"}
+              hint={blocksMode && blockTokens.length
+                ? "Every variable in the template gets a field here. They fill into the page as you type."
+                : required.length ? "Only the fields marked * are needed. Everything else is already filled in with common terms; change anything you like." : "Everything is already filled in with common terms. Change anything you like."}>
               <div className="grid gap-4 sm:grid-cols-2">
+                {blocksMode && blockTokens.map((token) => (
+                  <Field
+                    key={token}
+                    label={tokenFieldLabel(token)}
+                    tip={`Prints wherever {{${token}}} appears in the template.`}
+                    required
+                  >
+                    <Input
+                      id={`tok-${token}`}
+                      value={String(c.blockValues?.[token] ?? "")}
+                      onChange={(e) => setToken(token, e.target.value)}
+                      placeholder={tokenLabel(token)}
+                    />
+                  </Field>
+                ))}
                 {tracks.length > 0 && bp.fields.some((f) => f.key === "songTitle") && (
                   <Field label="Catalog song" tip="Pick a song from My Catalog to fill in its title.">
                     <select value={c.catalogId ?? ""} onChange={(e) => pickSong(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">

@@ -148,6 +148,8 @@ export async function templateToPdfBytes(
   };
 
   for (const block of blocks) {
+    // A signature block switched off prints nothing at all, so a document can carry its own signature and print-name lines.
+    if (block.kind === "signatures" && block.enabled === false) continue;
     if (block.kind === "header") {
       // A header sits at the top of a page, so a header that arrives mid-page starts the next one instead of drawing
       // over the text above it.
@@ -543,6 +545,38 @@ export async function templateToPdfBytes(
         });
       }
       y -= 30;
+      continue;
+    }
+
+    if (block.kind === "printName") {
+      // The name is printed, not signed: a labelled line with the Step 2 answer on it (founder, 2026-11-21). A missing
+      // answer leaves the line blank, and the preflight warning is what says it still needs filling.
+      ensure(48);
+      page.drawText(text(block.label || "Print legal name"), {
+        x: MARGIN,
+        y,
+        size: 9,
+        font: bold,
+        color: ink(BRAND.black),
+      });
+      y -= 16;
+      page.drawLine({
+        start: { x: MARGIN, y },
+        end: { x: PAGE.width - MARGIN, y },
+        thickness: 0.8,
+        color: ink(BRAND.black),
+      });
+      const printed = text("{{PRINT_LEGAL_NAME}}");
+      if (printed !== "{{PRINT_LEGAL_NAME}}") {
+        page.drawText(printed.slice(0, 90), {
+          x: MARGIN + 2,
+          y: y + 4,
+          size: 12,
+          font: regular,
+          color: ink(BRAND.black),
+        });
+      }
+      y -= 28;
       continue;
     }
 
