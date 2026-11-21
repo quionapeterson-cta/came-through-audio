@@ -83,6 +83,10 @@ export const shelfArt = (s: BadgeState) =>
     s.art,
   );
 
+/** The collection a badge belongs to, named the way the shelf and the workspace tab name it. */
+const collectionTitle = (badge: BadgeDef) =>
+  COLLECTIONS.find((c) => c.id === badge.collection)?.title ?? "Came Through Audio";
+
 function TierChip({ badge }: { badge: BadgeDef }) {
   const label = TIER_LABEL[badge.tier];
   if (!label) return null;
@@ -591,7 +595,7 @@ export function BadgeDetail({
     <Dialog open={!!s} onOpenChange={(o) => !o && onClose()}>
       {s && (
         <DialogContent
-          className="max-h-[95svh] max-w-[min(94vw,46rem)] overflow-y-auto border-0 bg-transparent p-2 text-white shadow-none [&>button]:text-white"
+          className="max-h-[95svh] max-w-[min(94vw,52rem)] overflow-y-auto border-0 bg-transparent p-2 text-white shadow-none [&>button]:text-white"
           onKeyDown={(e) => {
             if (e.key === "ArrowRight") go(1);
             if (e.key === "ArrowLeft") go(-1);
@@ -622,7 +626,7 @@ export function BadgeDetail({
             <img
               src={shelfArt(s)}
               alt=""
-              className={`cta-badge-float mx-auto max-h-[52svh] w-full min-w-0 object-contain ${s.earned ? "drop-shadow-2xl" : "opacity-40 grayscale"}`}
+              className={`cta-badge-float mx-auto max-h-[60svh] w-full min-w-0 object-contain sm:max-h-[68svh] ${s.earned ? "drop-shadow-2xl" : "opacity-40 grayscale"}`}
             />
             {list.length > 1 && onMove && (
               <Button
@@ -637,13 +641,19 @@ export function BadgeDetail({
               </Button>
             )}
           </div>
-          <div className="mx-auto max-w-lg space-y-2 text-center">
+          <div className="mx-auto max-w-xl space-y-2 text-center">
+            {/* What the badge is for (its collection), then what it takes in action words (founder, 2026-11-21). */}
+            <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4d8cff]">
+              {collectionTitle(s.badge)}
+            </p>
             <TierChip badge={s.badge} />
-            <DialogTitle className="text-2xl font-bold text-white">{s.badge.title}</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-white sm:text-3xl">
+              {s.badge.title}
+            </DialogTitle>
             <DialogDescription className="text-base text-white/80">
-              {s.earned ? s.badge.description : `Locked. ${s.badge.milestone}.`}
+              {s.badge.description}
             </DialogDescription>
-            {s.earned ? (
+            {s.earned && (
               <p className="text-sm text-white/80">
                 <span className="font-semibold text-white">Earned </span>
                 {new Date(s.earned.earnedAt).toLocaleDateString(undefined, {
@@ -653,32 +663,44 @@ export function BadgeDetail({
                 })}
                 {s.earned.times > 1 ? ` · ${s.earned.times} times` : ""}
               </p>
-            ) : (
-              <>
-                <p className="text-sm text-white/80">
-                  <span className="font-semibold text-white">Progress: </span>
-                  {Math.min(s.count, s.badge.goal)} of {s.badge.goal}
-                </p>
-                <div
-                  className="mx-auto h-2 max-w-xs overflow-hidden rounded-full bg-white/20"
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={s.badge.goal}
-                  aria-valuenow={Math.min(s.count, s.badge.goal)}
-                >
-                  <div
-                    className="h-full bg-primary"
-                    style={{ width: `${Math.min(100, (s.count / s.badge.goal) * 100)}%` }}
-                  />
-                </div>
-              </>
             )}
-            {s.earned && s.badge.every && (
-              <p className="text-sm text-white/80">
-                <span className="font-semibold text-white">Earn it again: </span>
-                {s.count} of {nextGoal(s.badge, s.count)}
+            <div className="mx-auto mt-2 w-full max-w-md space-y-2 rounded-2xl border border-white/15 bg-white/5 p-4 text-left">
+              <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4d8cff]">
+                {s.earned
+                  ? s.badge.every
+                    ? "How to earn it again"
+                    : "How it's earned"
+                  : "How to earn it"}
               </p>
-            )}
+              <p className="text-base font-semibold text-white">{s.badge.action}</p>
+              <p className="text-sm text-white/70">{s.badge.milestone}</p>
+              {!s.earned && (
+                <div className="space-y-1">
+                  <p className="text-sm text-white/85">
+                    <span className="font-semibold text-white">Progress: </span>
+                    {Math.min(s.count, s.badge.goal)} of {s.badge.goal}
+                  </p>
+                  <div
+                    className="h-2 overflow-hidden rounded-full bg-white/20"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={s.badge.goal}
+                    aria-valuenow={Math.min(s.count, s.badge.goal)}
+                  >
+                    <div
+                      className="h-full bg-primary"
+                      style={{ width: `${Math.min(100, (s.count / s.badge.goal) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {s.earned && s.badge.every && (
+                <p className="text-sm text-white/85">
+                  <span className="font-semibold text-white">Earn it again: </span>
+                  {s.count} of {nextGoal(s.badge, s.count)}
+                </p>
+              )}
+            </div>
             {s.earned && (
               <p className="text-sm italic text-white/70">
                 “{withArtist(earningPopup(s.badge, s.earned.times), artist)}”

@@ -210,7 +210,7 @@ export function PrestigeBadgeCapsule({
   return (
     <TooltipProvider delayDuration={150}>
       <div
-        className={cn("relative mx-auto w-full max-w-[14rem] sm:mx-0", className)}
+        className={cn("relative mx-auto w-full max-w-[16rem] sm:mx-0 sm:max-w-[14rem]", className)}
         data-prestige-capsule=""
       >
         <div className={cn("prestige-capsule", `prestige-frame-${activeFrame}`)}>
@@ -222,7 +222,7 @@ export function PrestigeBadgeCapsule({
               style={{ left: g.left, top: g.top, animationDelay: `${i * 0.9}s` }}
             />
           ))}
-          <div className="prestige-capsule-inner px-2 py-1.5">
+          <div className="prestige-capsule-inner px-3 py-2">
             <div className="flex items-center gap-2">
               <span
                 className={cn(
@@ -244,11 +244,11 @@ export function PrestigeBadgeCapsule({
 
               <span className="prestige-iced-label min-w-0 flex-1">
                 <span className="flex items-baseline gap-1 leading-none">
-                  <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#4D8CFF]">
+                  <span className="shrink-0 whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.18em] text-[#4D8CFF]">
                     {isCurrent ? "Badge" : "Next badge"}
                   </span>
                   {badge && (
-                    <span className="truncate text-[7px] font-semibold uppercase tracking-[0.12em] text-[#E5E4E2]/70">
+                    <span className="min-w-0 truncate text-[7px] font-semibold uppercase tracking-[0.08em] text-[#E5E4E2]/70">
                       · {collectionTitle(badge.collection)}
                     </span>
                   )}
