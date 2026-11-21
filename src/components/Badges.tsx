@@ -19,8 +19,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   BADGES,
+  BADGE_TABS,
   COLLECTIONS,
   TIER_LABEL,
+  badgeTab,
+  tabTitle,
   earningPopup,
   isBigTier,
   nextGoal,
@@ -28,6 +31,7 @@ import {
   withArtist,
   type BadgeDef,
   type BadgePrefs,
+  type BadgeTab,
   type CollectionId,
 } from "@/lib/badges";
 import { artUrl } from "@/lib/art-url";
@@ -82,10 +86,6 @@ export const shelfArt = (s: BadgeState) =>
     s.earned?.times ?? 1,
     s.art,
   );
-
-/** The collection a badge belongs to, named the way the shelf and the workspace tab name it. */
-const collectionTitle = (badge: BadgeDef) =>
-  COLLECTIONS.find((c) => c.id === badge.collection)?.title ?? "Came Through Audio";
 
 function TierChip({ badge }: { badge: BadgeDef }) {
   const label = TIER_LABEL[badge.tier];
@@ -455,8 +455,10 @@ export function NextBadgeHint({
 
 type Size = "large" | "small";
 const UP_NEXT = 3;
+/** The tabs that always show, so a new member can see where badges come from. */
+const ALWAYS_TABS = new Set<BadgeTab>(["embed", "catalog", "splits", "account"]);
 
-/** Profile shelf: earned badges and the next few locked ones, grouped by collection. */
+/** Profile shelf: earned badges and the next few locked ones, grouped by the tab that earns them. */
 export function BadgeShelf({
   userId,
   size,
@@ -473,15 +475,15 @@ export function BadgeShelf({
     return (
       <p className="text-sm text-destructive">Couldn't load your badges. Refresh to try again.</p>
     );
-  const groups = COLLECTIONS.filter((c) => !prefs.hidden.includes(c.id))
-    .map((c) => {
-      const mine = states.filter((s) => s.badge.collection === c.id);
-      const earned = mine.filter((s) => s.earned);
-      const started = c.always || earned.length > 0 || mine.some((s) => s.count > 0);
-      const locked = started ? mine.filter((s) => !s.earned && !s.off).slice(0, UP_NEXT) : [];
-      return { ...c, earned, locked, total: mine.length };
-    })
-    .filter((g) => g.earned.length || g.locked.length);
+  const groups = BADGE_TABS.map((t) => {
+    const mine = states.filter(
+      (s) => badgeTab(s.badge) === t.id && !prefs.hidden.includes(s.badge.collection),
+    );
+    const earned = mine.filter((s) => s.earned);
+    const started = ALWAYS_TABS.has(t.id) || earned.length > 0 || mine.some((s) => s.count > 0);
+    const locked = started ? mine.filter((s) => !s.earned && !s.off).slice(0, UP_NEXT) : [];
+    return { ...t, earned, locked, total: mine.length };
+  }).filter((g) => g.earned.length || g.locked.length);
   // Large is the size small used to be and small is half that (founder, 2026-11-07): each step doubles the columns, so a
   // logo's width halves while every tile stays square. The spacing shrinks with the tiles so the halving is real, not eaten
   // by gaps the same width as a logo.
@@ -547,6 +549,13 @@ export function BadgeShelf({
                     className={`font-semibold ${size === "large" ? "text-sm" : "text-[10px] leading-tight"} ${s.earned ? "" : "text-muted-foreground"}`}
                   >
                     {s.badge.title}
+                  </span>
+                  {/* What earns it, in action words, on every tile (founder, 2026-11-21). It wraps instead of being
+                    clipped, so the whole step reads at either shelf size. */}
+                  <span
+                    className={`break-words text-muted-foreground ${size === "large" ? "text-[10px]" : "text-[9px] leading-tight"}`}
+                  >
+                    {s.badge.action}
                   </span>
                   {!s.earned && s.badge.goal > 1 && (
                     <span className="text-xs text-muted-foreground">
@@ -642,9 +651,9 @@ export function BadgeDetail({
             )}
           </div>
           <div className="mx-auto max-w-xl space-y-2 text-center">
-            {/* What the badge is for (its collection), then what it takes in action words (founder, 2026-11-21). */}
+            {/* Which tab earns it, then what it takes in action words (founder, 2026-11-21). */}
             <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4d8cff]">
-              {collectionTitle(s.badge)}
+              {tabTitle(badgeTab(s.badge))}
             </p>
             <TierChip badge={s.badge} />
             <DialogTitle className="text-2xl font-bold text-white sm:text-3xl">
@@ -672,7 +681,11 @@ export function BadgeDetail({
                     : "How it's earned"
                   : "How to earn it"}
               </p>
-              <p className="text-base font-semibold text-white">{s.badge.action}</p>
+              {/* The action is the biggest words in the preview (founder, 2026-11-21): the step to take, not the
+                badge's name, is what the member has to read. */}
+              <p className="text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+                {s.badge.action}
+              </p>
               <p className="text-sm text-white/70">{s.badge.milestone}</p>
               {!s.earned && (
                 <div className="space-y-1">

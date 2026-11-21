@@ -109,7 +109,7 @@ import { celebrateReturn } from "@/lib/celebrate";
 import { rememberReturn } from "@/lib/password";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
-import { isBadgeImage, badgeForArt, type CollectionId } from "@/lib/badges";
+import { isBadgeImage, badgeForArt, type BadgeTab } from "@/lib/badges";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { EagleStatusBadge } from "@/components/EagleStatusBadge";
 import { eagleStatus } from "@/lib/eagle-status";
@@ -205,15 +205,16 @@ const tabs = [
   { id: "support", label: "Support", icon: LifeBuoy },
 ];
 
-/** Which badge collections each tab's next-badge card suggests from. */
-const TAB_BADGES: Record<string, CollectionId[]> = {
-  embed: ["core", "lyrics", "producer", "live"],
-  catalog: ["core", "lyrics", "hiphop", "spiritual", "night"],
-  splits: ["splits"],
-  protect: ["core"],
-  health: ["health"],
-  learn: ["contracts"],
-  pdf: ["contracts"],
+/** Which tab's badges the capsule beside the artist name walks, so it always speaks about the work on screen. */
+const TAB_BADGES: Record<string, BadgeTab> = {
+  embed: "embed",
+  catalog: "catalog",
+  health: "health",
+  protect: "protect",
+  splits: "splits",
+  learn: "learn",
+  pdf: "learn",
+  support: "account",
 };
 
 function Workspace() {
@@ -932,8 +933,9 @@ function Workspace() {
               ))}
             </TabsList>
 
-            {/* Same row on every tab: the artist name centered, the next-badge card pinned top right (founder, 2026-10-25:
-              back to the card, not the round medal). Fixed side columns and height keep it in the same spot on every tab. */}
+            {/* Same row on every tab: the artist name centered, the tab's own badge capsule pinned top right
+              (founder, 2026-10-25: back to the card, not the round medal; 2026-11-21: the capsule walks this tab's
+              badges). Fixed side columns and height keep it in the same spot on every tab. */}
             <div className="mt-8 grid items-center gap-4 sm:min-h-24 sm:grid-cols-[14rem_minmax(0,1fr)_14rem]">
               <div className="hidden sm:block" />
               <div className="min-w-0">
@@ -956,7 +958,7 @@ function Workspace() {
                   <WorkspaceReminderHeaderActions />
                 </div>
               </div>
-              <PrestigeBadgeCapsule userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
+              <PrestigeBadgeCapsule userId={user.id} tab={TAB_BADGES[tab] ?? "catalog"} />
             </div>
             {/* Full-width, directly under the artist-name header; it stays until opened, snoozed or completed. */}
             <WorkspaceReminderStrip />

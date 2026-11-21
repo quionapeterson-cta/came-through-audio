@@ -140,6 +140,182 @@ export function nextGoal(badge: Pick<BadgeDef, "goal" | "every">, count: number)
   return (Math.floor(count / badge.every) + 1) * badge.every;
 }
 
+/**
+ * Badges are organized by the workspace tab whose work earns them (founder, 2026-11-21), so the shelf reads like the
+ * tabs members already work in. "account" holds the milestones no tab earns (joining, years, brand kits, seats).
+ */
+export type BadgeTab = "embed" | "catalog" | "health" | "protect" | "splits" | "learn" | "account";
+export const BADGE_TABS: { id: BadgeTab; title: string; short: string }[] = [
+  { id: "embed", title: "Embed Metadata", short: "Embed" },
+  { id: "catalog", title: "My Catalog", short: "Catalog" },
+  { id: "health", title: "Royalties and Registrations", short: "Royalties" },
+  { id: "protect", title: "AI Protection Hub", short: "AI Protection" },
+  { id: "splits", title: "Split Sheets", short: "Splits" },
+  { id: "learn", title: "Contracts & Blueprints", short: "Contracts" },
+  { id: "account", title: "Your account", short: "Account" },
+];
+
+/**
+ * Every badge and the workspace tab whose work earns it (founder, 2026-11-21). The mapping is spelled out by id,
+ * never inferred, so a new badge has to be placed on purpose: an id missing here is a bug, not an account badge,
+ * and `badges.test.ts` names it. "account" holds the milestones no tab earns.
+ */
+export const BADGE_TAB: Record<string, BadgeTab | undefined> = {
+  genesis: "account",
+  first_note: "catalog",
+  master_crowned: "embed",
+  mic_check: "embed",
+  embedded: "embed",
+  cover_single: "catalog",
+  cover_ep: "catalog",
+  cover_album: "catalog",
+  cover_star: "catalog",
+  cover_star_20: "catalog",
+  album_cover_star: "catalog",
+  album_cover_star_platinum: "catalog",
+  diamond_drop: "catalog",
+  gold_standard: "catalog",
+  platinum_press: "catalog",
+  came_strong: "catalog",
+  came_double: "catalog",
+  key_holder: "learn",
+  time_witness: "protect",
+  ai_slayer: "protect",
+  shield_up: "protect",
+  sound_sealed: "protect",
+  key_keeper: "protect",
+  paper_ready: "health",
+  registration_submitted: "health",
+  checkup_champ: "health",
+  chain_of_title: "learn",
+  full_band: "embed",
+  vault: "catalog",
+  full_release: "catalog",
+  deal_maker: "learn",
+  catalog_complete: "catalog",
+  double_protection: "catalog",
+  brand_kit_bought: "account",
+  seat_keys: "account",
+  health_report_matched: "health",
+  unbreakable: "account",
+  unbreakable_2: "account",
+  unbreakable_3: "account",
+  unbreakable_4: "account",
+  unbreakable_5: "account",
+  full_ep: "catalog",
+  full_album: "catalog",
+  first_lyric_entry: "embed",
+  lyric_locked_gold: "embed",
+  word_weaver: "embed",
+  lyrical_genius: "embed",
+  lyric_lover: "embed",
+  hook_keeper: "embed",
+  brain_to_diamond: "embed",
+  verse_vault: "embed",
+  lyrical_legacy: "embed",
+  fist_bump_deal: "splits",
+  sealed: "splits",
+  three_way_collab: "splits",
+  studio_circle: "splits",
+  piggy_bank_split: "splits",
+  hands_in: "splits",
+  payout_explosion: "splits",
+  written_in_the_stars: "splits",
+  high_five: "splits",
+  blueprint: "learn",
+  fine_print: "learn",
+  cross_your_ts: "learn",
+  blueprints_checked: "learn",
+  contract_signed: "learn",
+  executive_contract: "learn",
+  secure_structure: "learn",
+  terms_architected: "learn",
+  crossin_your_ts: "learn",
+  dottin_your_is: "learn",
+  executive_blueprint: "learn",
+  executive_suite: "learn",
+  executive_legacy: "learn",
+  cobalt_beat_machine: "embed",
+  platinum_beat_machine: "embed",
+  platinum_cobalt_beat_machine: "embed",
+  gold_beat_machine: "embed",
+  gold_crusted_beat_machine: "embed",
+  full_gold_beat_machine: "embed",
+  self_produced: "embed",
+  live_vocals_1: "embed",
+  live_steel_pan_1: "embed",
+  live_steel_pan_10: "embed",
+  live_steel_pan_25: "embed",
+  live_ukulele_1: "embed",
+  live_ukulele_10: "embed",
+  live_ukulele_25: "embed",
+  live_electric_guitar_1: "embed",
+  live_acoustic_guitar_1: "embed",
+  live_piano_1: "embed",
+  live_piano_10: "embed",
+  live_piano_25: "embed",
+  live_drums_1: "embed",
+  live_trumpet_1: "embed",
+  live_saxophone_1: "embed",
+  live_violin_1: "embed",
+  live_cello_1: "embed",
+  live_cello_25: "embed",
+  live_banjo_1: "embed",
+  live_banjo_10: "embed",
+  live_banjo_25: "embed",
+  live_clarinet_1: "embed",
+  live_clarinet_10: "embed",
+  live_clarinet_25: "embed",
+  live_trombone_1: "embed",
+  live_trombone_10: "embed",
+  live_trombone_25: "embed",
+  live_harp_1: "embed",
+  live_harp_25: "embed",
+  live_xylophone_1: "embed",
+  live_xylophone_10: "embed",
+  live_xylophone_25: "embed",
+  session_hero: "embed",
+  live_legend: "embed",
+  cobalt_boombox: "catalog",
+  studio_headphones: "catalog",
+  vintage_mic: "catalog",
+  cobalt_grillz_mic: "catalog",
+  platinum_ice_mic: "catalog",
+  gold_filigree_mic: "catalog",
+  cta_chain: "catalog",
+  dripping_ice_boombox: "catalog",
+  iced_dollar: "catalog",
+  diamond_vinyl: "catalog",
+  cobalt_wings: "catalog",
+  faith_flow: "catalog",
+  positive_vibes: "catalog",
+  authentic: "catalog",
+  encourager: "catalog",
+  self_love: "catalog",
+  golden_halo: "catalog",
+  gold_wings: "catalog",
+  god_led: "catalog",
+  marathon: "catalog",
+  midnight_oil: "catalog",
+  in_the_quiet: "catalog",
+};
+
+/** The tab whose work earns a badge. There is no default: an unlisted badge fails loudly instead of landing on "account". */
+export function badgeTab(badge: BadgeDef): BadgeTab {
+  const tab = BADGE_TAB[badge.id];
+  if (!tab) throw new Error(`Badge "${badge.id}" is not mapped to a workspace tab.`);
+  return tab;
+}
+export const tabTitle = (tab: BadgeTab) =>
+  BADGE_TABS.find((t) => t.id === tab)?.title ?? "Came Through Audio";
+
+/** The tab's name where a line has no room for the full one (the capsule's own tag), never a clipped title. */
+export const tabShort = (tab: BadgeTab) =>
+  BADGE_TABS.find((t) => t.id === tab)?.short ?? "Came Through";
+
+/** The tab's own badges, in the order they are defined. */
+export const badgesInTab = (tab: BadgeTab) => BADGES.filter((b) => badgeTab(b) === tab);
+
 const I = "/icons";
 const S = `${I}/serious`,
   P = `${I}/playful`;

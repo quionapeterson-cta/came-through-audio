@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Link } from "@tanstack/react-router";
 import { Check, ChevronLeft, ChevronRight, Lock, Sparkles } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { shelfArt, useBadgeStates, type BadgeState } from "@/components/Badges";
 import { badgePrefs, loadOnboarding } from "@/lib/artist-profile";
-import { COLLECTIONS, METRIC_UNIT, type CollectionId } from "@/lib/badges";
+import { METRIC_UNIT, badgeTab, tabShort, tabTitle, type BadgeTab } from "@/lib/badges";
 import {
   DEFAULT_PRESTIGE_STYLE,
   LIQUID_FINISHES,
@@ -53,9 +54,6 @@ const progressLabel = (s: BadgeState) => {
   return unit ? `${count} of ${goal} ${unit[1]}` : `${count} of ${goal}`;
 };
 
-const collectionTitle = (id: CollectionId) =>
-  COLLECTIONS.find((c) => c.id === id)?.title ?? "Came Through Audio";
-
 /**
  * The Prestige Badge Capsule (founder, 2026-11-21): the badge status beside the artist's name in the workspace
  * header. A chamfered audio plaque pill in place of the old square card — metallic medallion, the BADGE micro-label,
@@ -67,11 +65,12 @@ const collectionTitle = (id: CollectionId) =>
  */
 export function PrestigeBadgeCapsule({
   userId,
-  collections,
+  tab,
   className = "",
 }: {
   userId: string;
-  collections?: CollectionId[];
+  /** The open workspace tab: the pill walks that tab's badges, never the whole ecosystem. */
+  tab: BadgeTab;
   className?: string;
 }) {
   const { states, data } = useBadgeStates(userId);
@@ -92,11 +91,14 @@ export function PrestigeBadgeCapsule({
   const onboard = loadOnboarding(userId);
   const prefs = badgePrefs(onboard);
 
-  const live = useMemo(() => states.filter((s) => !s.off), [states]);
-  const earned = useMemo(() => live.filter((s) => s.earned), [live]);
-  const earnedCount = earned.length;
-  const total = live.length;
+  // Frames still unlock with the whole ecosystem's badges; the pill and its count walk the open tab's own badges.
+  const ecosystem = useMemo(() => states.filter((s) => !s.off), [states]);
+  const earnedCount = ecosystem.filter((s) => s.earned).length;
+  const total = ecosystem.length;
   const completion = ecosystemCompletion(earnedCount, total);
+  const inTab = useMemo(() => states.filter((s) => badgeTab(s.badge) === tab), [states, tab]);
+  const tabEarned = useMemo(() => inTab.filter((s) => !s.off && s.earned), [inTab]);
+  const tabTotal = inTab.filter((s) => !s.off).length;
 
   // A frame kept in storage is only worn while the ecosystem still says it is earned: disabling a badge or resetting a
   // shelf can take one back, and a saved choice is not proof of it. Until the badges have loaded, keep what was chosen.
@@ -104,26 +106,24 @@ export function PrestigeBadgeCapsule({
   const mayWearSaved = !data || frameUnlocked(savedFrame, earnedCount, total);
 
   const equipped = onboard?.avatar
-    ? earned.find(
+    ? tabEarned.find(
         (s) => s.badge.src === onboard.avatar || s.badge.choices?.includes(onboard.avatar),
       )
     : undefined;
-  const newest = [...earned].sort((a, b) => lastEarned(b) - lastEarned(a))[0];
+  const newest = [...tabEarned].sort((a, b) => lastEarned(b) - lastEarned(a))[0];
   const featured =
-    (style.featuredId && earned.find((s) => s.badge.id === style.featuredId)) || equipped || newest;
+    (style.featuredId && inTab.find((s) => s.badge.id === style.featuredId && s.earned)) ||
+    equipped ||
+    newest;
 
-  // Upcoming badges stay in full colour; whatever the open tab works on comes first, then the closest to earning.
+  // Upcoming badges stay in full colour, closest to earning first, and only from the open tab.
   const upcoming = useMemo(() => {
     if (!prefs.hints) return [];
-    return live
+    return inTab
       .filter((s) => !s.earned && !prefs.hidden.includes(s.badge.collection))
-      .sort((a, b) => {
-        const tabA = collections?.includes(a.badge.collection) ? 0 : 1;
-        const tabB = collections?.includes(b.badge.collection) ? 0 : 1;
-        return tabA - tabB || remaining(a) / a.badge.goal - remaining(b) / b.badge.goal;
-      })
+      .sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)
       .slice(0, 8);
-  }, [live, prefs, collections]);
+  }, [inTab, prefs]);
 
   const items = useMemo(
     () => [
@@ -163,7 +163,7 @@ export function PrestigeBadgeCapsule({
   const isCurrent = !!item?.current;
   const pct = badge
     ? isCurrent
-      ? Math.round(completion * 100)
+      ? Math.round((tabEarned.length / Math.max(1, tabTotal)) * 100)
       : Math.round((Math.min(item!.state.count, badge.goal) / Math.max(1, badge.goal)) * 100)
     : 0;
 
@@ -178,7 +178,7 @@ export function PrestigeBadgeCapsule({
   const previewMissing = previewFrameDef ? badgesToUnlock(previewFrameDef, earnedCount, total) : 0;
 
   const label = isCurrent
-    ? `Ecosystem progress: ${earnedCount} of ${total} badges earned.`
+    ? `${tabTitle(tab)}: ${tabEarned.length} of ${tabTotal} badges earned.`
     : badge
       ? `Next badge: ${badge.title}. ${progressLabel(item!.state)}.`
       : "No badge progress yet.";
@@ -223,6 +223,27 @@ export function PrestigeBadgeCapsule({
             />
           ))}
           <div className="prestige-capsule-inner px-3 py-2">
+            {/* The pill opens the profile shelf, the way the next-badge card did (founder, 2026-11-21). The stepper
+              and the studio button sit above it, so their own clicks never navigate. */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  to="/profile"
+                  hash="badges"
+                  aria-label={`Open your badge shelf. ${badge ? `${badge.title}: ${badge.action}.` : "Your first badge."}`}
+                  className="absolute inset-0 z-10 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D8CFF]"
+                />
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                align="end"
+                className="max-w-64 space-y-1 border border-border bg-popover px-3 py-2 text-popover-foreground"
+              >
+                <p className="font-semibold">{badge?.title ?? "Your first badge"}</p>
+                <p className="text-muted-foreground">{badge?.action ?? "Earn one to start"}</p>
+                {badge && <p className="text-muted-foreground">{badge.milestone}</p>}
+              </TooltipContent>
+            </Tooltip>
             <div className="flex items-center gap-2">
               <span
                 className={cn(
@@ -248,20 +269,18 @@ export function PrestigeBadgeCapsule({
                     {isCurrent ? "Badge" : "Next badge"}
                   </span>
                   {badge && (
-                    <span className="min-w-0 truncate text-[7px] font-semibold uppercase tracking-[0.08em] text-[#E5E4E2]/70">
-                      · {collectionTitle(badge.collection)}
+                    <span className="min-w-0 text-[7px] font-semibold uppercase tracking-[0.08em] text-[#E5E4E2]/70">
+                      · {tabShort(tab)}
                     </span>
                   )}
                 </span>
-                <span className="mt-0.5 block truncate text-[12px] font-bold leading-tight text-white">
+                {/* The title and the action wrap onto a second line rather than clipping mid-word. */}
+                <span className="mt-0.5 block text-[12px] font-bold leading-tight text-white">
                   {badge?.title ?? "Your first badge"}
                 </span>
-                <span className="block truncate text-[9px] leading-snug text-[#E5E4E2]/75">
-                  {!badge
-                    ? "Earn one to start"
-                    : isCurrent
-                      ? `${earnedCount} / ${total} ecosystem badges`
-                      : progressLabel(item!.state)}
+                {/* What earns the badge, in the badge's own action words (founder, 2026-11-21). */}
+                <span className="block text-[9px] leading-snug text-[#E5E4E2]/75">
+                  {badge ? badge.action : "Earn one to start"}
                 </span>
               </span>
 
@@ -271,7 +290,7 @@ export function PrestigeBadgeCapsule({
                     type="button"
                     aria-label="Open Badge Studio"
                     title="Badge Studio"
-                    className="prestige-icon-button shrink-0 text-[#E5E4E2]/80 hover:text-white"
+                    className="prestige-icon-button relative z-20 shrink-0 text-[#E5E4E2]/80 hover:text-white"
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                   </button>
@@ -287,8 +306,7 @@ export function PrestigeBadgeCapsule({
                     <div>
                       <p className="text-sm font-bold tracking-tight">Badge Studio</p>
                       <p className="text-[11px] text-[#E5E4E2]/70">
-                        {earnedCount} of {total} ecosystem badges earned ·{" "}
-                        {Math.round(completion * 100)}%
+                        {earnedCount} of {total} badges earned · {Math.round(completion * 100)}%
                       </p>
                     </div>
 
@@ -415,9 +433,9 @@ export function PrestigeBadgeCapsule({
                       <legend className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4D8CFF]">
                         Featured badge
                       </legend>
-                      {earned.length === 0 ? (
+                      {tabEarned.length === 0 ? (
                         <p className="text-[11px] text-[#E5E4E2]/70">
-                          Earn a badge and it can sit on the capsule.
+                          Earn a badge on this tab and it can sit on the capsule.
                         </p>
                       ) : (
                         <div className="flex max-h-24 flex-wrap gap-1 overflow-y-auto">
@@ -432,7 +450,7 @@ export function PrestigeBadgeCapsule({
                           >
                             Auto
                           </button>
-                          {earned.map((s) => (
+                          {tabEarned.map((s) => (
                             <button
                               key={s.badge.id}
                               type="button"
@@ -462,7 +480,7 @@ export function PrestigeBadgeCapsule({
                 aria-label="Show previous badge"
                 disabled={items.length < 2}
                 onClick={() => step(-1)}
-                className="prestige-icon-button shrink-0 disabled:opacity-30"
+                className="prestige-icon-button relative z-20 shrink-0 disabled:opacity-30"
               >
                 <ChevronLeft className="h-3 w-3" />
               </button>
@@ -523,7 +541,7 @@ export function PrestigeBadgeCapsule({
                 aria-label="Show next badge"
                 disabled={items.length < 2}
                 onClick={() => step(1)}
-                className="prestige-icon-button shrink-0 disabled:opacity-30"
+                className="prestige-icon-button relative z-20 shrink-0 disabled:opacity-30"
               >
                 <ChevronRight className="h-3 w-3" />
               </button>
