@@ -4,12 +4,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { z } from "zod";
 import { getGateStatus, unlockSite } from "@/lib/gate.functions";
+import { readGateWithRetry } from "@/lib/page-load";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/unlock")({
   validateSearch: z.object({ next: z.string().optional() }),
   // The passcode is off: old links skip straight to where they were going.
   beforeLoad: async ({ search }) => {
-    const { unlocked } = await getGateStatus();
+    const { unlocked } = await readGateWithRetry(() => getGateStatus());
     if (unlocked) throw redirect({ href: safeRedirectPath(search.next, "/") });
   },
   head: () => ({
@@ -22,6 +24,8 @@ export const Route = createFileRoute("/unlock")({
       },
       { property: "og:title", content: "Private Preview · Came Through Audio" },
       { property: "og:description", content: "Came Through Audio is in private preview." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Unlock,
@@ -31,19 +35,27 @@ function Unlock() {
   const { next } = Route.useSearch();
   const unlock = useServerFn(unlockSite);
   const [error, setError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError(false);
+    setLoadError(false);
     const password = new FormData(e.currentTarget).get("password") as string;
-    const { ok } = await unlock({ data: { password } });
-    setBusy(false);
-    if (ok) {
-      const dest = safeRedirectPath(next, "/");
-      window.location.assign(dest);
-    } else setError(true);
+    try {
+      // A submission is never automatically repeated; only the status read above retries.
+      const { ok } = await unlock({ data: { password } });
+      if (ok) {
+        const dest = safeRedirectPath(next, "/");
+        window.location.assign(dest);
+      } else setError(true);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -75,13 +87,18 @@ function Unlock() {
         {error && (
           <p className="mt-2 text-sm text-destructive">That passcode isn't right. Try again.</p>
         )}
-        <button
+        {loadError && (
+          <p role="alert" className="mt-2 text-sm text-destructive">
+            Couldn't check the passcode. Check your connection and try again.
+          </p>
+        )}
+        <Button
           type="submit"
           disabled={busy}
           className="mt-4 w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
         >
           {busy ? "Checking…" : "Enter"}
-        </button>
+        </Button>
       </form>
     </main>
   );
