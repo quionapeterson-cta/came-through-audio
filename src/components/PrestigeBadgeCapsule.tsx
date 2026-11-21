@@ -247,22 +247,24 @@ export function PrestigeBadgeCapsule({
               </span>
 
               <span className="prestige-iced-label min-w-0 flex-1">
-                <span className="flex items-baseline gap-1 leading-none">
-                  <span className="shrink-0 whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.18em] text-[#4D8CFF]">
+                {/* Inline, not a nowrap row (founder, 2026-11-21): a phone's font scaling stretches the micro-label past
+                  the plate, so it wraps onto the next line instead of running outside the border. */}
+                <span className="block leading-none [overflow-wrap:anywhere]">
+                  <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#4D8CFF]">
                     {isCurrent ? "Badge" : "Next badge"}
-                  </span>
+                  </span>{" "}
                   {badge && (
-                    <span className="min-w-0 text-[7px] font-semibold uppercase tracking-[0.08em] text-[#E5E4E2]/70">
+                    <span className="text-[7px] font-semibold uppercase tracking-[0.08em] text-[#E5E4E2]/70">
                       · {tabShort(tab)}
                     </span>
                   )}
                 </span>
                 {/* The title is the small line; the action is the biggest text on the pill, because the step to take
                   is what the member has to read (founder, 2026-11-21). Both wrap rather than clipping mid-word. */}
-                <span className="mt-0.5 block text-[10px] font-semibold leading-tight text-[#E5E4E2]/85">
+                <span className="mt-0.5 block text-[10px] font-semibold leading-tight text-[#E5E4E2]/85 [overflow-wrap:anywhere]">
                   {badge?.title ?? "Your first badge"}
                 </span>
-                <span className="mt-0.5 block text-[15px] font-extrabold leading-[1.1] text-white">
+                <span className="mt-0.5 block text-[15px] font-extrabold leading-[1.1] text-white [overflow-wrap:anywhere]">
                   {badge ? badge.action : "Earn one to start"}
                 </span>
               </span>

@@ -1134,11 +1134,15 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
   background: transparent;
 }
 .prestige-iced-label {
-  border-radius: 9999px;
+  /* A soft rectangle, not a pill (founder, 2026-11-21): the label carries two or three lines, and a 9999px radius
+     curves through the top and bottom lines, so their words sat outside the plate's own edge. */
+  border-radius: 14px;
+  /* A long action ("Submit a song for registration") breaks rather than running past the plate. */
+  overflow-wrap: anywhere;
 }
 .prestige-frame-iced-gold .prestige-iced-label,
 .prestige-frame-iced-platinum .prestige-iced-label {
-  padding: 2px 7px;
+  padding: 4px 10px;
   background: rgb(11 11 11 / 0.9);
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
 }
