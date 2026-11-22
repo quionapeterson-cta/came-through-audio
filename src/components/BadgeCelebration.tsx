@@ -396,10 +396,12 @@ export function SharePanel({
           <img
             src={card.url}
             alt="Teaser card preview"
-            className="aspect-square w-40 rounded-lg border border-border"
+            // Centred on a phone, where the card sits alone above the caption (founder, 2026-11-21): in the two-column
+            // layout from `sm` it heads its own column, so it stays on that column's left edge.
+            className="mx-auto aspect-square w-40 rounded-lg border border-border sm:mx-0"
           />
         ) : (
-          <div className="aspect-square w-40 animate-pulse rounded-lg bg-muted" />
+          <div className="mx-auto aspect-square w-40 animate-pulse rounded-lg bg-muted sm:mx-0" />
         )}
         <div className="space-y-2">
           <label htmlFor="promo-caption" className="text-sm font-medium">
