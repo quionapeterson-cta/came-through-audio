@@ -13,6 +13,14 @@
   --fl-soft: #f4f8ff;
   --fl-ink: #0b0b0b;
   --fl-muted: #53657d;
+  /* One rim for the suite's four surfaces: a platinum line, a gold ring and a cobalt glow. */
+  --fl-rim-line: #dcd9d2;
+  --fl-rim-gold: rgb(255 215 0 / 32%);
+  --fl-rim-cobalt: rgb(77 140 255 / 42%);
+  --fl-rim-gold-bloom: rgb(255 215 0 / 38%);
+  --fl-rim-shadow:
+    0 0 0 1px var(--fl-rim-gold), 0 0 18px -4px var(--fl-rim-cobalt),
+    0 0 32px -10px var(--fl-rim-gold-bloom), 0 22px 50px -30px rgb(0 74 173 / 55%);
   --mouse-x: 50%;
   --mouse-y: 50%;
 }
@@ -21,6 +29,14 @@
   --fl-panel-rule: rgb(255 255 255 / 12%);
   --fl-soft: #0d1117;
   --fl-muted: #a9b8cc;
+  --fl-rim-line: rgb(229 228 226 / 58%);
+  --fl-rim-gold: rgb(255 215 0 / 38%);
+  --fl-rim-cobalt: rgb(77 140 255 / 62%);
+  --fl-rim-gold-bloom: rgb(255 215 0 / 52%);
+  --fl-rim-shadow:
+    0 0 0 1px var(--fl-rim-gold), 0 0 18px -2px var(--fl-rim-cobalt),
+    0 0 34px -8px var(--fl-rim-gold-bloom), 0 0 56px -20px rgb(229 228 226 / 48%),
+    0 24px 60px -34px rgb(77 140 255 / 55%);
 }
 
 .financial-lab {
@@ -46,9 +62,7 @@
 .dark .fl-panel,
 .dark .fl-telemetry {
   color: #fff;
-  border-color: rgb(77 140 255 / 28%);
   background: linear-gradient(145deg, rgb(255 255 255 / 6%), rgb(255 255 255 / 2.5%));
-  box-shadow: 0 24px 60px -45px rgb(77 140 255 / 55%);
 }
 
 .fl-header {
@@ -68,13 +82,11 @@
   box-shadow: 0 20px 50px -38px rgb(0 74 173 / 50%);
 }
 .dark .fl-header {
-  border-color: rgb(77 140 255 / 48%);
   color: #fff;
   background:
     radial-gradient(circle at 12% -10%, rgb(77 140 255 / 30%), transparent 45%),
     radial-gradient(circle at 96% 115%, rgb(255 215 0 / 16%), transparent 44%),
     linear-gradient(120deg, #071326, #0b0b0b 58%, #171300);
-  box-shadow: 0 24px 60px -35px rgb(77 140 255 / 45%);
 }
 .dark .fl-header .text-muted-foreground {
   color: #b8c7da;
@@ -84,19 +96,19 @@
   width: 0.42rem;
   height: 0.42rem;
   border-radius: 999px;
-  background: #22c55e;
-  box-shadow: 0 0 0 0 rgb(34 197 94 / 55%);
+  background: var(--fl-electric);
+  box-shadow: 0 0 0 0 rgb(77 140 255 / 62%);
   animation: fl-live 2.4s ease-out infinite;
 }
 @keyframes fl-live {
   0% {
-    box-shadow: 0 0 0 0 rgb(34 197 94 / 55%);
+    box-shadow: 0 0 0 0 rgb(77 140 255 / 62%);
   }
   70% {
-    box-shadow: 0 0 0 7px rgb(34 197 94 / 0%);
+    box-shadow: 0 0 0 7px rgb(77 140 255 / 0%);
   }
   100% {
-    box-shadow: 0 0 0 0 rgb(34 197 94 / 0%);
+    box-shadow: 0 0 0 0 rgb(77 140 255 / 0%);
   }
 }
 
@@ -425,9 +437,9 @@
 .fl-copy[data-copied="true"],
 .dark .fl-copy[data-copied="true"] {
   color: #fff;
-  border-color: #22c55e;
-  background: var(--fl-emerald);
-  box-shadow: 0 0 18px rgb(34 197 94 / 55%);
+  border-color: #8fb8ff;
+  background: var(--fl-cobalt);
+  box-shadow: 0 0 20px rgb(77 140 255 / 70%);
 }
 .fl-copy-gold {
   border-color: #d9b93d;
@@ -680,7 +692,8 @@
   font-size: 0.68rem;
 }
 .fl-drawer-result strong {
-  color: var(--fl-emerald);
+  color: var(--fl-cobalt);
+  text-shadow: 0 0 14px rgb(77 140 255 / 40%);
   font-family: ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   font-size: 1rem;
@@ -690,7 +703,8 @@
   color: #a9b8cc;
 }
 .dark .fl-drawer-result strong {
-  color: #22c55e;
+  color: var(--fl-electric);
+  text-shadow: 0 0 16px rgb(77 140 255 / 55%);
 }
 
 .fl-dock {
@@ -716,13 +730,22 @@
 }
 .dark .fl-dock {
   color: #fff;
-  border-color: rgb(77 140 255 / 50%);
   background: rgb(11 11 11 / 86%);
-  box-shadow: 0 20px 48px -24px rgb(77 140 255 / 50%);
 }
+
+/* The suite's own surfaces all wear the one rim; Bedazzle Mode still draws over it. */
+.fl-panel,
+.fl-telemetry,
+.fl-header,
+.fl-dock {
+  border-color: var(--fl-rim-line);
+  box-shadow: var(--fl-rim-shadow);
+}
+
 .fl-dock-total {
   margin-top: 0.05rem;
-  color: var(--fl-emerald);
+  color: var(--fl-cobalt);
+  text-shadow: 0 0 16px rgb(77 140 255 / 45%);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 1.9rem;
   font-weight: 800;
@@ -731,7 +754,16 @@
   letter-spacing: -0.05em;
 }
 .dark .fl-dock-total {
-  color: #22c55e;
+  color: var(--fl-electric);
+  text-shadow: 0 0 18px rgb(77 140 255 / 60%);
+}
+.fl-dock-label {
+  color: var(--fl-cobalt);
+  text-shadow: 0 0 12px rgb(77 140 255 / 35%);
+}
+.dark .fl-dock-label {
+  color: var(--fl-electric);
+  text-shadow: 0 0 14px rgb(77 140 255 / 55%);
 }
 .fl-dock-bedazzle {
   border-width: 2px;

@@ -1170,7 +1170,7 @@ function TotalDock({
           />
         ))}
       <div className="min-w-0">
-        <div className="flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.2em] text-[#22C55E]">
+        <div className="fl-dock-label flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.2em]">
           <TrendingUp className="h-3.5 w-3.5" /> Your projected total
         </div>
         <div className="fl-dock-total">{money(total)}</div>
