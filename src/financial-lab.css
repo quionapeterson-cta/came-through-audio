@@ -21,6 +21,49 @@
   --fl-rim-shadow:
     0 0 0 1px var(--fl-rim-gold), 0 0 18px -4px var(--fl-rim-cobalt),
     0 0 32px -10px var(--fl-rim-gold-bloom), 0 22px 50px -30px rgb(0 74 173 / 55%);
+  /*
+   * Bedazzle Mode's rim, drawn once: a pavé band of platinum-white diamonds set in CTA gold, polished so the
+   * light catches the top and the gold falls away underneath. Gold (#FFD700) and platinum (#E5E4E2) only —
+   * no pink, no cyan, so the rim stays inside the brand's colours.
+   */
+  --fl-pave:
+    /* the gold setting, above the facets so the metal shows between the stones */
+    radial-gradient(
+        ellipse 50% 50% at 50% 50%,
+        transparent 0 72%,
+        #fff8d8 75% 78%,
+        #ffd700 81% 87%,
+        #d8a600 91%,
+        #8a6508 96% 100%
+      )
+      border-box 0 0 / 12px 9px,
+    /* the flat table at the centre of each stone */
+    radial-gradient(
+        ellipse 50% 50% at 50% 50%,
+        #ffffff 0 16%,
+        rgb(255 255 255 / 0%) 24%
+      )
+      border-box 0 0 / 12px 9px,
+    /* the crown and pavilion facets */
+    repeating-conic-gradient(
+        from 0deg at 50% 50%,
+        #ffffff 0deg 30deg,
+        #f4f2ee 30deg 60deg,
+        #ffffff 60deg 90deg,
+        #d2c9b6 90deg 120deg,
+        #ffffff 120deg 150deg,
+        #e5e4e2 150deg 180deg,
+        #ffffff 180deg 210deg,
+        #c2b7a2 210deg 240deg,
+        #ffffff 240deg 270deg,
+        #f7f6f3 270deg 300deg,
+        #ffffff 300deg 330deg,
+        #d6d3cc 330deg 360deg
+      )
+      border-box 0 0 / 12px 9px,
+    /* the polish: light along the top of the bar, shadow underneath */
+    linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 0%) 40%, rgb(70 45 0 / 30%) 100%)
+      border-box 0 0 / 100% 100%;
   --mouse-x: 50%;
   --mouse-y: 50%;
 }
@@ -800,7 +843,7 @@
   width: 11px;
   height: 11px;
   pointer-events: none;
-  background: radial-gradient(circle, #fff 0 20%, #b9f2ff 34%, #ffd700 58%, transparent 70%);
+  background: radial-gradient(circle, #fff 0 20%, var(--fl-platinum) 34%, var(--fl-gold) 58%, transparent 70%);
   clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%);
   filter: drop-shadow(0 0 5px rgb(255 255 255 / 80%));
   animation: fl-glint 900ms ease-out both;
@@ -820,105 +863,53 @@
   }
 }
 
-/* Bedazzle Mode: faceted pavé rims, a pointer-tracked refraction, and no layout change to the numbers. */
+/*
+ * Bedazzle Mode changes the rim and nothing else. The diamonds go round every surface, and each one keeps its
+ * own background, shadow, meter and type, so the Lab inside the border is exactly the Lab with Bedazzle off.
+ */
 .fl-bedazzle .fl-panel,
-.fl-bedazzle .fl-telemetry,
-.fl-bedazzle .fl-dock,
-.fl-bedazzle .fl-header {
-  border: 3px solid transparent;
+.fl-bedazzle .fl-telemetry {
+  border: 9px solid transparent;
   background:
     linear-gradient(var(--fl-panel-bg), var(--fl-panel-bg)) padding-box,
-    repeating-conic-gradient(
-        from 0deg,
-        #ffffff 0deg 2deg,
-        #b9f2ff 2deg 4deg,
-        #e5e4e2 4deg 5deg,
-        #ffd700 5deg 6deg,
-        #ffffff 6deg 8deg
-      )
-      border-box;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 28%),
-    0 0 22px rgb(77 140 255 / 24%),
-    0 24px 50px -35px rgb(255 215 0 / 45%);
+    var(--fl-pave);
 }
 .dark .fl-bedazzle .fl-panel,
-.dark .fl-bedazzle .fl-telemetry,
-.dark .fl-bedazzle .fl-dock,
+.dark .fl-bedazzle .fl-telemetry {
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 6%), rgb(255 255 255 / 2.5%)) padding-box,
+    linear-gradient(#0b0b0b, #0b0b0b) padding-box,
+    var(--fl-pave);
+}
+.fl-bedazzle .fl-header {
+  border: 9px solid transparent;
+  background:
+    radial-gradient(circle at 8% 0%, rgb(77 140 255 / 22%), transparent 42%) padding-box,
+    linear-gradient(120deg, #ffffff, #edf5ff 58%, #fff9df) padding-box,
+    var(--fl-pave);
+}
 .dark .fl-bedazzle .fl-header {
   background:
-    linear-gradient(var(--fl-panel-bg), var(--fl-panel-bg)) padding-box,
-    repeating-conic-gradient(
-        from 0deg,
-        #ffffff 0deg 2deg,
-        #b9f2ff 2deg 4deg,
-        #e5e4e2 4deg 5deg,
-        #ffd700 5deg 6deg,
-        #ffffff 6deg 8deg
-      )
-      border-box;
+    radial-gradient(circle at 12% -10%, rgb(77 140 255 / 30%), transparent 45%) padding-box,
+    radial-gradient(circle at 96% 115%, rgb(255 215 0 / 16%), transparent 44%) padding-box,
+    linear-gradient(120deg, #071326, #0b0b0b 58%, #171300) padding-box,
+    var(--fl-pave);
 }
-.fl-bedazzle .fl-panel::before,
-.fl-bedazzle .fl-telemetry::before,
-.fl-bedazzle .fl-dock::before,
-.fl-bedazzle .fl-header::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  z-index: 3;
-  border-radius: inherit;
-  padding: 3px;
+.fl-bedazzle .fl-dock {
+  border: 9px solid transparent;
   background:
-    radial-gradient(circle, #ffffff 0 1.2px, transparent 1.8px) 0 0 / 8px 8px,
-    radial-gradient(circle, #ffd700 0 1px, transparent 1.7px) 4px 4px / 8px 8px;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  opacity: 0.86;
-  pointer-events: none;
+    linear-gradient(rgb(255 255 255 / 88%), rgb(255 255 255 / 88%)) padding-box,
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    var(--fl-pave);
 }
-.fl-bedazzle .fl-panel::after,
-.fl-bedazzle .fl-telemetry::after,
-.fl-bedazzle .fl-dock::after,
-.fl-bedazzle .fl-header::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: inherit;
-  background: radial-gradient(
-    220px circle at var(--mouse-x) var(--mouse-y),
-    rgb(255 255 255 / 18%),
-    rgb(185 242 255 / 11%) 30%,
-    rgb(255 215 0 / 5%) 48%,
-    transparent 68%
-  );
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
-.fl-bedazzle .fl-split-meter {
-  border: 2px solid transparent;
+.dark .fl-bedazzle .fl-dock {
   background:
-    linear-gradient(var(--fl-soft), var(--fl-soft)) padding-box,
-    repeating-conic-gradient(
-        from 45deg,
-        #ffffff 0deg 2deg,
-        #b9f2ff 2deg 4deg,
-        #ffd700 4deg 5deg,
-        #ffffff 5deg 7deg
-      )
-      border-box;
-  box-shadow: 0 0 16px rgb(255 215 0 / 18%);
+    linear-gradient(rgb(11 11 11 / 86%), rgb(11 11 11 / 86%)) padding-box,
+    linear-gradient(#0b0b0b, #0b0b0b) padding-box,
+    var(--fl-pave);
 }
-.fl-bedazzle .fl-header h2 {
-  text-shadow:
-    0 0 18px rgb(255 255 255 / 16%),
-    0 0 30px rgb(77 140 255 / 18%);
+.fl-bedazzle .fl-glint {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
