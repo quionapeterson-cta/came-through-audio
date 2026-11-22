@@ -388,7 +388,9 @@ export function SharePanel({
   return (
     <section
       aria-label={HEADINGS[ctx]}
-      className="w-full space-y-4 rounded-2xl border border-border bg-card p-5 text-left text-card-foreground shadow-2xl"
+      // Centred on a phone, where the card sits alone above everything; left-aligned from `sm` up, where the card leads
+      // its own column (founder, 2026-11-21).
+      className="w-full space-y-4 rounded-2xl border border-border bg-card p-5 text-center text-card-foreground shadow-2xl sm:text-left"
     >
       <h2 className="text-xl font-bold">{HEADINGS[ctx]}</h2>
       <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
@@ -407,15 +409,17 @@ export function SharePanel({
           <label htmlFor="promo-caption" className="text-sm font-medium">
             Caption
           </label>
+          {/* The caption itself stays left-aligned: it is words someone is editing and pasting, not a label. */}
           <Textarea
             id="promo-caption"
             rows={6}
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
+            className="text-left"
           />
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-start">
         <Button type="button" variant="outline" onClick={() => setStep((s) => s + 1)}>
           <RefreshCw />
           Generate
@@ -432,7 +436,7 @@ export function SharePanel({
           </label>
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
         {canShare && (
           <Button type="button" onClick={() => void nativeShare()}>
             <Share2 />
