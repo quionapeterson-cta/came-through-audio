@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
 import { convertBetween, estimateEarnings, songShareRows, yourSongShare } from "@/lib/royalty-calc";
 
-describe("royalty utility suite", () => {
+describe("the financial lab", () => {
   it("moves shares between BMI's 200% scale and ASCAP/SESAC's 100% scale", () => {
     expect(convertBetween(100, "bmi", "ascap")).toBe(50);
     expect(convertBetween(25, "sesac", "bmi")).toBe(50);

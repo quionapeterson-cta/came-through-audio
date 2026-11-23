@@ -38,7 +38,7 @@ export function scopedTier(profile: WorkingProfile | null, ownTier: Tier): Tier 
 /**
  * The tier the workspace works at, with the pause on top (founder, 2026-11-21: "paused is Free, seats included"). A
  * paused account stays Free even while it stands in an artist's seat, so switching profiles can never borrow the seat's
- * paid tools (embedding, agency exports, split sheets, the utility suite) for a plan that is paused. The catalog it
+ * paid tools (embedding, agency exports, split sheets, The Financial Lab) for a plan that is paused. The catalog it
  * switches to stays readable and downloadable either way.
  */
 export function workTierFor(profile: WorkingProfile | null, ownTier: Tier, paused: boolean): Tier {

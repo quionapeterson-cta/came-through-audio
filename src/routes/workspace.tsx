@@ -453,7 +453,7 @@ function Workspace() {
   const canPreview = staff.data?.role === "super_admin";
   const tier: Tier = canPreview && previewTier !== "real" ? previewTier : realTier;
   // Free accounts may only sign invited split sheets (/sign/$token). Generating one starts at Plus; collecting
-  // collaborator e-signatures, agency exports and the utility suite need Collaborate. The database enforces both.
+  // collaborator e-signatures, agency exports and The Financial Lab need Collaborate. The database enforces both.
   // Free accounts use the Royalty Inspector with their own song details; embedding and the catalog start at Plus.
   // Working as an artist on one of this account's seats (founder, 2026-11-08): the switch is the same login, and the
   // workspace works at the seat's own tier, so an owner never borrows their plan's tools inside someone else's account.

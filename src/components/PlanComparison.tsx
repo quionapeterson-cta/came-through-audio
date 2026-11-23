@@ -353,7 +353,7 @@ function Mark({ feature, tier, t }: { feature: Feature; tier: Tier; t: Palette }
   // transparent margins instead, which makes the eagle fill the cell at full size.
   // Eagle art is the mark wherever it appears, and nothing sits on top of it. Contracts delivery marks the paperwork
   // and signing rows (and 1-Click Agency Exports). The eye on the prize marks what Catalog Management alone has, plus
-  // the rows marked `prize` wherever they are included (Royalty Utility Suite on Catalog & Collaborate).
+  // the rows marked `prize` wherever they are included (The Financial Lab on Catalog & Collaborate).
   // Every other row carried over from a lower tier keeps the check it shows there (founder, 2026-11-04).
   const prize = feature.prize || (tier === "management" && feature.from === "management");
   const eagle = feature.paperwork

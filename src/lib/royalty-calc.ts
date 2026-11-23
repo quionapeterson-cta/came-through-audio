@@ -2,7 +2,7 @@ import { creditName, type Metadata } from "@/lib/metadata";
 import { publisherPie } from "@/lib/readiness";
 
 /**
- * Royalty Utility Suite math (PLAN-master-notes 3.4). Catalog splits are entered the way the song is owned: writer splits
+ * The Financial Lab math (PLAN-master-notes 3.4). Catalog splits are entered the way the song is owned: writer splits
  * add up to 100% of the writer half, publisher shares (the publisher pie) to 100% of the publisher half. Each US PRO
  * asks for them on its own scale:
  * - BMI: 200% in all, 100% for writers plus 100% for publishers, so a share is entered as is.

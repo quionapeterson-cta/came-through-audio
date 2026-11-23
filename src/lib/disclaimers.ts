@@ -13,7 +13,7 @@ export const DISCLAIMERS = {
   /** Agency exports. */
   exports:
     "Exports follow each agency's template as we know it. Agencies can change their requirements and decide on their own what they accept and pay. Check every file before you upload it; you're responsible for what you submit.",
-  /** Royalties and Registrations, Royalty Health Report, Royalty Utility Suite. */
+  /** Royalties and Registrations, Royalty Health Report, The Financial Lab. */
   health:
     "Health scores, findings, converters and earnings estimates are based on the details you enter and on public searches that can be incomplete or out of date. They don't guarantee registration, matching or payment and aren't legal, financial or tax advice; each agency decides the final result.",
   /** "Registration Ready" badges and readiness lists. */

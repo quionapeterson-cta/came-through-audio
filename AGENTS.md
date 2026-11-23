@@ -796,7 +796,7 @@ rules keep it consistent as features are added.
 - Contracts Delivery (`EAGLE_ART.contractsDelivery`) marks the paperwork and signing rows, and 1-Click Agency Exports,
   wherever those rows are included.
 - Eye on the Prize (`EAGLE_ART.eyeOnThePrize`) marks the rows Catalog Management alone has, plus the rows marked
-  `prize: true`, which carry it on every tier that includes them (Royalty Utility Suite on Catalog & Collaborate). Any
+  `prize: true`, which carry it on every tier that includes them (The Financial Lab on Catalog & Collaborate). Any
   other row that starts on a lower tier keeps the check it shows there, on every tier above it.
 - A spotlit row may also carry a faint accent tint across the whole row (`highlight: true` on the feature), which is
   only a background: the row keeps its eagle mark and never gains a second one.
