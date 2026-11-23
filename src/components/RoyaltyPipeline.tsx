@@ -276,6 +276,12 @@ export function RoyaltyPipelinePanel({
 
   const anyMoney = pool > 0 || sx.gross > 0;
 
+  // A listed publisher collects the publishing side of the song, so the writing cards' figure is not what the member
+  // keeps. With no publisher on the song there is no cut to name, and the approved line stays as it is.
+  const publisherCut = (song?.metadata.publishers ?? []).some((row) => row.name.trim())
+    ? ", before your publisher's cut"
+    : "";
+
   function toggle(key: string) {
     setRegistered((current) => ({ ...current, [key]: !current[key] }));
   }
@@ -303,7 +309,7 @@ export function RoyaltyPipelinePanel({
       id: "pro",
       label: "PRO · performance",
       name: proRows.map((row) => row.label).join(" · "),
-      share: `${percent(PIPELINE_SHARES.pro * 100)} of the pool · your song share ${percent(songShare)}`,
+      share: `${percent(PIPELINE_SHARES.pro * 100)} of the pool · your song share ${percent(songShare)}${publisherCut}`,
       bucket: bucket("pro"),
       stage: proStage,
       rows: proRows,
@@ -312,7 +318,7 @@ export function RoyaltyPipelinePanel({
       id: "mlc",
       label: "The MLC · mechanical",
       name: "The MLC",
-      share: `${percent(PIPELINE_SHARES.mlc * 100)} of the pool · your song share ${percent(songShare)}`,
+      share: `${percent(PIPELINE_SHARES.mlc * 100)} of the pool · your song share ${percent(songShare)}${publisherCut}`,
       bucket: bucket("mlc"),
       stage: mlcStage,
       rows: [mlcRow],
