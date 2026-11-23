@@ -238,10 +238,10 @@ function LabHeader({
     <header className="fl-header fl-crystal">
       <div className="relative z-10 min-w-0">
         <div className="flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.24em] text-[#4D8CFF]">
-          <span className="fl-live-dot" aria-hidden="true" /> The Financial Lab
+          <span className="fl-live-dot" aria-hidden="true" /> Royalty intelligence
         </div>
         <h2 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
-          Royalty control room
+          The Financial Lab
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           Convert catalog splits, forecast every platform and hand each agency a clean registration

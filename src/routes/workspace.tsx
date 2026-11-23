@@ -1367,7 +1367,7 @@ function Health({
   const views = [
     ["check", "Royalties and Registrations", Activity],
     ["expert", "Expert Help", Users],
-    ["utility", "Utility Suite", Calculator],
+    ["utility", "The Financial Lab", Calculator],
   ] as const;
   return (
     <div className="mt-6 space-y-6">
