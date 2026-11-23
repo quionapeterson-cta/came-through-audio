@@ -43,7 +43,10 @@ import {
   DEPARTMENT_LABEL,
   ROLE_LABEL,
   canAuditPayments,
+  canReceivePackets,
+  canSendPackets,
   canViewDepartmentPlans,
+  canWorkPackets,
   viewDepartments,
   visibleTabs,
   type Department,
@@ -236,8 +239,9 @@ function AdminPage() {
   });
   const show = (value: string) => tabs.some((t) => t.value === value);
   const isSuper = access.role === "super_admin";
-  // A packet is sent by a super admin or HR, so Sent & Inbox is theirs alone (founder, 2026-11-19).
-  const canSendPackets = isSuper || access.departments.includes("hr");
+  // Sent & Inbox is the super admin's; HR sends and reads what came back, nothing more (founder, 2026-11-22).
+  const packetsAllowed = canWorkPackets(access);
+  const hrPackets = !packetsAllowed && canReceivePackets(access) && canSendPackets(access);
   const current = activeTab && show(activeTab) ? activeTab : (tabs[0]?.value ?? "");
   // Only the tabs whose numbers come from the overview carry its tiles and its error. A failed overview used to sit above
   // unrelated work — Handbook, Email, My Queue — and made the whole dashboard read as broken.
@@ -616,7 +620,8 @@ function AdminPage() {
                     <TabsContent value="pdf">
                       <PdfTools
                         canStudio={canManagePdfTemplates(access)}
-                        packets={canSendPackets}
+                        packets={packetsAllowed}
+                        hrPackets={hrPackets}
                         mailboxes={companyMailboxesFor(access).filter((m): m is PdfMailbox =>
                           (PDF_MAILBOXES as readonly string[]).includes(m),
                         )}

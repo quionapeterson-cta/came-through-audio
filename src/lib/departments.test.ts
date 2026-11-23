@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   DEPARTMENTS,
+  canReceivePackets,
+  canSendPackets,
   canViewDepartmentPlans,
+  canWorkPackets,
   normalizeDepartments,
   resolveAccess,
   staffChangeError,
@@ -121,6 +124,33 @@ describe("visibleTabs", () => {
     expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual(
       withDeptTabs([]),
     );
+  });
+
+  it("lets HR send and receive a packet, never build or counter-sign", () => {
+    // Founder, 2026-11-22: HR sends and reads what came back; building a packet, the reply inbox and counter-signing are
+    // the super admin's. The server and migration 20261122200000 keep the same split.
+    for (const access of [
+      resolveAccess([{ role: "employee", departments: ["hr"] }]),
+      resolveAccess([{ role: "department_lead", departments: ["hr"] }]),
+      resolveAccess([{ role: "hr_admin" }]),
+    ]) {
+      expect(canSendPackets(access)).toBe(true);
+      expect(canReceivePackets(access)).toBe(true);
+      expect(canWorkPackets(access)).toBe(false);
+    }
+    for (const role of ["employee", "department_lead", "project_manager"] as const) {
+      const access = resolveAccess([{ role, departments: ["finance", "support"] }]);
+      expect(canSendPackets(access)).toBe(false);
+      expect(canReceivePackets(access)).toBe(false);
+      expect(canWorkPackets(access)).toBe(false);
+    }
+    const superAdmin = resolveAccess([{ role: "super_admin" }]);
+    expect(canSendPackets(superAdmin)).toBe(true);
+    expect(canReceivePackets(superAdmin)).toBe(true);
+    expect(canWorkPackets(superAdmin)).toBe(true);
+    expect(canSendPackets(null)).toBe(false);
+    expect(canReceivePackets(null)).toBe(false);
+    expect(canWorkPackets(null)).toBe(false);
   });
 
   it("keeps Company Contracts to super admins alone", () => {

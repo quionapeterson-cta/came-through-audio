@@ -59,9 +59,12 @@ row above, applied by `src/lib/contracts-email.functions.ts`.
 There is no daily count on this mail. What protects it is who may send it, what one send can contain, and that a repeat
 cannot slip through:
 
-- **Sender seat** — only a super admin or HR may send a packet (`requirePacketSender` in
-  `src/lib/pdf-packets.functions.ts`), enforced on `sendPacket`, `emailPacketLink` and `emailPacketCopy`. The hidden
-  Sent & Inbox section is the second lock, never the rule.
+- **Packet seat** — a super admin builds a packet, sets the reply inbox and counter-signs; a super admin or HR sends
+  one and reads what came back. `requirePacketAccess` (super admin), `requirePacketReader` (super admin or HR) and
+  `requirePacketSender` (super admin or HR) in `src/lib/pdf-packets.functions.ts` ask `canWorkPackets`,
+  `canReceivePackets` and `canSendPackets` in `src/lib/departments.ts`. Migration 20261122200000 keeps the same split on
+  `pdf_packets`: HR may read and insert, never update. The hidden sent list, reply inbox and signature pad are the second
+  lock, never the rule.
 - **One email per key** — every send carries an idempotency key built with `mailKey` from the packet id and recipient,
   and the provider drops a repeat of the same key, so a double click or retried request cannot email the signer twice.
   A deliberate "send it again" uses a new key on purpose, and that is the only way a second copy goes out.
@@ -95,4 +98,4 @@ mailbox each letter records, live in `AGENTS.md` ("Company Mail: Who Sends, Who 
   updating this file in the same commit.
 - Reusing invite or signature mail for a list, an announcement, a promotion, or anything a named recipient did not ask
   for.
-- Opening packet sending beyond a super admin and HR.
+- Building a packet, setting the reply inbox or counter-signing beyond a super admin, or sending/receiving packets beyond a super admin and HR.

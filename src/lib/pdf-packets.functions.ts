@@ -3,7 +3,13 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveAccess } from "@/lib/departments";
+import {
+  canReceivePackets,
+  canSendPackets,
+  canWorkPackets,
+  resolveAccess,
+  type StaffAccess,
+} from "@/lib/departments";
 import { emailLayout, escapeHtml, ADMIN_EMAIL, SITE_URL } from "@/lib/email-layout";
 import { trustedOrigin } from "@/lib/invite-limits";
 import { mailKey, mailboxAddress, resendKey, sendMail } from "@/lib/mailer";
@@ -25,9 +31,9 @@ import { sameTemplateBlocks, type PdfTemplate } from "@/lib/pdf-templates";
 
 /**
  * Sent & Inbox (founder, 2026-11-15): sending a packet, the public signing page, the counter-signature and the delivery
- * to the admin inbox. Staff functions run on the signed-in staff member's session; the two public functions go through
- * the database's own `pdf_packet_signing` / `pdf_packet_submit` functions, which see one packet by its unguessable id and
- * nothing else.
+ * to the admin inbox. Building, the inbox setting and the counter-signature are a super admin's; HR sends and reads what
+ * came back (founder, 2026-11-22). The two public functions go through the database's own `pdf_packet_signing` /
+ * `pdf_packet_submit` functions, which see one packet by its unguessable id and nothing else.
  */
 
 const SETTINGS_ID = "pdf_inbox";
@@ -85,27 +91,44 @@ const signatureSchema = z.object({
   size: z.enum(["sm", "md", "lg"]).optional(),
 });
 
-async function requireStaff(context: Ctx): Promise<void> {
-  const { data } = await context.supabase.rpc(
-    "is_staff" as never,
-    { _user_id: context.userId } as never,
-  );
-  if (!data) throw new Error("Only staff can send signature packets.");
-}
-
-/**
- * Who may send a packet (founder, 2026-11-19): a super admin, or HR. A packet leaves from admin@ and carries an agreement,
- * so the sender is one of those two seats — the HR desk that builds them, or the company's own signer. Everyone else still
- * reads, prepares and works the Sent & Inbox exactly as before; they just can't be the one who sends it.
- */
-async function requirePacketSender(context: Ctx): Promise<void> {
+/** The caller's staff access, resolved from the same roles rows `public.in_department` reads. */
+async function packetAccess(context: Ctx) {
   const { data: roles } = await context.supabase
     .from("user_roles")
     .select("role, departments")
     .eq("user_id", context.userId);
-  const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
-  if (access?.role !== "super_admin" && !access?.departments.includes("hr"))
+  return resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
+}
+
+/**
+ * Who may work a packet beyond sending (founder, 2026-11-22): a super admin alone reads a sent packet, builds one, sets
+ * the reply inbox and counter-signs. HR sends and stops there, so every one of those calls refuses HR here as well as
+ * in the database (migration 20261122200000).
+ */
+async function requirePacketAccess(context: Ctx): Promise<void> {
+  if (!canWorkPackets(await packetAccess(context)))
+    throw new Error("Only a super admin can work signature packets.");
+}
+
+/**
+ * Who may send a packet (founder, 2026-11-19, narrowed 2026-11-22): a super admin or HR. Building, the reply inbox and
+ * the counter-signature stay on `requirePacketAccess`. The access comes back so a send can ask the narrower question too
+ * — HR may not attach a company signature while sending.
+ */
+async function requirePacketSender(context: Ctx): Promise<StaffAccess> {
+  const access = await packetAccess(context);
+  if (!access || !canSendPackets(access))
     throw new Error("Only a super admin or HR can send a packet.");
+  return access;
+}
+
+/**
+ * Who may read Sent & Inbox (founder, 2026-11-22): a super admin or HR. HR receives a packet as well as sending one, so
+ * the list, one packet and its locked PDF are theirs too; building and counter-signing are not.
+ */
+async function requirePacketReader(context: Ctx): Promise<void> {
+  if (!canReceivePackets(await packetAccess(context)))
+    throw new Error("Only a super admin or HR can open sent packets.");
 }
 
 const origin = () => {
@@ -262,9 +285,9 @@ async function recordPacketEmail(
 export const ensureInternshipPacket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ id: string; created: boolean }> => {
-    await requireStaff(context);
-    // The starter is the built-in document, never anything the browser sends, so it seeds on the service client: every
-    // staff member needs it in the library to send a packet, while changing the library itself stays with the leads.
+    await requirePacketAccess(context);
+    // The starter is the built-in document, never anything the browser sends, so it seeds on the service client: the
+    // library needs it before a packet can be sent, while changing the library itself stays with a super admin.
     const db = (await import("@/integrations/supabase/client.server")).supabaseAdmin;
     const { data: existing } = await db
       .from("pdf_templates" as never)
@@ -317,7 +340,7 @@ export const ensureInternshipPacket = createServerFn({ method: "POST" })
 export const getPacketInbox = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ email: string; configured: boolean }> => {
-    await requireStaff(context);
+    await requirePacketAccess(context);
     const { data } = await context.supabase
       .from("site_settings" as never)
       .select("content")
@@ -335,7 +358,7 @@ export const setPacketInbox = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ email: emailSchema }).parse(d))
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requirePacketAccess(context);
     const { error } = await context.supabase.from("site_settings" as never).upsert({
       id: SETTINGS_ID,
       content: { email: data.email, updatedBy: context.userId },
@@ -371,7 +394,11 @@ export const sendPacket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => sendInput.parse(d))
   .handler(async ({ data, context }) => {
-    await requirePacketSender(context);
+    const access = await requirePacketSender(context);
+    // Counter-signing while sending is still counter-signing: HR sends, and the company's signature stays a super
+    // admin's, so a pre-signature posted past the hidden checkbox is refused here.
+    if (data.preSign && !canWorkPackets(access))
+      throw new Error("Only a super admin can counter-sign a packet.");
     const { data: row, error } = await context.supabase
       .from("pdf_templates" as never)
       .select("*")
@@ -515,7 +542,7 @@ export const emailPacketLink = createServerFn({ method: "POST" })
 export const listPackets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<PacketSummary[]> => {
-    await requireStaff(context);
+    await requirePacketReader(context);
     const { data, error } = await context.supabase
       .from("pdf_packets" as never)
       .select("*")
@@ -570,7 +597,7 @@ export const getPacket = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requirePacketReader(context);
     const { data: row, error } = await context.supabase
       .from("pdf_packets" as never)
       .select("*")
@@ -637,7 +664,7 @@ export const counterSignPacket = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), signature: signatureSchema }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requirePacketAccess(context);
     const { data: current, error: readError } = await context.supabase
       .from("pdf_packets" as never)
       .select("*")
@@ -740,7 +767,7 @@ export const packetPdf = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requirePacketReader(context);
     const { data: row, error } = await context.supabase
       .from("pdf_packets" as never)
       .select("*")

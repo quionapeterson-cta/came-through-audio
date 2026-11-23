@@ -24,9 +24,10 @@ export type TemplateTier = (typeof TEMPLATE_TIERS)[number];
 
 /**
  * Who keeps the template library (founder, 2026-11-17, narrowing 2026-11-15): a super admin alone builds, copies and
- * deletes templates. Everyone else on staff still reads the library, because sending a packet needs it, but nothing they
- * type can change a document the team sends out. The server checks this too, and the database policies in
- * 20261117160000_pdf-templates-super-admin.sql repeat it; a screen that hides the studio is not the rule.
+ * deletes templates, and the studio is theirs alone. HR reads the library because a send picks from it (founder,
+ * 2026-11-22), but nothing they type can change a document the team sends out. The server checks this too, and
+ * the database policies in 20261117160000_pdf-templates-super-admin.sql repeat it; a screen that hides the studio is not
+ * the rule.
  */
 export const PDF_TEMPLATE_EDITOR_ROLES = ["super_admin"] as const;
 

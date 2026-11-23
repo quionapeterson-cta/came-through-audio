@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveAccess } from "@/lib/departments";
 import { PDF_SHELF_MAX_BYTES, shelfFileName, shelfStorageName, type PdfShelf } from "./pdf-shelf";
 
 /**
@@ -17,12 +18,18 @@ type Ctx = { supabase: SupabaseClient; userId: string };
 const BUCKET = "saved-pdfs";
 const SIGNED_FOR = 60 * 60;
 
+/**
+ * Any staff member, an HR Admin included (founder, 2026-11-23): the shelf sits right under the packet desk in PDF
+ * Tools, and public.is_staff leaves hr_admin out, so that seat read "Only staff can use Saved PDFs." The same staff
+ * access every other panel asks decides it, and migration 20261122230000 names the HR seat in the shelf policies.
+ */
 async function requireStaff(context: Ctx): Promise<void> {
-  const { data } = await context.supabase.rpc(
-    "is_staff" as never,
-    { _user_id: context.userId } as never,
-  );
-  if (!data) throw new Error("Only staff can use Saved PDFs.");
+  const { data: roles } = await context.supabase
+    .from("user_roles")
+    .select("role, departments")
+    .eq("user_id", context.userId);
+  const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
+  if (!access) throw new Error("Only staff can use Saved PDFs.");
 }
 
 type FolderRow = { id: string; name: string };

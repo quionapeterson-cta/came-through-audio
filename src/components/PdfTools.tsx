@@ -118,6 +118,7 @@ export function PdfTools({
   title = "PDF Tools",
   mailboxes = PDF_MAILBOXES,
   packets = true,
+  hrPackets = false,
 }: {
   canEmail?: boolean;
   canSave?: boolean;
@@ -125,8 +126,10 @@ export function PdfTools({
   title?: string;
   /** The mailboxes this person may send from; Admin passes the lead's own boxes (founder, 2026-11-19). */
   mailboxes?: readonly PdfMailbox[];
-  /** Sent & Inbox is a super admin's or HR's (founder, 2026-11-19); the sending calls refuse anyone else too. */
+  /** Sent & Inbox is the super admin's (founder, 2026-11-22): reading, building, the reply inbox and counter-signing. */
   packets?: boolean;
+  /** HR's view: send a packet and read what came back, with no inbox setting and no counter-signature. */
+  hrPackets?: boolean;
 } = {}) {
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
@@ -511,11 +514,14 @@ export function PdfTools({
       {canEmail && canStudio && <PdfTemplateStudio />}
       {canEmail && !canStudio && (
         <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-          The template library is kept by a super admin. Sending a packet is a super admin's or HR's
-          job.
+          The template library is kept by a super admin.
+          {hrPackets
+            ? " You can send a signature packet and see what comes back; the reply inbox and counter-signing are a super admin's."
+            : " Signature packets are a super admin's or HR's job."}
         </p>
       )}
       {canEmail && packets && <PdfPacketCenter />}
+      {canEmail && !packets && hrPackets && <PdfPacketCenter mode="hr" />}
       {canEmail && <PdfEmailLog refreshKey={emailVersion} />}
       {canSave && <PdfShelfPanel refreshKey={shelfVersion} focusFolderId={savedFolderId} />}
     </div>

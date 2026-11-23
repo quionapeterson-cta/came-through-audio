@@ -9,9 +9,9 @@ import {
 } from "./pdf-templates";
 
 /**
- * The Template Studio library (founder, 2026-11-15). Staff build or convert a document, save it, and the whole team can
- * open it again. Everything is additive: a saved template is a row of blocks, so a later version of the studio can read
- * one written today.
+ * The Template Studio library (founder, 2026-11-15). A super admin builds or converts a document and saves it, and the
+ * packet seats (a super admin or HR) read it to assemble a packet. Everything is additive: a saved template is a row of
+ * blocks, so a later version of the studio can read one written today.
  */
 
 type Ctx = {
@@ -76,12 +76,37 @@ async function requireStaff(context: Ctx): Promise<void> {
     "is_staff" as never,
     { _user_id: context.userId } as never,
   );
-  if (!data) throw new Error("Only staff can use Template Studio.");
+  if (!data) throw new Error("Only staff can change the template library.");
+}
+
+/**
+ * Who may read the library (founder, 2026-11-22): the packet seats, because building a packet is the only place besides
+ * the studio that picks from it. A super admin writes it; HR reads it to assemble a packet.
+ */
+async function requireTemplateReader(context: Ctx): Promise<void> {
+  const [superAdmin, hr] = await Promise.all([
+    context.supabase.rpc(
+      "has_role" as never,
+      {
+        _user_id: context.userId,
+        _role: "super_admin",
+      } as never,
+    ),
+    context.supabase.rpc(
+      "in_department" as never,
+      {
+        _user_id: context.userId,
+        _dept: "hr",
+      } as never,
+    ),
+  ]);
+  if (!superAdmin.data && !hr.data)
+    throw new Error("Only a super admin or HR can open the template library.");
 }
 
 /**
  * Changing the library is narrower than reading it (founder, 2026-11-17, narrowing 2026-11-15): only a super admin
- * writes; every other staff member reads, because the send dialog picks from the same library.
+ * writes; HR reads, because building a packet picks from the same library.
  */
 async function requireTemplateAuthor(context: Ctx): Promise<void> {
   await requireStaff(context);
@@ -113,7 +138,7 @@ const toTemplate = (row: Row): SavedTemplate => ({
 export const listPdfTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SavedTemplate[]> => {
-    await requireStaff(context);
+    await requireTemplateReader(context);
     const { data, error } = await context.supabase
       .from("pdf_templates" as never)
       .select("*")

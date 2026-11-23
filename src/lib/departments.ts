@@ -182,6 +182,42 @@ export function canAuditPayments(access: StaffAccess | null | undefined): boolea
 }
 
 /**
+ * Who sends a signature packet (founder, 2026-11-22): a super admin, or HR — and for HR, only the send. A packet leaves
+ * from admin@ and carries an agreement, so the HR desk may put one out; reading what came back, the reply inbox and the
+ * counter-signature stay with a super admin (`canWorkPackets`). The server asks this before `sendPacket`,
+ * `emailPacketLink` and `emailPacketCopy`, and migration 20261122200000 narrows the table to the same split.
+ */
+export const PACKET_SENDER_DEPARTMENTS = ["hr"] as const satisfies readonly Department[];
+
+/** A super admin, or HR — the two seats that send a packet and read what came back. */
+function packetSeat(access: StaffAccess | null | undefined): boolean {
+  if (!access) return false;
+  if (access.role === "super_admin") return true;
+  return PACKET_SENDER_DEPARTMENTS.some((d) => access.departments.includes(d));
+}
+
+export function canSendPackets(access: StaffAccess | null | undefined): boolean {
+  return packetSeat(access);
+}
+
+/**
+ * Who may read Sent & Inbox (founder, 2026-11-22): HR receives a packet as well as sending one, so both seats read the
+ * sent and completed lists. Building, the reply inbox and the counter-signature stay a super admin's.
+ */
+export function canReceivePackets(access: StaffAccess | null | undefined): boolean {
+  return packetSeat(access);
+}
+
+/**
+ * Who keeps Sent & Inbox (founder, 2026-11-22): a super admin alone reads a sent packet, builds one, sets the reply
+ * inbox and counter-signs. HR sends and stops there. The server and migration 20261122200000 enforce the same split, so
+ * the hidden section is the second lock, never the rule.
+ */
+export function canWorkPackets(access: StaffAccess | null | undefined): boolean {
+  return access?.role === "super_admin";
+}
+
+/**
  * Task Bank → Plans (Phase 4 item 9) are the super admin's alone (founder, 2026-11-21). A plan is its department's
  * scorecard: the quarter's targets and the goals behind them, so it sits with Legal and Company Contracts rather than
  * with the department that carries it out. Staff keep their Task Bank, and a plan's milestones stay ordinary tasks.

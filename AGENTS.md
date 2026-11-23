@@ -269,10 +269,23 @@
 - **Both caps stay on, before the send** (founder, 2026-11-19): `COMPANY_MAIL_DAILY_LIMIT` company-wide and
   `COMPANY_MAIL_SENDER_DAILY_LIMIT` per account are checked in `sendCompanyEmail` before `sendMail` runs. They are the
   domain's protection, so never move a cap after the send or into a component.
-- **A signature packet is sent by a super admin or HR** (founder, 2026-11-19): `requirePacketSender` in
-  `src/lib/pdf-packets.functions.ts` gates the three sending calls — `sendPacket`, `emailPacketLink` and
-  `emailPacketCopy`. Reading, building, setting the inbox and counter-signing stay on `requireStaff`, because they are not
-  sending. Admin → PDF Tools hides Sent & Inbox for anyone else, which is the second lock, never the rule.
+- **A super admin works packets; HR sends one and receives what comes back** (founder, 2026-11-22, narrowing the earlier
+  same-day pass): in `src/lib/pdf-packets.functions.ts`, `requirePacketAccess` (a super admin) gates building a packet,
+  setting the reply inbox and counter-signing; `requirePacketReader` (a super admin or HR) gates the sent list, one
+  packet and its locked PDF; `requirePacketSender` (a super admin or HR) gates the three sending calls — `sendPacket`,
+  `emailPacketLink` and `emailPacketCopy`. The rules are `canWorkPackets`, `canReceivePackets` and `canSendPackets` in
+  `src/lib/departments.ts`. HR gets `PdfPacketCenter mode="hr"`: the send form and Sent & Inbox with no reply-inbox
+  setting, no pre-signature and no counter-signature. Migration 20261122200000 enforces the same split in the database
+  (HR may read and insert, never update). The template library is read by those two seats only, because a send picks
+  from it.
+
+## PDF Tools: Saved PDFs (always follow)
+
+- **Every staff member uses the shared shelf, an HR Admin included** (founder, 2026-11-23): Saved PDFs carries no
+  permission of its own. `requireStaff` in `src/lib/pdf-shelf.functions.ts` asks `resolveAccess`, not `public.is_staff`
+  (which leaves `hr_admin` out), so the shelf under Admin → PDF Tools never tells an HR Admin "Only staff can use Saved
+  PDFs." The table and bucket policies in `20261122230000_saved-pdfs-hr.sql` name the HR seat too. A folder records its
+  creator, a save is the saver's own row, a delete is the team's, and the `saved-pdfs` bucket stays private.
 
 ## Signature & Invite Mail: Approved, With Limits (always follow)
 

@@ -80,8 +80,13 @@ const statusStyle = (status: PacketStatus) =>
 /**
  * Admin → PDF Tools → Sent & Inbox (founder, 2026-11-15): send a packet, watch it come back signed, counter-sign it and
  * keep the completed file. The signing page itself is public at /sign/:id; this panel never leaves the admin.
+ *
+ * `mode="hr"` is HR's view (founder, 2026-11-22): they send a packet and read what comes back, so the reply inbox
+ * setting, the counter-signature and the pre-signature are neither fetched nor rendered.
  */
-export function PdfPacketCenter() {
+export function PdfPacketCenter({ mode = "admin" }: { mode?: "admin" | "hr" } = {}) {
+  /** HR sends and receives; a super admin does everything else. */
+  const hr = mode === "hr";
   const [templates, setTemplates] = useState<SavedTemplate[]>([]);
   const [packets, setPackets] = useState<PacketSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +128,14 @@ export function PdfPacketCenter() {
 
   async function load() {
     try {
+      if (hr) {
+        // HR sends and receives: the library a send picks from, plus the packets that came back. Building, the reply
+        // inbox setting and the counter-signature are a super admin's.
+        const [saved, sent] = await Promise.all([listPdfTemplates(), listPackets()]);
+        setTemplates(saved);
+        setPackets(sent);
+        return;
+      }
       // The starter packet joins the library once, and an untouched early copy is brought up to the full document.
       await ensureInternshipPacket().catch(() => null);
       const [saved, sent, mail] = await Promise.all([
@@ -351,8 +364,9 @@ export function PdfPacketCenter() {
         <div>
           <h3 className="text-lg font-bold">Sent &amp; Inbox</h3>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Send a packet for signature, counter-sign it when it comes back, and keep the locked PDF
-            with its audit certificate. The recipient only ever sees their own signing page.
+            {hr
+              ? "Send a packet and see what comes back. The reply inbox and counter-signing are a super admin's."
+              : "Send a packet for signature, counter-sign it when it comes back, and keep the locked PDF with its audit certificate. The recipient only ever sees their own signing page."}
           </p>
         </div>
         <div className="flex gap-2">
@@ -365,39 +379,41 @@ export function PdfPacketCenter() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border p-3">
-        <div className="min-w-[240px] flex-1">
-          <Label htmlFor="packet-inbox">Admin notification email</Label>
-          <Input
-            id="packet-inbox"
-            value={inbox}
-            onChange={(e) => {
-              setInbox(e.target.value);
-              setInboxSaved(false);
+      {!hr && (
+        <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border p-3">
+          <div className="min-w-[240px] flex-1">
+            <Label htmlFor="packet-inbox">Admin notification email</Label>
+            <Input
+              id="packet-inbox"
+              value={inbox}
+              onChange={(e) => {
+                setInbox(e.target.value);
+                setInboxSaved(false);
+              }}
+              placeholder="admin@camethroughaudio.com"
+              className="mt-1"
+            />
+          </div>
+          <Button
+            variant="outline"
+            disabled={!inbox.includes("@")}
+            onClick={async () => {
+              try {
+                await setPacketInbox({ data: { email: inbox.trim() } });
+                setInboxSaved(true);
+                toast.success("Completed packets go to this inbox.");
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : "Couldn't save the email.");
+              }
             }}
-            placeholder="admin@camethroughaudio.com"
-            className="mt-1"
-          />
+          >
+            <Mail /> {inboxSaved ? "Saved" : "Save email"}
+          </Button>
+          <p className="w-full text-xs text-muted-foreground">
+            Every fully executed PDF is emailed here as an attachment and kept under Completed.
+          </p>
         </div>
-        <Button
-          variant="outline"
-          disabled={!inbox.includes("@")}
-          onClick={async () => {
-            try {
-              await setPacketInbox({ data: { email: inbox.trim() } });
-              setInboxSaved(true);
-              toast.success("Completed packets go to this inbox.");
-            } catch (error) {
-              toast.error(error instanceof Error ? error.message : "Couldn't save the email.");
-            }
-          }}
-        >
-          <Mail /> {inboxSaved ? "Saved" : "Save email"}
-        </Button>
-        <p className="w-full text-xs text-muted-foreground">
-          Every fully executed PDF is emailed here as an attachment and kept under Completed.
-        </p>
-      </div>
+      )}
 
       {!packets.length ? (
         <p className="text-sm text-muted-foreground">
@@ -413,7 +429,8 @@ export function PdfPacketCenter() {
                 <p className="truncate font-semibold">{packet.title}</p>
                 <p className="text-xs text-muted-foreground">
                   {packet.recipient_name} · {packet.recipient_email} · sent {when(packet.sent_at)} ·{" "}
-                  {packet.formCount} form{packet.formCount === 1 ? "" : "s"}
+                  {packet.formCount} form
+                  {packet.formCount === 1 ? "" : "s"}
                 </p>
                 {packet.email ? (
                   <p className={`text-xs ${deliveryTone(packet.email.status)}`}>
@@ -452,7 +469,7 @@ export function PdfPacketCenter() {
               >
                 <ArrowUpRight /> Open signing page
               </Button>
-              {packet.status === "pending_admin" ? (
+              {!hr && packet.status === "pending_admin" ? (
                 <Button size="sm" onClick={() => void openReview(packet.id)}>
                   <FileSignature /> Review &amp; counter-sign
                 </Button>
@@ -683,40 +700,42 @@ export function PdfPacketCenter() {
                   </div>
                 ) : null}
 
-                <div className="rounded-xl border border-border p-3">
-                  <label className="flex items-center gap-2 text-sm font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={!!preSign}
-                      onChange={(e) =>
-                        setPreSign(
-                          e.target.checked
-                            ? {
-                                kind: "type",
-                                data: "Came Through Audio",
-                                name: "Came Through Audio",
-                              }
-                            : null,
-                        )
-                      }
-                    />
-                    Counter-sign now
-                  </label>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Pre-signing marks the packet fully executed the moment the recipient signs.
-                    Leave it off to review and sign after they do.
-                  </p>
-                  {preSign ? (
-                    <div className="mt-3">
-                      <PdfSignaturePad
-                        value={preSign}
-                        onChange={(v) => setPreSign(v)}
-                        label="Company representative"
-                        name="Came Through Audio"
+                {!hr && (
+                  <div className="rounded-xl border border-border p-3">
+                    <label className="flex items-center gap-2 text-sm font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={!!preSign}
+                        onChange={(e) =>
+                          setPreSign(
+                            e.target.checked
+                              ? {
+                                  kind: "type",
+                                  data: "Came Through Audio",
+                                  name: "Came Through Audio",
+                                }
+                              : null,
+                          )
+                        }
                       />
-                    </div>
-                  ) : null}
-                </div>
+                      Counter-sign now
+                    </label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Pre-signing marks the packet fully executed the moment the recipient signs.
+                      Leave it off to review and sign after they do.
+                    </p>
+                    {preSign ? (
+                      <div className="mt-3">
+                        <PdfSignaturePad
+                          value={preSign}
+                          onChange={(v) => setPreSign(v)}
+                          label="Company representative"
+                          name="Came Through Audio"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                )}
 
                 {!configured ? (
                   <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -734,7 +753,7 @@ export function PdfPacketCenter() {
         </div>
       ) : null}
 
-      {review ? (
+      {!hr && review ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
           <div className="my-6 w-full max-w-2xl rounded-2xl border border-border bg-card p-5 shadow-xl">
             <div className="flex items-start justify-between gap-3">
