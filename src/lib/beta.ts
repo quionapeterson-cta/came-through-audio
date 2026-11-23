@@ -133,9 +133,9 @@ export const BETA_ITEMS: BetaItem[] = [
   {
     id: "utility-suite",
     tier: "collaborate",
-    area: "Royalty Utility Suite",
+    area: "The Financial Lab",
     title: "Converter and earnings calculator",
-    how: "Royalties and Registrations → Royalty Utility Suite: pick a song in the converter, try the calculator.",
+    how: "Royalties and Registrations → The Financial Lab: pick a song in the converter, try the calculator.",
   },
   {
     id: "collab-locks",

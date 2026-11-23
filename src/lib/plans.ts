@@ -303,7 +303,7 @@ export const PLAN_FEATURES: Feature[] = [
   {
     group: "Collaboration & registration",
     from: "collaborate",
-    title: "Royalty Utility Suite",
+    title: "The Financial Lab",
     tip: "Pick a song and the converters turn your catalog splits into the exact numbers ASCAP, BMI and SESAC ask for (each counts shares differently), plus a projected earnings calculator by platform and country.",
     prize: true,
   },

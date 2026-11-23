@@ -125,7 +125,7 @@ export const DOCS: Doc[] = [
         ],
       },
       {
-        heading: "Royalty Utility Suite",
+        heading: "The Financial Lab",
         paragraphs: [
           "Included with Catalog & Collaborate and up: the BMI/ASCAP Formula Converter (BMI reports shares on a 200% scale; ASCAP, SoundExchange and The MLC use 100%) and a Projected Royalty Earnings Calculator with editable rate estimates.",
         ],
@@ -218,7 +218,7 @@ export const DOCS: Doc[] = [
           "The report names what is blocking the money and links each fix to the field that needs it.",
           "Check a song that is not in your catalog yet with the Royalty Inspector, free and unlimited.",
           "Tick the Song Health Checklist until a song is 100% healthy. Every report stays in My reports, so you can run it again and see what healed.",
-          "On paid plans, every song you embed or save is checked automatically. The Royalty Utility Suite, with the share converters and the projected earnings calculator, needs Catalog & Collaborate.",
+          "On paid plans, every song you embed or save is checked automatically. The Financial Lab, with the share converters and the projected earnings calculator, needs Catalog & Collaborate.",
           "Expert Help, where our team registers the songs for you, starts here and is paid per order.",
         ],
       },
@@ -270,7 +270,7 @@ export const DOCS: Doc[] = [
         bullets: [
           "Free: Royalty Health Checks, the Royalty Inspector, signing split sheets you are invited to, and support.",
           "Catalog Plus: MP3 embedding, My Catalog with its downloads, and split sheet generation.",
-          "Catalog & Collaborate: collaborator e-signatures, 1-Click Agency Exports, and the Royalty Utility Suite.",
+          "Catalog & Collaborate: collaborator e-signatures, 1-Click Agency Exports, and The Financial Lab.",
           "Catalog Management: WAV embedding, PDF Fill & Sign, contracts and the Signed Vault, blueprints, and personal branding.",
           "Pause: once every 12 months, for as long as you need, for a Vault fee of $1.99 a month. It is billed monthly and stops the moment you resume, so there is no end date. There is no plan charge while you are paused, your catalog stays read-only and is not emptied, and your downloads keep working, while embedding, uploads, new songs, split sheets, contracts and the other paid tools wait until you resume. Pausing is not cancelling: your plan renews from the day you resume, for a fresh year.",
           "Plans renew yearly and upgrades are prorated. See the Refund Policy for refund terms, and View Plans in the workspace for what you are on.",

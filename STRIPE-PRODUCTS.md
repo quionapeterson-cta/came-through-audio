@@ -14,7 +14,7 @@ written for the customer, not for us.
 | Lookup key | Product name | Price | Description |
 |---|---|---|---|
 | `catalog_plus_yearly` | Catalog Plus | $24.99 / year | Yearly plan: unlimited catalog, MP3 embedding, split sheets, PDF catalog and lyric downloads, and master MP3 retrieval. |
-| `catalog_collaborate_yearly` | Catalog & Collaborate | $44.99 / year | Yearly plan: everything in Catalog Plus, plus split-sheet e-signatures, 1-Click Agency Exports, the Royalty Utility Suite, and registration assistance. |
+| `catalog_collaborate_yearly` | Catalog & Collaborate | $44.99 / year | Yearly plan: everything in Catalog Plus, plus split-sheet e-signatures, 1-Click Agency Exports, The Financial Lab, and registration assistance. |
 | `catalog_management_yearly` | Catalog Management | $89.99 / year | Yearly plan: everything in Catalog & Collaborate, plus WAV embedding, contracts with e-signing, 75+ blueprints, the Signed Contract Vault, and one Personal Branding kit. |
 
 ## 2. Add-on artist seats (yearly subscriptions, one per added artist)

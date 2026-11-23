@@ -100,7 +100,7 @@ export function RoyaltyUtilitySuite({
     return (
       <UpgradeLock
         className=""
-        title="Royalty Utility Suite"
+        title="The Financial Lab"
         tier="collaborate"
         onUpgrade={onUpgrade}
         text="Turn your catalog splits into the numbers BMI, ASCAP and SESAC ask for, and forecast your payouts by platform."
