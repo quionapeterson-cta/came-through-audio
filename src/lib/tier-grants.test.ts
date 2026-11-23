@@ -48,7 +48,10 @@ describe("tier grants", () => {
   it("keeps the staff role and the staff-plan grant as management", () => {
     expect(userTier, "user_tier is missing").not.toBeNull();
     expect(userTier).toContain("WHEN public.has_role(_uid, 'super_admin') THEN 'management'");
-    expect(userTier).toContain("WHEN public.is_staff(_uid) THEN 'management'");
+    // An HR Admin holds a staff role too, so user_tier must never show that seat as Free (founder, 2026-11-23).
+    expect(userTier).toContain(
+      "WHEN public.is_staff(_uid) OR public.in_department(_uid, 'hr') THEN 'management'",
+    );
     expect(userTier).toContain("WHEN public.staff_plan_active(_uid) THEN 'management'");
   });
 

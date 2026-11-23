@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveAccess } from "@/lib/departments";
 import {
   fileProblem,
   KIND_LIMIT,
@@ -18,18 +19,27 @@ import {
  */
 
 type Ctx = {
-  supabase: { rpc: (fn: never, args: never) => PromiseLike<{ data: unknown }> };
+  supabase: {
+    rpc: (fn: never, args: never) => PromiseLike<{ data: unknown }>;
+    from: (table: "user_roles") => {
+      select: (columns: string) => {
+        eq: (column: string, value: unknown) => PromiseLike<{ data: unknown }>;
+      };
+    };
+  };
   userId: string;
 };
 const adminDb = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 const BUCKET = "staff-submissions";
 
 async function requireStaff(context: Ctx): Promise<void> {
-  const { data } = await context.supabase.rpc(
-    "is_staff" as never,
-    { _user_id: context.userId } as never,
-  );
-  if (!data) throw new Error("Only staff can send submissions.");
+  // The HR Admin holds a staff role too; public.is_staff leaves hr_admin out (founder, 2026-11-23).
+  const { data } = await context.supabase
+    .from("user_roles")
+    .select("role, departments")
+    .eq("user_id", context.userId);
+  if (!resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]))
+    throw new Error("Only staff can send submissions.");
 }
 
 async function isSuper(context: Ctx): Promise<boolean> {
@@ -88,7 +98,7 @@ export const createSubmissionUpload = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<{ path: string; token: string }> => {
-    await requireStaff(context);
+    await requireStaff(context as unknown as Ctx);
     const problem = fileProblem(data.kind, data);
     if (problem) throw new Error(problem);
     const db = await adminDb();
@@ -128,7 +138,7 @@ export const submitStaffIdea = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requireStaff(context as unknown as Ctx);
     if (data.file) {
       const problem = fileProblem(data.kind, {
         name: data.file.name,
@@ -160,8 +170,8 @@ export const submitStaffIdea = createServerFn({ method: "POST" })
 export const listStaffSubmissions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<StaffSubmission[]> => {
-    await requireStaff(context);
-    const superUser = await isSuper(context);
+    await requireStaff(context as unknown as Ctx);
+    const superUser = await isSuper(context as unknown as Ctx);
     const db = await adminDb();
     let query = db
       .from("staff_submissions" as never)
@@ -229,7 +239,8 @@ export const handleStaffSubmission = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    if (!(await isSuper(context))) throw new Error("Only a super admin can handle submissions.");
+    if (!(await isSuper(context as unknown as Ctx)))
+      throw new Error("Only a super admin can handle submissions.");
     const db = await adminDb();
     const { error } = await db
       .from("staff_submissions" as never)

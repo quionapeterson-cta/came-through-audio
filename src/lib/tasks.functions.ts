@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { DEPARTMENTS } from "./departments";
+import { DEPARTMENTS, resolveAccess } from "./departments";
 
 export const TASK_STATUSES = ["idea", "planned", "in_progress", "done"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
@@ -101,8 +101,13 @@ export type TaskOwner = { userId: string; name: string; departments: string[] };
 export const listTaskOwners = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ me: string; owners: TaskOwner[] }> => {
-    const { data: isStaff } = await context.supabase.rpc("is_staff", { _user_id: context.userId });
-    if (!isStaff) throw new Error("Forbidden");
+    // The owner list is every staff seat's, the HR Admin's included (founder, 2026-11-23).
+    const { data: roles } = await context.supabase
+      .from("user_roles")
+      .select("role, departments")
+      .eq("user_id", context.userId);
+    if (!resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]))
+      throw new Error("Forbidden");
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await db
       .from("user_roles")

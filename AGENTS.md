@@ -1,4 +1,5 @@
 <!-- LOVABLE:BEGIN -->
+
 > [!IMPORTANT]
 > This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
 > published git history — force pushing, or rebasing/amending/squashing commits
@@ -7,6 +8,7 @@
 >
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
+
 <!-- LOVABLE:END -->
 
 ## Every Signature Is One Cursive (always follow)
@@ -16,7 +18,7 @@
   is given, the company block, a member's contract, a split sheet, a block agreement built from a template, and a form
   signed in PDF Fill & Sign. Never Times italic, never a serif, never a second script, in a PDF or on screen.
 - **One constant names it** (`src/lib/signature-font.ts`): `SIGNATURE_FONT` for a PDF that sets a family (`"Dancing
-  Script"`), `SIGNATURE_CSS` for the screen, `SIGNATURE_FILE` for the `.ttf` a PDF embeds. `contract-blueprints.ts`
+Script"`), `SIGNATURE_CSS` for the screen, `SIGNATURE_FILE` for the `.ttf` a PDF embeds. `contract-blueprints.ts`
   re-exports `SIGNATURE_FONT` for the code that already imported it there. Use the constant; never type the family name
   into a component, a template or a PDF helper.
 - **Fallbacks keep working, they never stand in** (founder, 2026-11-16): if the font file cannot be loaded, a PDF finishes
@@ -102,6 +104,17 @@
 - Art is submitted to the private `badge-submissions` bucket and read through a signed link a super admin asks for, so a
   rejected badge is never a public picture. Art in the bucket is not a live badge: the badge still needs its `BadgeDef`,
   a real `metric` in badge-rules.ts, and one earned run before it ships (see the engineering steps in the panel).
+
+## Staff Panels: The HR Admin Is Staff (always follow)
+
+- **Ask `resolveAccess`, never `public.is_staff`, before handing a staff panel to its own seat** (founder, 2026-11-23):
+  `is_staff` is `super_admin`, `employee` and `department_lead` only, so an HR Admin fell through the Idea Box
+  (`staff-submissions.functions.ts`), Support Scripts (`support-scripts.functions.ts`) and the Task Bank's owner list
+  (`listTaskOwners` in `tasks.functions.ts`). `resolveAccess` in `src/lib/departments.ts` is the one check; never add a
+  second role list beside it.
+- **The database policies name the HR seat too** (`20261123120000_hr-staff-panels.sql`): the Idea Box insert,
+  `team_notices` and `staff_wins` reads are `is_staff OR in_department(…, 'hr')`, and `public.user_tier` maps an HR Admin
+  to `management` like every other staff role, so the workspace never shows the seat as Free.
 
 ## Staff Idea Box (always follow)
 
@@ -328,7 +341,8 @@ announcement or anything a named recipient did not ask for.
   that word alone, while the name and its own mark keep their sizes. The signature sits above the name, the name under it and the
   tagline under that, all centred (founder, 2026-11-10).
 - **The staff plan is Catalog Management, free** (founder, 2026-11-05): `public.user_tier` returns `management` for any
-  account with a staff role (`public.is_staff`) and for any account holding a live `staff_plan_grants` row. Do not gate
+  account with a staff role (`public.is_staff`, and the HR Admin through `in_department(…, 'hr')`) and for any account
+  holding a live `staff_plan_grants` row. Do not gate
   staff access with a second, separate check: brand kit and contract generator follow the tier, so they come with it.
   `useBilling` reads `user_tier` too, so a page can never show a staff member as Free.
 - **A reported member account keeps its paid year** (founder, 2026-11-05): staff report the email they already use as an
@@ -575,9 +589,11 @@ announcement or anything a named recipient did not ask for.
 ## Writer Credits & Registration Rules (always follow)
 
 ### Core principle
+
 Embedding is forgiving; registration is strict. Never block a user from saving or embedding a song because of incomplete writer info. Only block songs from entering registration sessions or agency exports.
 
 ### Writer data
+
 - Every writer has: legal_name (their only name, used for credits and registration; optional until registration), role, plus PRO affiliation (worldwide list), IPI name number and share. There is no credited or stage name for writers.
 - Roles are exactly: "Author", "Composer", "Author/Composer". Do not add, rename, or remove roles without asking.
 - "Author/Composer" counts toward BOTH author and composer coverage everywhere: validation, catalog, exports, reports.
@@ -585,6 +601,7 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 - Songs can be marked Instrumental, which removes the author requirement.
 
 ### Registration readiness (single source of truth)
+
 - A song is "Ready" only when: (has an author OR is instrumental) AND has a composer AND every writer has a legal_name.
 - Splits are checked by the same module as `warnings`: they never hold back an agency export (it goes out with a warning), but they DO block registration assistance, because splits must be settled before registering: writer splits must total exactly 100%, and if any publisher is listed, publisher shares must total exactly 100% (shares are entered as 100% of the publisher half, not of the whole song). Exports still go out, with a warning naming the songs to fix. SoundExchange skips the split check because it registers the recording, not the song.
 - This logic lives in ONE shared function/module. Every feature (embed indicator, catalog badge, export gate, any future agency template) must call it. Never re-implement readiness checks anywhere else.
@@ -601,20 +618,24 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
   - A song's "I'm a BMI writer with no publishing company" choice (`bmiWriterPublishing`) states the BMI no-publisher case out loud; it only counts when every writer is with BMI.
 
 ### Data flow
+
 - Embed → Catalog → Agency export templates. Changes to writer fields must be carried through all three.
 - Exports and registrations always use legal_name.
 - When adding a new agency/PRO export template, it must use the shared readiness check and the existing writer fields. Do not create template-specific writer fields.
 
 ### Copy-and-paste sheets
+
 - The BMI / ASCAP Registration Cheat Sheet and the Neighbouring Rights Pack are `.xlsx` files whose cells are all stored
   as text (`textSheet` in `src/lib/agency-export.ts`), so an IPI keeps its leading zeros and a duration stays `03:20`
   (founder, 2026-11-06). Never go back to a CSV with `="…"` wrappers: the member had to delete them after pasting.
 
 ### UX conventions
+
 - Missing writer info shows as a warning (⚠️) with a direct link to the field that needs fixing, never a dead-end error.
 - Any new form field related to writers gets a help tooltip in plain language.
 
 ### Before making changes
+
 - If a change touches writer fields, roles, readiness logic, or export templates, explain the plan and list affected files before editing.
 - Never delete or overwrite existing writer data. Any schema change needs a migration that preserves current data.
   - No exception any more (founder, 2026-11-08): a plan ending deletes nothing — the catalog stays read-only on Free, as
@@ -629,6 +650,7 @@ Personal Branding is one kit that replaces the Came Through Audio header on ever
 rules keep it consistent as features are added.
 
 ### Which documents carry it
+
 - `BrandUse` in `src/lib/brand-kit.ts` is the complete list of places a kit may appear: `contracts`, `splits`, `lyrics`
   and `catalog`. A new branded document adds a `BrandUse` entry, is allowed by `brandAccess()`, and is described on the
   plan chart and in Profile → Brand kit in the same change. Never gate branding with a second, separate check.
@@ -640,6 +662,7 @@ rules keep it consistent as features are added.
 - Emails are not branded by a kit. Outgoing email stays wrapped in `emailLayout()` (see the rule above).
 
 ### Who decides
+
 - The server decides, every time a download is made: `getMyBrand` / `getContractBrand` check the plan and verified
   add-on purchases. The browser may only ask for a kit ID it already owns; it never passes an "on" flag, and a saved
   kit never switches itself on.
@@ -680,6 +703,7 @@ rules keep it consistent as features are added.
   exactly what the founder hit while testing.
 
 ### The editor
+
 - Profile → Brand kit shows the editor and the live preview side by side, the preview pinned while scrolling, so every
   change shows as it is made (founder, 2026-11-06). The sections run name, logo and font, then contract style, then
   Colors (founder, 2026-11-07), so the look is chosen before the palette. Save sits under the preview on the left, and the small footer switch
@@ -761,6 +785,7 @@ rules keep it consistent as features are added.
   line and made the two settings look joined. Keep the line's ends square in the preview as well as the PDF.
 
 ### When it fails
+
 - A missing, unreadable or unavailable kit never blocks a download: the document simply keeps the Came Through Audio
   header. Never turn a branding lookup into an error the member sees.
 
