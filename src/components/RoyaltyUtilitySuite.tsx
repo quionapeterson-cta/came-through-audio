@@ -36,6 +36,7 @@ import {
 import { toast } from "sonner";
 import { LabBudgetPlanner } from "@/components/LabBudgetPlanner";
 import { LabMerchCalculator } from "@/components/LabMerchCalculator";
+import { RecoupmentPanel, RoyaltyPipelinePanel } from "@/components/RoyaltyPipeline";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +50,7 @@ import {
 } from "@/components/ui/select";
 import { loadOnboarding } from "@/lib/artist-profile";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { presetOf } from "@/lib/financial-lab-merch";
 import { COUNTRIES, countryByCode } from "@/lib/repertoires";
 import {
   MASTER_PORTION,
@@ -188,6 +190,13 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry || "US");
   const [focus, setFocus] = useState("all");
   const [bedazzle, setBedazzle] = useState(false);
+  // Lifted here so the royalty tools can prefill from the other two: the Budget Planner's target spend and the merch
+  // calculator's live price and cost. Neither tool writes the other's state; the parent only carries the numbers.
+  const [budgetCap, setBudgetCap] = useState("500");
+  const [merchMargin, setMerchMargin] = useState(() => {
+    const preset = presetOf("tshirt");
+    return { price: preset.price, cost: preset.unitCost };
+  });
   const theme = useLabTheme();
   const song = tracks.find((t) => t.id === songId);
   const rows = useMemo(() => (song ? songShareRows(song.metadata) : []), [song]);
@@ -306,11 +315,13 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
                 songId={songId}
                 userId={userId}
                 bedazzle={bedazzle}
+                budgetCap={budgetCap}
+                merchMargin={merchMargin}
               />
             </div>
           )}
-          {item.id === "budget" && <LabBudgetPlanner />}
-          {item.id === "merch" && <LabMerchCalculator />}
+          {item.id === "budget" && <LabBudgetPlanner target={budgetCap} onTarget={setBudgetCap} />}
+          {item.id === "merch" && <LabMerchCalculator onMarginChange={setMerchMargin} />}
         </div>
       ))}
       <p className="fl-footnote">
@@ -648,12 +659,16 @@ function Earnings({
   songId,
   userId,
   bedazzle,
+  budgetCap,
+  merchMargin,
 }: {
   tracks: CatalogTrack[];
   song: CatalogTrack | undefined;
   songId: string;
   userId: string | undefined;
   bedazzle: boolean;
+  budgetCap: string;
+  merchMargin: { price: number; cost: number };
 }) {
   const [streams, setStreams] = useState<Record<string, string>>({ spotify: "100000" });
   const [rates, setRates] = useState<Record<string, string>>(() =>
@@ -715,6 +730,12 @@ function Earnings({
     [song, r, master, songShare, streams, rates],
   );
 
+  // One cut, read by the readout, the pipeline and the recoupment targets, so the three can never disagree.
+  const streamCut =
+    MASTER_PORTION * (Number(master) || 0) + (1 - MASTER_PORTION) * (Number(songShare) || 0);
+  const streamPool = r.platforms.reduce((n, p) => n + p.total, 0);
+  const streamCount = Object.values(streams).reduce((n, v) => n + (Number(v) || 0), 0);
+
   function setStream(id: string, value: string) {
     setStreams((current) => ({ ...current, [id]: value }));
     setPulse((p) => p + 1);
@@ -766,12 +787,7 @@ function Earnings({
         </div>
         <div className="fl-readout">
           <span>Your combined stream cut</span>
-          <strong>
-            {pct(
-              MASTER_PORTION * (Number(master) || 0) +
-                (1 - MASTER_PORTION) * (Number(songShare) || 0),
-            )}
-          </strong>
+          <strong>{pct(streamCut)}</strong>
         </div>
       </div>
 
@@ -893,6 +909,22 @@ function Earnings({
         <Telemetry r={r} streams={streams} rates={rates} />
         <MiniDrawers />
       </div>
+
+      <RoyaltyPipelinePanel
+        song={song}
+        pool={streamPool}
+        masterShare={Number(master) || 0}
+        songShare={Number(songShare) || 0}
+        streams={streamCount}
+      />
+
+      <RecoupmentPanel
+        target={budgetCap}
+        streamCut={streamCut}
+        merchProfit={merchMargin.price - merchMargin.cost}
+        spotifyRate={Number(rates["spotify"]) || 0}
+        appleRate={Number(rates["apple"]) || 0}
+      />
 
       <TotalDock total={r.yours} context={copyContext} pulse={pulse} bedazzle={bedazzle} />
     </section>

@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   CircleDollarSign,
   Gauge,
@@ -43,7 +43,12 @@ const STATE_COPY = {
   profit: "Pure profit",
 } as const;
 
-export function LabMerchCalculator() {
+export function LabMerchCalculator({
+  onMarginChange,
+}: {
+  /** Reports the live price and unit cost so the Lab's recoupment tool can price a shirt recovery. */
+  onMarginChange?: (margin: { price: number; cost: number }) => void;
+} = {}) {
   const start = presetOf("tshirt");
   const [product, setProduct] = useState<ProductKind>(start.id);
   const [quantity, setQuantity] = useState(String(start.quantity));
@@ -60,6 +65,10 @@ export function LabMerchCalculator() {
     () => merchMath({ quantity: run, unitCost: cost, price: retail, unitsSold }),
     [run, cost, retail, unitsSold],
   );
+
+  useEffect(() => {
+    onMarginChange?.({ price: retail, cost });
+  }, [cost, retail, onMarginChange]);
 
   function chooseProduct(id: ProductKind) {
     const preset = presetOf(id);

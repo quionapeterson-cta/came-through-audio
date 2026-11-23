@@ -47,11 +47,7 @@
       )
       border-box 0 0 / var(--fl-pave-tile) var(--fl-pave-tile),
     /* the flat table at the centre of each stone */
-    radial-gradient(
-        circle closest-side at 50% 50%,
-        #ffffff 0 30%,
-        rgb(255 255 255 / 0%) 46%
-      )
+    radial-gradient(circle closest-side at 50% 50%, #ffffff 0 30%, rgb(255 255 255 / 0%) 46%)
       border-box 0 0 / var(--fl-pave-tile) var(--fl-pave-tile),
     /* the crown facets: eight soft cuts in platinum, so the stone reads crisp rather than pearled */
     repeating-conic-gradient(
@@ -74,10 +70,15 @@
       )
       border-box 0 0 / var(--fl-pave-tile) var(--fl-pave-tile),
     /* the platinum plate behind the stones, so the band never shows the page through it */
-    linear-gradient(180deg, #f1f0ed, #c6c6c2)
-      border-box 0 0 / var(--fl-pave-tile) var(--fl-pave-tile),
+    linear-gradient(180deg, #f1f0ed, #c6c6c2) border-box 0 0 / var(--fl-pave-tile)
+      var(--fl-pave-tile),
     /* the polish: light along the top of the bar, shadow underneath */
-    linear-gradient(180deg, rgb(255 255 255 / 28%), rgb(255 255 255 / 0%) 44%, rgb(32 34 38 / 22%) 100%)
+    linear-gradient(
+        180deg,
+        rgb(255 255 255 / 28%),
+        rgb(255 255 255 / 0%) 44%,
+        rgb(32 34 38 / 22%) 100%
+      )
       border-box 0 0 / 100% 100%;
   --mouse-x: 50%;
   --mouse-y: 50%;
@@ -1005,7 +1006,13 @@
   width: 11px;
   height: 11px;
   pointer-events: none;
-  background: radial-gradient(circle, #fff 0 20%, var(--fl-platinum) 34%, var(--fl-gold) 58%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    #fff 0 20%,
+    var(--fl-platinum) 34%,
+    var(--fl-gold) 58%,
+    transparent 70%
+  );
   clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%);
   filter: drop-shadow(0 0 5px rgb(255 255 255 / 80%));
   animation: fl-glint 900ms ease-out both;
@@ -1286,8 +1293,7 @@
 .dark .fl-pill[data-on="true"] {
   border-color: var(--fl-electric);
   background:
-    radial-gradient(circle at 50% 0%, rgb(77 140 255 / 38%), transparent 70%),
-    rgb(77 140 255 / 14%);
+    radial-gradient(circle at 50% 0%, rgb(77 140 255 / 38%), transparent 70%), rgb(77 140 255 / 14%);
   box-shadow:
     0 0 0 1px rgb(77 140 255 / 70%),
     0 0 26px -4px rgb(77 140 255 / 65%);
@@ -1853,11 +1859,7 @@
   height: 0.7rem;
   border: 1px solid #c9d7ea;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--fl-cobalt) 0 var(--fill),
-    #e4edf9 var(--fill) 100%
-  );
+  background: linear-gradient(90deg, var(--fl-cobalt) 0 var(--fill), #e4edf9 var(--fill) 100%);
 }
 .fl-slider::-moz-range-track {
   height: 0.7rem;
@@ -2176,15 +2178,35 @@
   animation: fl-rim-shimmer 7.4s cubic-bezier(0.42, 0, 0.22, 1) infinite;
 }
 /* The light walks down the stack: header, the panels, then the total. */
-.fl-bedazzle .fl-header::before { animation-delay: 0s; }
-.fl-bedazzle .fl-panel::before { animation-delay: 0.5s; }
-.fl-bedazzle .fl-telemetry::before { animation-delay: 0.5s; }
-.fl-bedazzle .fl-dock::before { animation-delay: 1s; }
+.fl-bedazzle .fl-header::before {
+  animation-delay: 0s;
+}
+.fl-bedazzle .fl-panel::before {
+  animation-delay: 0.5s;
+}
+.fl-bedazzle .fl-telemetry::before {
+  animation-delay: 0.5s;
+}
+.fl-bedazzle .fl-dock::before {
+  animation-delay: 1s;
+}
 @keyframes fl-rim-shimmer {
-  0% { background-position: 168% 168%; opacity: 0; }
-  6% { opacity: 1; }
-  58% { background-position: -68% -68%; opacity: 1; }
-  66%, 100% { background-position: -68% -68%; opacity: 0; }
+  0% {
+    background-position: 168% 168%;
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  58% {
+    background-position: -68% -68%;
+    opacity: 1;
+  }
+  66%,
+  100% {
+    background-position: -68% -68%;
+    opacity: 0;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .fl-bedazzle .fl-header::before,
@@ -2193,5 +2215,546 @@
   .fl-bedazzle .fl-dock::before {
     animation: none;
     opacity: 0;
+  }
+}
+
+/*
+ * Royalty pipeline & recoupment: the two tools under Telemetry. Gold is collected, Electric Cobalt is money still
+ * waiting on a registration, platinum is an empty bucket — the Lab's own ladder.
+ */
+.fl-pipe {
+  margin-top: 0.9rem;
+}
+.fl-pipe-bar {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.85rem;
+  border: 1px solid var(--fl-panel-rule);
+  border-radius: 0.75rem;
+  padding: 0.25rem;
+  background: var(--fl-soft);
+}
+.fl-pipe-seg {
+  display: flex;
+  min-width: 0;
+  min-height: 2.1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  border-radius: 0.45rem;
+  padding: 0 0.5rem;
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.fl-pipe-seg small {
+  font-size: 0.55rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+.fl-pipe-seg-master {
+  background: linear-gradient(90deg, var(--fl-cobalt-shade), var(--fl-cobalt));
+}
+.fl-pipe-seg-pro {
+  background: linear-gradient(90deg, #3d79e6, var(--fl-electric));
+  color: #071326;
+}
+.fl-pipe-seg-mlc {
+  background: linear-gradient(90deg, #b4b2ad, var(--fl-platinum));
+  color: var(--fl-ink);
+}
+
+.fl-pipe-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+@media (max-width: 820px) {
+  .fl-pipe-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.fl-pipe-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+  border: 1px solid #e0eaf7;
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.75rem;
+  background: var(--fl-soft);
+}
+.dark .fl-pipe-card {
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(255 255 255 / 3.5%);
+  backdrop-filter: blur(10px);
+}
+.fl-pipe-card[data-state="collected"] {
+  border-color: rgb(255 215 0 / 55%);
+  box-shadow: inset 0 0 22px rgb(255 215 0 / 7%);
+}
+.fl-pipe-card[data-state="waiting"],
+.fl-pipe-card[data-state="mismatch"] {
+  border-color: rgb(77 140 255 / 55%);
+  box-shadow: inset 0 0 22px rgb(77 140 255 / 8%);
+}
+.fl-pipe-label {
+  color: var(--fl-muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.fl-pipe-name {
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.fl-pipe-money {
+  color: var(--fl-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.dark .fl-pipe-money {
+  color: #fff;
+}
+.fl-pipe-card[data-state="collected"] .fl-pipe-money {
+  color: var(--fl-gold-shade);
+}
+.dark .fl-pipe-card[data-state="collected"] .fl-pipe-money {
+  color: var(--fl-gold);
+  text-shadow: 0 0 22px rgb(255 215 0 / 42%);
+}
+.fl-pipe-card[data-state="waiting"] .fl-pipe-money,
+.fl-pipe-card[data-state="mismatch"] .fl-pipe-money {
+  color: var(--fl-cobalt);
+}
+.dark .fl-pipe-card[data-state="waiting"] .fl-pipe-money,
+.dark .fl-pipe-card[data-state="mismatch"] .fl-pipe-money {
+  color: var(--fl-electric);
+  text-shadow: 0 0 22px rgb(77 140 255 / 42%);
+}
+.fl-pipe-share,
+.fl-pipe-note {
+  color: var(--fl-muted);
+  font-size: 0.65rem;
+  line-height: 1.4;
+}
+.fl-pipe-note {
+  margin-top: auto;
+  padding-top: 0.2rem;
+}
+.fl-pipe-state {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.fl-pipe-state i {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+.fl-pipe-state[data-kind="collected"] {
+  color: #6b5200;
+  border-color: rgb(201 162 39 / 65%);
+  background: rgb(255 215 0 / 12%);
+}
+.dark .fl-pipe-state[data-kind="collected"] {
+  color: var(--fl-gold);
+  border-color: rgb(255 215 0 / 60%);
+  background: rgb(255 215 0 / 10%);
+  box-shadow: 0 0 12px rgb(255 215 0 / 26%);
+}
+.fl-pipe-state[data-kind="waiting"],
+.fl-pipe-state[data-kind="mismatch"] {
+  color: var(--fl-cobalt);
+  border-color: rgb(77 140 255 / 55%);
+  background: rgb(77 140 255 / 8%);
+}
+.dark .fl-pipe-state[data-kind="waiting"],
+.dark .fl-pipe-state[data-kind="mismatch"] {
+  color: var(--fl-electric);
+  border-color: rgb(77 140 255 / 60%);
+  background: rgb(77 140 255 / 12%);
+  box-shadow: 0 0 12px rgb(77 140 255 / 28%);
+}
+.fl-pipe-state[data-kind="empty"] {
+  color: var(--fl-muted);
+  border-color: var(--fl-panel-rule);
+  background: transparent;
+}
+
+.fl-pipe-reg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+}
+.fl-pipe-reg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+.fl-pipe-reg-name {
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+.fl-reg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid rgb(77 140 255 / 45%);
+  border-radius: 999px;
+  padding: 0.22rem 0.55rem;
+  background: transparent;
+  color: var(--fl-cobalt);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  transition:
+    border-color 200ms ease,
+    background 200ms ease,
+    color 200ms ease;
+}
+.fl-reg-btn:hover {
+  background: rgb(77 140 255 / 10%);
+}
+.fl-reg-btn:focus-visible {
+  outline: 2px solid var(--fl-electric);
+  outline-offset: 2px;
+}
+.fl-reg-btn[data-on="true"] {
+  border-color: rgb(201 162 39 / 65%);
+  background: rgb(255 215 0 / 12%);
+  color: #6b5200;
+}
+.dark .fl-reg-btn {
+  color: var(--fl-electric);
+  border-color: rgb(77 140 255 / 55%);
+}
+.dark .fl-reg-btn[data-on="true"] {
+  color: var(--fl-gold);
+  border-color: rgb(255 215 0 / 65%);
+  background: rgb(255 215 0 / 10%);
+  box-shadow: 0 0 12px rgb(255 215 0 / 24%);
+}
+
+.fl-pipe-sx {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  border: 1px dashed rgb(77 140 255 / 45%);
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.8rem;
+}
+.fl-pipe-sx-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+.fl-pipe-sx-sub {
+  margin-top: 0.2rem;
+  max-width: 46ch;
+  color: var(--fl-muted);
+  font-size: 0.66rem;
+  line-height: 1.45;
+}
+.fl-pipe-sx-controls {
+  display: grid;
+  width: 100%;
+  /* An auto column takes the select's longest option as its max-content width and pushes the rate field past the
+     panel on a phone, so the phone column is pinned to the container. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.4rem;
+}
+@media (min-width: 640px) {
+  .fl-pipe-sx-controls {
+    width: auto;
+    grid-template-columns: minmax(0, 15rem) minmax(0, 5.5rem) minmax(0, 6.5rem);
+    align-items: end;
+  }
+}
+.fl-pipe-sx-controls .fl-field {
+  min-width: 0;
+  margin: 0;
+}
+.fl-pipe-sx-controls .fl-field label {
+  font-size: 0.56rem;
+}
+.fl-pipe-sx-foot {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  border-top: 1px solid var(--fl-panel-rule);
+  padding-top: 0.5rem;
+}
+.fl-pipe-sx-foot .fl-pipe-money {
+  font-size: 1.1rem;
+}
+.fl-pipe-sx-foot .fl-pipe-note {
+  flex: 1 1 12rem;
+  margin: 0;
+  padding: 0;
+}
+
+.fl-pipe-summary {
+  margin-top: 0.6rem;
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  background: rgb(77 140 255 / 7%);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.dark .fl-pipe-summary {
+  background: rgb(77 140 255 / 10%);
+}
+.fl-pipe-summary b {
+  color: var(--fl-cobalt);
+}
+.dark .fl-pipe-summary b {
+  color: var(--fl-electric);
+}
+
+.fl-pipe-reminders {
+  margin-top: 0.65rem;
+  border-top: 1px solid var(--fl-panel-rule);
+  padding-top: 0.55rem;
+}
+.fl-pipe-reminder-list {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.fl-pipe-reminder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+  border: 1px solid rgb(77 140 255 / 35%);
+  border-radius: 0.7rem;
+  padding: 0.5rem 0.6rem;
+}
+.fl-pipe-reminder[data-kind="mismatch"] {
+  border-color: rgb(255 215 0 / 55%);
+  background: rgb(255 215 0 / 6%);
+}
+.fl-pipe-reminder strong {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.fl-pipe-reminder span {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--fl-muted);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+.fl-pipe-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--fl-cobalt);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.fl-pipe-link:hover {
+  text-decoration: underline;
+}
+.dark .fl-pipe-link {
+  color: var(--fl-electric);
+}
+.fl-pipe-foot {
+  margin-top: 0.6rem;
+  color: var(--fl-muted);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.fl-recoup-controls {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+@media (min-width: 640px) {
+  .fl-recoup-controls {
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+    align-items: end;
+  }
+}
+.fl-recoup-read {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  border: 1px solid var(--fl-panel-rule);
+  border-radius: 0.7rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--fl-soft);
+}
+.fl-recoup-read span {
+  color: var(--fl-muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fl-recoup-read strong {
+  color: var(--fl-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.dark .fl-recoup-read {
+  border-color: rgb(255 255 255 / 10%);
+  background: #0c1118;
+}
+.dark .fl-recoup-read strong {
+  color: #fff;
+}
+
+.fl-recoup-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+@media (max-width: 820px) {
+  .fl-recoup-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.fl-recoup-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+  border: 1px solid #e0eaf7;
+  border-radius: 0.85rem;
+  padding: 0.65rem 0.7rem;
+  background: var(--fl-soft);
+}
+.dark .fl-recoup-tile {
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(255 255 255 / 3.5%);
+}
+.fl-recoup-tile[data-hero="true"] {
+  border-color: rgb(77 140 255 / 55%);
+  box-shadow: inset 0 0 22px rgb(77 140 255 / 9%);
+}
+.fl-recoup-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+  color: var(--fl-muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fl-recoup-name em {
+  font-style: normal;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.fl-recoup-number {
+  color: var(--fl-cobalt);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.dark .fl-recoup-number {
+  color: var(--fl-electric);
+  text-shadow: 0 0 20px rgb(77 140 255 / 42%);
+}
+.fl-recoup-unit {
+  color: var(--fl-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+@media (max-width: 639px) {
+  /* The two 10% segments get too narrow for a second word inside them on a phone. */
+  .fl-pipe-seg {
+    padding: 0 0.3rem;
+    font-size: 0.56rem;
+  }
+  .fl-pipe-seg small {
+    display: none;
+  }
+}
+
+/* The phone legend for the split bar: the same 80 / 10 / 10, spelled out under it. */
+.fl-pipe-legend {
+  display: none;
+}
+@media (max-width: 639px) {
+  .fl-pipe-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    margin-top: 0.45rem;
+    color: var(--fl-muted);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .fl-pipe-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .fl-pipe-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 0.15rem;
+  }
+  .fl-pipe-dot-master {
+    background: var(--fl-cobalt);
+  }
+  .fl-pipe-dot-pro {
+    background: var(--fl-electric);
+  }
+  .fl-pipe-dot-mlc {
+    background: var(--fl-platinum-shade);
   }
 }

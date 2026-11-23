@@ -72,10 +72,16 @@ function openPlan(kind: ProjectKind, target: number, previous: ExpenseRow[] = []
   };
 }
 
-export function LabBudgetPlanner() {
+export function LabBudgetPlanner({
+  target,
+  onTarget,
+}: {
+  /** The target spend lives in the Lab so the recoupment tool can prefill from it. */
+  target: string;
+  onTarget: (value: string) => void;
+}) {
   const [kind, setKind] = useState<ProjectKind>("music-video");
-  const [target, setTarget] = useState("500");
-  const [plan, setPlan] = useState<Plan>(() => openPlan("music-video", 500));
+  const [plan, setPlan] = useState<Plan>(() => openPlan("music-video", Number(target) || 500));
   const [active, setActive] = useState("");
   const [exporting, setExporting] = useState(false);
 
@@ -182,7 +188,7 @@ export function LabBudgetPlanner() {
                   className="fl-pill"
                   data-on={Math.round(targetNumber) === amount}
                   aria-pressed={Math.round(targetNumber) === amount}
-                  onClick={() => setTarget(String(amount))}
+                  onClick={() => onTarget(String(amount))}
                 >
                   {whole(amount)}
                 </button>
@@ -198,7 +204,7 @@ export function LabBudgetPlanner() {
                 inputMode="decimal"
                 className="fl-input fl-mono"
                 value={target}
-                onChange={(event) => setTarget(event.target.value)}
+                onChange={(event) => onTarget(event.target.value)}
                 placeholder="500"
               />
             </div>
