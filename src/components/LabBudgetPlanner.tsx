@@ -221,7 +221,7 @@ export function LabBudgetPlanner() {
       <section className="fl-panel fl-crystal" aria-label="CTA allocation">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-[#4D8CFF]">
+            <div className="fl-eyebrow flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em]">
               <Sparkles className="h-3.5 w-3.5" /> CTA expert allocation
             </div>
             <h3 className="mt-1 text-lg font-extrabold">Where {whole(plan.target)} should go</h3>

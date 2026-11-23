@@ -225,13 +225,14 @@ export function LabMerchCalculator() {
       <section className="fl-panel fl-crystal" aria-label="Sales simulator">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-[#4D8CFF]">
+            <div className="fl-eyebrow flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em]">
               <Gauge className="h-3.5 w-3.5" /> Sales simulator
             </div>
             <h3 className="mt-1 text-lg font-extrabold">How much will you sell?</h3>
           </div>
+          {/* Without a price the state is a placeholder, so the chip never claims the costs came back. */}
           <span className="fl-chip" data-state={math.state}>
-            {STATE_COPY[math.state]}
+            {math.breakevenUnits === null ? "Set a price" : STATE_COPY[math.state]}
           </span>
         </div>
 
@@ -345,7 +346,7 @@ export function LabMerchCalculator() {
             <span className="fl-profit-state">
               {math.state === "below" ? (
                 <>
-                  <span className="fl-amber-dot" aria-hidden="true" />
+                  <span className="fl-cobalt-dot" aria-hidden="true" />
                   {math.unitsToBreakeven} more unit{math.unitsToBreakeven === 1 ? "" : "s"} to
                   recover costs
                 </>
@@ -353,7 +354,7 @@ export function LabMerchCalculator() {
                 <>Costs fully recovered — the next unit is pure profit.</>
               ) : math.state === "profit" ? (
                 <>
-                  <span className="fl-emerald-dot" aria-hidden="true" />
+                  <span className="fl-gold-dot" aria-hidden="true" />
                   {math.soldOut ? "Sold out and in profit." : `${money(math.profit)} in pocket.`}
                 </>
               ) : (

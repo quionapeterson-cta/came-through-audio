@@ -340,7 +340,7 @@ function LabHeader({
   return (
     <header className="fl-header fl-crystal">
       <div className="relative z-10 min-w-0">
-        <div className="flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.24em] text-[#4D8CFF]">
+        <div className="fl-eyebrow flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.24em]">
           <span className="fl-live-dot" aria-hidden="true" /> {section}
         </div>
         <h2 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
@@ -359,7 +359,7 @@ function LabHeader({
           {dark ? "Daylight" : "Obsidian"}
         </button>
         <div className="fl-switch-label">
-          <Sparkles className={cn("h-4 w-4", bedazzle ? "text-[#FFD700]" : "text-[#4D8CFF]")} />
+          <Sparkles className="fl-sparkle h-4 w-4" data-on={bedazzle} />
           <span>Bedazzle Mode</span>
           <Switch
             checked={bedazzle}
@@ -938,7 +938,7 @@ function Telemetry({
     <section className="fl-telemetry" aria-label="Royalty telemetry and revenue radar">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-[#4D8CFF]">
+          <div className="fl-eyebrow flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em]">
             <Gauge className="h-3.5 w-3.5" /> Telemetry
           </div>
           <h3 className="mt-1 text-lg font-extrabold">Royalty Telemetry &amp; Revenue Radar</h3>
@@ -1182,7 +1182,7 @@ function CopyDeck({
     <div className="fl-copy-deck">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-[#4D8CFF]">
+          <div className="fl-eyebrow text-[0.65rem] font-bold uppercase tracking-[0.2em]">
             1-click agency copy
           </div>
           <p className="text-xs text-muted-foreground">

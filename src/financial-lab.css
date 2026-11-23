@@ -7,7 +7,14 @@
   --fl-electric: #4d8cff;
   --fl-gold: #ffd700;
   --fl-platinum: #e5e4e2;
-  --fl-emerald: #16a34a;
+  /*
+   * The Lab carries no fifth hue. Every bar, dot, chip and state below is one of the four official colours — Cobalt
+   * #004AAD, Electric Cobalt #4D8CFF, Platinum #E5E4E2, Gold #FFD700 — with a tint or a shade where two neighbours
+   * need to read apart. Gold and platinum are the only metals, and they glow; no green, amber, red, purple or teal.
+   */
+  --fl-cobalt-shade: #00327a;
+  --fl-platinum-shade: #b4b2ad;
+  --fl-gold-shade: #c9a227;
   --fl-panel-bg: #ffffff;
   --fl-panel-rule: #dbe7f7;
   --fl-soft: #f4f8ff;
@@ -141,6 +148,35 @@
 }
 .dark .fl-header .text-muted-foreground {
   color: #b8c7da;
+}
+
+/*
+ * The Lab's small caps eyebrow: Cobalt ink in daylight, Electric Cobalt on obsidian. It used to be typed as
+ * text-[#4D8CFF] in the components, which is 2.9:1 on a white panel; the class keeps the meaning and the contrast.
+ */
+.fl-eyebrow {
+  color: var(--fl-cobalt);
+}
+.dark .fl-eyebrow {
+  color: var(--fl-electric);
+}
+/* The Bedazzle sparkle follows the same rule and turns gold only while it is on. */
+.fl-sparkle {
+  color: var(--fl-cobalt);
+  transition:
+    color 200ms ease,
+    filter 200ms ease;
+}
+.dark .fl-sparkle {
+  color: var(--fl-electric);
+}
+.fl-sparkle[data-on="true"] {
+  color: var(--fl-gold-shade);
+  filter: drop-shadow(0 0 6px rgb(201 162 39 / 45%));
+}
+.dark .fl-sparkle[data-on="true"] {
+  color: var(--fl-gold);
+  filter: drop-shadow(0 0 8px rgb(255 215 0 / 60%));
 }
 
 .fl-live-dot {
@@ -325,8 +361,21 @@
 .fl-seg-ascap {
   --seg: var(--fl-electric);
 }
+/*
+ * Platinum has no hue to carry a 22% fill, so the daylight meter takes the approved platinum shade and a heavier
+ * mix; on the obsidian canvas the same stone at the meter's usual 22% reads without help.
+ */
 .fl-seg-sesac {
+  --seg: var(--fl-platinum-shade);
+}
+.fl-seg-sesac::before {
+  opacity: 0.45;
+}
+.dark .fl-seg-sesac {
   --seg: var(--fl-platinum);
+}
+.dark .fl-seg-sesac::before {
+  opacity: 0.22;
 }
 .fl-seg-bmi {
   --seg: var(--fl-gold);
@@ -418,7 +467,7 @@
 .dark .fl-note {
   border-color: var(--fl-electric);
   background: rgb(77 140 255 / 10%);
-  color: #e0f7ff;
+  color: #dbe7f7;
 }
 .fl-hint {
   margin-top: 0.45rem;
@@ -1332,7 +1381,8 @@
   background: color-mix(in srgb, var(--tone) 34%, transparent);
   box-shadow:
     inset 0 0 16px color-mix(in srgb, var(--tone) 65%, transparent),
-    0 0 14px -2px color-mix(in srgb, var(--tone) 70%, transparent);
+    0 0 14px -2px color-mix(in srgb, var(--tone) 70%, transparent),
+    0 0 0 1px rgb(229 228 226 / 32%);
 }
 .dark .fl-alloc-seg {
   color: #fff;
@@ -1342,25 +1392,27 @@
 .dark .fl-alloc-seg[data-on="true"] {
   box-shadow:
     inset 0 0 18px color-mix(in srgb, var(--tone) 80%, transparent),
-    0 0 16px 0 color-mix(in srgb, var(--tone) 75%, transparent);
+    0 0 16px 0 color-mix(in srgb, var(--tone) 75%, transparent),
+    0 0 28px -8px rgb(255 215 0 / 45%),
+    0 0 0 1px rgb(229 228 226 / 42%);
 }
 .fl-tone-0 {
-  --tone: #4d8cff;
+  --tone: var(--fl-electric);
 }
 .fl-tone-1 {
-  --tone: #7c5cff;
+  --tone: var(--fl-platinum-shade);
 }
 .fl-tone-2 {
-  --tone: #12b3a6;
+  --tone: var(--fl-gold);
 }
 .fl-tone-3 {
-  --tone: #d9a520;
+  --tone: var(--fl-cobalt);
 }
 .fl-tone-4 {
-  --tone: #e5739b;
+  --tone: var(--fl-gold-shade);
 }
 .fl-tone-5 {
-  --tone: #5b8def;
+  --tone: var(--fl-platinum);
 }
 
 .fl-alloc-list {
@@ -1478,7 +1530,8 @@
   font-variant-numeric: tabular-nums;
 }
 .fl-budget-stat[data-low="true"] strong {
-  color: #b02a2a;
+  color: var(--fl-cobalt);
+  text-shadow: 0 0 14px rgb(77 140 255 / 35%);
 }
 .dark .fl-budget-stat {
   border-color: rgb(255 255 255 / 10%);
@@ -1491,7 +1544,8 @@
   color: #fff;
 }
 .dark .fl-budget-stat[data-low="true"] strong {
-  color: #ff9c8f;
+  color: var(--fl-electric);
+  text-shadow: 0 0 16px rgb(77 140 255 / 55%);
 }
 .fl-budget-track {
   height: 0.5rem;
@@ -1544,7 +1598,7 @@
   background: rgb(11 11 11 / 82%);
   box-shadow:
     inset 0 0 18px rgb(77 140 255 / 12%),
-    0 0 18px -6px rgb(22 163 74 / 45%),
+    0 0 18px -6px rgb(255 215 0 / 48%),
     0 0 22px -8px rgb(77 140 255 / 55%);
 }
 .fl-check-top {
@@ -1584,17 +1638,23 @@
   color: #fff;
   border-color: var(--fl-cobalt);
   background: var(--fl-cobalt);
+  box-shadow:
+    0 0 0 1px rgb(77 140 255 / 32%),
+    0 0 16px -4px rgb(0 74 173 / 55%);
 }
 .dark .fl-check-toggle {
   color: #c7d4e4;
   border-color: rgb(255 255 255 / 18%);
   background: rgb(255 255 255 / 5%);
 }
+/* Paid is Cobalt blue in both themes, so the click that files a line is the same colour everywhere. */
 .dark .fl-check-toggle[data-paid="true"] {
   color: #fff;
-  border-color: var(--fl-emerald);
-  background: rgb(22 163 74 / 22%);
-  box-shadow: 0 0 14px -3px rgb(22 163 74 / 65%);
+  border-color: var(--fl-electric);
+  background: var(--fl-cobalt);
+  box-shadow:
+    0 0 0 1px rgb(77 140 255 / 45%),
+    0 0 18px -3px rgb(77 140 255 / 65%);
 }
 .fl-check-del {
   display: inline-flex;
@@ -1609,14 +1669,14 @@
   cursor: pointer;
 }
 .fl-check-del:hover {
-  color: #b02a2a;
+  color: var(--fl-cobalt);
   border-color: currentColor;
 }
 .dark .fl-check-del {
   color: #a9b8cc;
 }
 .dark .fl-check-del:hover {
-  color: #ff9c8f;
+  color: var(--fl-electric);
 }
 .fl-check-grid {
   display: grid;
@@ -1916,37 +1976,39 @@
   font-weight: 700;
   line-height: 1.35;
 }
-.fl-amber-dot,
-.fl-emerald-dot {
+.fl-cobalt-dot,
+.fl-gold-dot {
   width: 0.45rem;
   height: 0.45rem;
   flex: 0 0 auto;
   border-radius: 999px;
 }
-.fl-amber-dot {
-  background: #f0b429;
-  box-shadow: 0 0 10px rgb(240 180 41 / 80%);
+.fl-cobalt-dot {
+  background: var(--fl-electric);
+  box-shadow: 0 0 10px rgb(77 140 255 / 85%);
 }
-.fl-emerald-dot {
-  background: #22c55e;
-  box-shadow: 0 0 10px rgb(34 197 94 / 80%);
+.fl-gold-dot {
+  background: var(--fl-gold);
+  box-shadow:
+    0 0 10px rgb(255 215 0 / 85%),
+    0 0 18px rgb(229 228 226 / 45%);
 }
-/* Below breakeven: translucent charcoal glass with a soft amber indicator. */
+/* Below breakeven: translucent charcoal glass, Electric Cobalt carrying the "not yet" read. */
 .fl-profit[data-state="below"] {
-  border-color: rgb(240 180 41 / 45%);
-  background: rgb(11 11 11 / 40%);
+  border-color: rgb(77 140 255 / 55%);
+  background: rgb(11 11 11 / 78%);
   backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 26px rgb(77 140 255 / 10%);
 }
-.fl-profit[data-state="below"] .fl-hero-number,
 .fl-profit[data-state="below"] .fl-profit-state,
 .fl-profit[data-state="below"] .fl-tel-label,
 .fl-profit[data-state="below"] .fl-tel-note {
-  color: #f3ead9;
+  color: #dbe7f7;
 }
 .fl-profit[data-state="below"] .fl-tel-value,
 .fl-profit[data-state="below"] .fl-hero-number {
-  color: #ffd79a;
-  text-shadow: 0 0 24px rgb(240 180 41 / 45%);
+  color: var(--fl-electric);
+  text-shadow: 0 0 24px rgb(77 140 255 / 50%);
 }
 /* At breakeven: the rim pulses platinum and Electric Cobalt. */
 .fl-profit[data-state="even"] {
@@ -1976,48 +2038,57 @@
       0 0 26px -2px rgb(77 140 255 / 70%);
   }
 }
-/* In pure profit: obsidian tile, cobalt ambient glow, green number. */
+/* In pure profit: obsidian tile wearing the gold, ringed and bloomed in platinum. */
 .fl-profit[data-state="profit"] {
-  border-color: rgb(77 140 255 / 55%);
+  border-color: rgb(255 215 0 / 62%);
   background: #0b0b0b;
   box-shadow:
-    inset 0 0 30px rgb(77 140 255 / 10%),
-    0 0 24px rgba(77, 140, 255, 0.4);
+    inset 0 0 30px rgb(255 215 0 / 10%),
+    0 0 0 1px rgb(229 228 226 / 30%),
+    0 0 26px -6px rgb(255 215 0 / 58%),
+    0 0 44px -18px rgb(229 228 226 / 55%),
+    0 0 24px rgba(77, 140, 255, 0.28);
 }
 .fl-profit[data-state="profit"] .fl-hero-number {
-  color: #22c55e;
-  text-shadow: 0 0 24px rgba(77, 140, 255, 0.35);
+  color: var(--fl-gold);
+  text-shadow:
+    0 0 26px rgb(255 215 0 / 60%),
+    0 0 46px rgb(229 228 226 / 28%);
 }
 .fl-profit[data-state="profit"] .fl-tel-label {
-  color: #c7d4e4;
+  color: var(--fl-platinum);
 }
 .fl-profit[data-state="profit"] .fl-tel-note {
   color: #a9b8cc;
 }
 .fl-profit[data-state="profit"] .fl-profit-state {
-  color: #b9f5cf;
+  color: var(--fl-platinum);
 }
 .fl-chip[data-state="below"] {
-  color: #6b4a00;
-  border-color: #f0b429;
-  background: #fffaf0;
+  color: #123a70;
+  border-color: var(--fl-electric);
+  background: #eef5ff;
+  box-shadow: 0 0 14px -3px rgb(77 140 255 / 40%);
 }
 .dark .fl-chip[data-state="below"] {
-  color: #ffd79a;
-  border-color: rgb(240 180 41 / 70%);
-  background: rgb(240 180 41 / 10%);
-  box-shadow: 0 0 12px rgb(240 180 41 / 30%);
+  color: #dbe7f7;
+  border-color: rgb(77 140 255 / 70%);
+  background: rgb(77 140 255 / 10%);
+  box-shadow: 0 0 12px rgb(77 140 255 / 30%);
 }
 .fl-chip[data-state="profit"] {
-  color: #0f5e30;
-  border-color: #22c55e;
-  background: #f2fdf6;
+  color: #6b5200;
+  border-color: var(--fl-gold-shade);
+  background: #fffdf1;
+  box-shadow: 0 0 16px -4px rgb(255 215 0 / 45%);
 }
 .dark .fl-chip[data-state="profit"] {
-  color: #b9f5cf;
-  border-color: rgb(34 197 94 / 70%);
-  background: rgb(34 197 94 / 12%);
-  box-shadow: 0 0 12px rgb(34 197 94 / 30%);
+  color: var(--fl-gold);
+  border-color: rgb(255 215 0 / 70%);
+  background: rgb(255 215 0 / 12%);
+  box-shadow:
+    0 0 14px rgb(255 215 0 / 32%),
+    0 0 24px -10px rgb(229 228 226 / 55%);
 }
 
 /*

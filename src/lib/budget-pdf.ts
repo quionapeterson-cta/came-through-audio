@@ -63,7 +63,7 @@ export async function buildBudgetPdf(sheet: BudgetSheet) {
     pdf.setFillColor(...PANEL).roundedRect(x, y, boxW, 18, 2.5, 2.5, "F");
     label(pdf, name.toUpperCase(), x + 4, y + 6, MUTED, 7);
     font(pdf, "bold", 13)
-      .setTextColor(...(value < 0 ? ([176, 42, 42] as [number, number, number]) : INK))
+      .setTextColor(...(value < 0 ? accentOf(pdf) : INK))
       .text(money(value), x + 4, y + 14);
   });
   y += 26;
