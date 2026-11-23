@@ -847,6 +847,12 @@
   color: #fff;
   background: rgb(11 11 11 / 86%);
 }
+@media (min-width: 640px) {
+  /* Same lane, wider bar: the desktop Help Desk pill is a button and a word, so the bar stops further left. */
+  .fl-dock {
+    width: calc(100% - 8.5rem);
+  }
+}
 
 /* The suite's own surfaces all wear the one rim; Bedazzle Mode still draws over it. */
 .fl-panel,
@@ -884,11 +890,29 @@
   border-width: 2px;
 }
 @media (max-width: 639px) {
+  /* The Help Desk badge floats in the bottom-right corner (40px at 12px from the edge), so the bar stops short
+     of it instead of running underneath: the badge keeps its own lane at every scroll position. */
   .fl-dock {
-    padding: 0.6rem 0.7rem;
+    bottom: 0;
+    gap: 0.5rem;
+    width: calc(100% - 3.6rem);
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.85rem;
+  }
+  .fl-dock-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
   }
   .fl-dock-total {
-    font-size: 1.55rem;
+    font-size: 1.45rem;
+  }
+  .fl-dock .fl-copy {
+    padding: 0.34rem 0.5rem;
+    font-size: 0.54rem;
+  }
+  /* Room at the panel's end, so its last rows always sit above the pinned bar rather than behind it. */
+  .fl-earnings {
+    padding-bottom: 1rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1979,4 +2003,66 @@
   border-color: rgb(34 197 94 / 70%);
   background: rgb(34 197 94 / 12%);
   box-shadow: 0 0 12px rgb(34 197 94 / 30%);
+}
+
+/*
+ * Bedazzle Mode's shimmer: a band of CTA cobalt -> Electric Cobalt -> white -> gold travels the pavé band on every
+ * bedazzled surface. The pavé is a 9px border and an absolutely positioned child sits inside the padding box, so the
+ * band steps out by exactly one tile to land back on the stones; its mask keeps it on the rim, so the Lab inside is
+ * untouched. Nothing here runs when the pointer or the member asks for less motion.
+ */
+.fl-bedazzle .fl-header::before,
+.fl-bedazzle .fl-panel::before,
+.fl-bedazzle .fl-telemetry::before,
+.fl-bedazzle .fl-dock::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--fl-pave-tile));
+  z-index: 4;
+  padding: var(--fl-pave-tile);
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: linear-gradient(
+    112deg,
+    transparent 41.5%,
+    rgb(0 74 173 / 0%) 44.5%,
+    rgb(0 74 173 / 42%) 47.2%,
+    rgb(77 140 255 / 78%) 48.9%,
+    rgb(255 255 255 / 100%) 50%,
+    rgb(255 215 0 / 74%) 51%,
+    rgb(0 74 173 / 38%) 52.9%,
+    rgb(0 74 173 / 0%) 55.4%,
+    transparent 58.5%
+  );
+  background-size: 320% 320%;
+  background-repeat: no-repeat;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: fl-rim-shimmer 7.4s cubic-bezier(0.42, 0, 0.22, 1) infinite;
+}
+/* The light walks down the stack: header, the panels, then the total. */
+.fl-bedazzle .fl-header::before { animation-delay: 0s; }
+.fl-bedazzle .fl-panel::before { animation-delay: 0.5s; }
+.fl-bedazzle .fl-telemetry::before { animation-delay: 0.5s; }
+.fl-bedazzle .fl-dock::before { animation-delay: 1s; }
+@keyframes fl-rim-shimmer {
+  0% { background-position: 168% 168%; opacity: 0; }
+  6% { opacity: 1; }
+  58% { background-position: -68% -68%; opacity: 1; }
+  66%, 100% { background-position: -68% -68%; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fl-bedazzle .fl-header::before,
+  .fl-bedazzle .fl-panel::before,
+  .fl-bedazzle .fl-telemetry::before,
+  .fl-bedazzle .fl-dock::before {
+    animation: none;
+    opacity: 0;
+  }
 }
