@@ -513,6 +513,13 @@
   .fl-controls {
     grid-template-columns: 1fr 1fr 1.2fr;
   }
+  /* Two-line labels share one height, so the master and song boxes line up. */
+  .fl-controls > .fl-field label {
+    display: flex;
+    align-items: flex-end;
+    min-height: 2.4em;
+    line-height: 1.25;
+  }
 }
 .fl-readout {
   display: flex;
@@ -540,19 +547,77 @@
   color: #fff;
 }
 
-.fl-matrix-wrap {
-  overflow-x: auto;
+/* One platform at a time: a picker, then Streams · Per stream · Your estimate on one row that fits a
+   390px phone, so the calculator never scrolls sideways. */
+.fl-platform-block {
+  margin-top: 0.75rem;
   border: 1px solid #e0eaf7;
   border-radius: 0.8rem;
+  padding: 0.7rem;
+  background: #fbfdff;
 }
-.dark .fl-matrix-wrap {
+.dark .fl-platform-block {
   border-color: rgb(255 255 255 / 10%);
+  background: #0d1117;
 }
-.fl-matrix {
-  min-width: 36rem;
+.fl-block-title {
+  margin: 0;
+  color: var(--fl-ink);
+  font-size: 0.8rem;
+  font-weight: 800;
 }
-.fl-matrix tbody tr:last-child td {
-  border-bottom: 0;
+.dark .fl-block-title {
+  color: #fff;
+}
+.fl-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+/* "Per stream ($)" takes two lines on a phone, so every label holds two: the three boxes start on one line,
+   and the estimate stretches to the row's control height so every box ends on one line too. */
+.fl-platform-grid .fl-field {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-content: start;
+}
+.fl-platform-grid .fl-field label {
+  display: flex;
+  align-items: flex-end;
+  min-height: 2.4em;
+  line-height: 1.2;
+}
+.fl-estimate {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-height: 2.15rem;
+  border: 1px solid #b9d6fa;
+  border-radius: 0.55rem;
+  padding: 0 0.55rem;
+  background: #eef6ff;
+  color: var(--fl-cobalt);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dark .fl-estimate {
+  border-color: rgb(77 140 255 / 45%);
+  background: #0f1a29;
+  color: var(--fl-electric);
+}
+.fl-platform-note {
+  margin: 0.5rem 0 0;
+  color: var(--fl-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+.dark .fl-platform-note {
+  color: #a9b8cc;
 }
 .fl-platform-icon {
   width: 1rem;
@@ -758,24 +823,23 @@
   text-shadow: 0 0 16px rgb(77 140 255 / 55%);
 }
 
+/* Pinned to the bottom of the Earnings panel: it holds its place while the calculator scrolls and
+   settles at the panel's own end, instead of floating over the rest of the workspace. */
 .fl-dock {
-  position: fixed;
-  right: auto;
-  bottom: max(0.75rem, env(safe-area-inset-bottom));
-  left: 50%;
-  z-index: 55;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  width: min(66rem, calc(100vw - 2rem));
-  margin-top: 0;
-  transform: translateX(-50%);
+  width: 100%;
+  margin-top: 0.9rem;
   border: 1px solid #b9d6fa;
   border-radius: 1rem;
   padding: 0.7rem 0.85rem;
-  background: rgb(255 255 255 / 88%);
+  background: rgb(255 255 255 / 94%);
   box-shadow: 0 18px 45px -28px rgb(0 74 173 / 65%);
   backdrop-filter: blur(16px);
 }
@@ -819,21 +883,8 @@
 .fl-dock-bedazzle {
   border-width: 2px;
 }
-@media (max-width: 1199px) {
-  .fl-dock {
-    right: 8rem;
-    left: 1rem;
-    width: auto;
-    transform: none;
-  }
-}
 @media (max-width: 639px) {
-  .financial-lab {
-    padding-bottom: 6.5rem;
-  }
   .fl-dock {
-    right: 1rem;
-    left: 1rem;
     padding: 0.6rem 0.7rem;
   }
   .fl-dock-total {

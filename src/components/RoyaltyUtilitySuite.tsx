@@ -36,6 +36,13 @@ import { UpgradeLock } from "@/components/UpgradeLock";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { loadOnboarding } from "@/lib/artist-profile";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { COUNTRIES, countryByCode } from "@/lib/repertoires";
@@ -571,6 +578,7 @@ function Earnings({
   const [songShare, setSongShare] = useState("100");
   const [radio, setRadio] = useState({ plays: "0", perPlay: "0.10" });
   const [pulse, setPulse] = useState(0);
+  const [platform, setPlatform] = useState(PLATFORMS[0]!.id);
 
   useEffect(() => {
     const t = tracks.find((x) => x.id === songId);
@@ -591,6 +599,14 @@ function Earnings({
     radioPlays: Number(radio.plays) || 0,
     perPlay: Number(radio.perPlay) || 0,
   });
+  const selected = PLATFORMS.find((p) => p.id === platform) ?? PLATFORMS[0]!;
+  const selectedRow = r.platforms.find((x) => x.id === selected.id)!;
+  const selectedSource = selected.source ? RATE_SOURCES[selected.source] : undefined;
+  const enteredCount = PLATFORMS.filter((p) => Number(streams[p.id]) > 0).length;
+  const enteredLabel =
+    enteredCount === 1
+      ? `1 of ${PLATFORMS.length} platforms has streams entered.`
+      : `${enteredCount} of ${PLATFORMS.length} platforms have streams entered.`;
   const copyContext = useMemo(
     () =>
       contextForTrack(song, {
@@ -674,108 +690,116 @@ function Earnings({
         </div>
       </div>
 
-      <div className="fl-matrix-wrap">
-        <table className="fl-table fl-matrix">
-          <thead>
-            <tr>
-              <th>Platform</th>
-              <th>Streams</th>
-              <th>Per stream ($)</th>
-              <th className="text-right">Your estimate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {PLATFORMS.map((p) => {
-              const row = r.platforms.find((x) => x.id === p.id)!;
-              const src = p.source ? RATE_SOURCES[p.source] : undefined;
-              const Icon = PLATFORM_ICON[p.id] ?? Music2;
-              return (
-                <tr key={p.id} className="group">
-                  <td>
-                    <div className="flex items-center gap-2 font-semibold">
-                      <Icon className="fl-platform-icon" />
-                      {p.name}
-                    </div>
-                    {(p.note || src) && (
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                        {p.note}
-                        {p.note && src ? " " : ""}
-                        {src && (
-                          <a
-                            href={src.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="fl-ref-link"
-                            title={`${src.label} source`}
-                            aria-label={`${src.label} source`}
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <Input
-                      aria-label={`${p.name} streams`}
-                      type="number"
-                      min={0}
-                      className="fl-input fl-mono h-8 w-28 text-right"
-                      value={streams[p.id] ?? ""}
-                      placeholder="0"
-                      onChange={(e) => setStream(p.id, e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <Input
-                      aria-label={`${p.name} rate per stream`}
-                      type="number"
-                      min={0}
-                      step="0.0001"
-                      className="fl-input fl-mono h-8 w-24 text-right"
-                      value={rates[p.id] ?? ""}
-                      onChange={(e) => setRates({ ...rates, [p.id]: e.target.value })}
-                    />
-                  </td>
-                  <td className="fl-mono text-right font-semibold">{money(row.yours)}</td>
-                </tr>
-              );
-            })}
-            <tr>
-              <td>
-                <div className="font-semibold">Radio, SiriusXM and live</div>
-                <div className="text-xs text-muted-foreground">
-                  Performance royalties: the song side only.
-                </div>
-              </td>
-              <td>
-                <Input
-                  aria-label="Radio and live plays"
-                  type="number"
-                  min={0}
-                  className="fl-input fl-mono h-8 w-28 text-right"
-                  value={radio.plays}
-                  onChange={(e) => {
-                    setRadio({ ...radio, plays: e.target.value });
-                    setPulse((p) => p + 1);
-                  }}
-                />
-              </td>
-              <td>
-                <Input
-                  aria-label="Per play"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  className="fl-input fl-mono h-8 w-24 text-right"
-                  value={radio.perPlay}
-                  onChange={(e) => setRadio({ ...radio, perPlay: e.target.value })}
-                />
-              </td>
-              <td className="fl-mono text-right font-semibold">{money(r.radio)}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div className="fl-platform-block">
+        <div className="fl-field">
+          <Label htmlFor="earn-platform">Platform</Label>
+          <Select value={platform} onValueChange={setPlatform}>
+            <SelectTrigger id="earn-platform" className="fl-select">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PLATFORMS.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="fl-platform-grid">
+          <div className="fl-field">
+            <Label htmlFor="earn-streams">Streams</Label>
+            <Input
+              id="earn-streams"
+              type="number"
+              min={0}
+              className="fl-input fl-mono h-8 w-full text-right"
+              value={streams[selected.id] ?? ""}
+              placeholder="0"
+              onChange={(e) => setStream(selected.id, e.target.value)}
+            />
+          </div>
+          <div className="fl-field">
+            <Label htmlFor="earn-rate">Per stream ($)</Label>
+            <Input
+              id="earn-rate"
+              type="number"
+              min={0}
+              step="0.0001"
+              className="fl-input fl-mono h-8 w-full text-right"
+              value={rates[selected.id] ?? ""}
+              onChange={(e) => setRates({ ...rates, [selected.id]: e.target.value })}
+            />
+          </div>
+          <div className="fl-field">
+            <Label htmlFor="earn-estimate">Your estimate</Label>
+            <output id="earn-estimate" className="fl-estimate">
+              {money(selectedRow.yours)}
+            </output>
+          </div>
+        </div>
+
+        {(selected.note || selectedSource) && (
+          <p className="fl-platform-note">
+            {selected.note}
+            {selected.note && selectedSource ? " " : ""}
+            {selectedSource && (
+              <a
+                href={selectedSource.url}
+                target="_blank"
+                rel="noreferrer"
+                className="fl-ref-link"
+                title={`${selectedSource.label} source`}
+                aria-label={`${selectedSource.label} source`}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </p>
+        )}
+        <p className="fl-platform-note">
+          {enteredLabel} Switching platforms keeps every number you type.
+        </p>
+      </div>
+
+      <div className="fl-platform-block">
+        <h4 className="fl-block-title">Radio, SiriusXM and live</h4>
+        <div className="fl-platform-grid">
+          <div className="fl-field">
+            <Label htmlFor="earn-radio-plays">Plays</Label>
+            <Input
+              id="earn-radio-plays"
+              type="number"
+              min={0}
+              className="fl-input fl-mono h-8 w-full text-right"
+              value={radio.plays}
+              onChange={(e) => {
+                setRadio({ ...radio, plays: e.target.value });
+                setPulse((p) => p + 1);
+              }}
+            />
+          </div>
+          <div className="fl-field">
+            <Label htmlFor="earn-radio-rate">Per play ($)</Label>
+            <Input
+              id="earn-radio-rate"
+              type="number"
+              min={0}
+              step="0.01"
+              className="fl-input fl-mono h-8 w-full text-right"
+              value={radio.perPlay}
+              onChange={(e) => setRadio({ ...radio, perPlay: e.target.value })}
+            />
+          </div>
+          <div className="fl-field">
+            <Label htmlFor="earn-radio-estimate">Your estimate</Label>
+            <output id="earn-radio-estimate" className="fl-estimate">
+              {money(r.radio)}
+            </output>
+          </div>
+        </div>
+        <p className="fl-platform-note">Performance royalties: the song side only.</p>
       </div>
 
       <CopyDeck context={copyContext} />
@@ -1177,7 +1201,7 @@ function TotalDock({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <span className="hidden text-xs text-muted-foreground sm:block">
-          Itemized platforms + PRO table
+          All entered platforms + PRO table
         </span>
         <CopyButton label="Copy Breakdown" text={fullReport(context)} gold />
       </div>
