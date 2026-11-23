@@ -88,15 +88,32 @@ export function SignupCard({
     navigate({ to: "/workspace", search: { tab: "health", plan: intent ?? undefined } });
   }
 
+  /**
+   * Where a confirmation link lands. The plan picked on this form travels in the link, so confirming on another device
+   * still resumes the purchase in the workspace (founder, 2026-11-05). The first email and a resent one both use it.
+   */
+  const confirmRedirect = () =>
+    `${window.location.origin}/verified?next=${encodeURIComponent(planSignupNext(intent, returnPath ?? "/workspace?tab=health"))}`;
+
   /** Back from the inbox: refresh the session so a confirmed address counts, then carry on where they were going. */
   async function continueAfterConfirm() {
-    await supabase.auth.refreshSession();
+    const { data } = await supabase.auth.refreshSession();
+    // Still unconfirmed: say so here instead of handing them a workspace that bounces them back to the log-in page.
+    if (!data.session) {
+      toast.error("Not confirmed yet. Open the link in your inbox, then try again.");
+      return;
+    }
     if (onAuthed) onAuthed();
     else navigate({ to: "/workspace", search: { tab: undefined } });
   }
 
   async function resendConfirmation() {
-    const { error } = await supabase.auth.resend({ type: "signup", email: email.trim() });
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim(),
+      // Without this the resent link falls back to the site's home page and the waiting plan is lost.
+      options: { emailRedirectTo: confirmRedirect() },
+    });
     if (error) toast.error(error.message);
     else toast.success(`Sent again to ${email.trim()}.`);
   }
@@ -119,11 +136,11 @@ export function SignupCard({
         setSent(true);
       } else if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
             // The link names the plan, so confirming on another device still resumes the purchase in the workspace.
-            emailRedirectTo: `${window.location.origin}/verified?next=${encodeURIComponent(planSignupNext(intent, returnPath ?? "/workspace?tab=health"))}`,
+            emailRedirectTo: confirmRedirect(),
             data: { stage_name: stageName, legal_name: legalName },
           },
         });
@@ -135,7 +152,7 @@ export function SignupCard({
         if (data.session) await afterAuth();
         else {
           const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
+            email: email.trim(),
             password,
           });
           if (signInError || !signedIn.session) {
@@ -145,7 +162,7 @@ export function SignupCard({
           await afterAuth();
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (error) throw error;
         // So /login fills this address in next time, whichever box they used today.
         await afterAuth();
