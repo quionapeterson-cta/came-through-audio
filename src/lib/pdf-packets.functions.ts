@@ -637,7 +637,7 @@ export const counterSignPacket = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), signature: signatureSchema }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requirePacketSender(context);
     const { data: current, error: readError } = await context.supabase
       .from("pdf_packets" as never)
       .select("*")

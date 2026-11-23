@@ -355,6 +355,23 @@ export const decideStepRequest = createServerFn({ method: "POST" })
       .eq("id", data.id);
     const req = found?.[0];
     if (!req || req.status !== "pending") throw new Error("That request is already decided.");
+    // A lead decides only for steps owned by someone in a department they hold; a super admin decides any.
+    if (access.role !== "super_admin") {
+      const { data: step } = await client
+        .from("task_steps")
+        .select("user_id")
+        .eq("id", String(req.step_id))
+        .maybeSingle();
+      const ownerId = (step as { user_id?: string } | null)?.user_id;
+      const { data: ownerRoles } = ownerId
+        ? await client.from("user_roles").select("departments").eq("user_id", ownerId)
+        : { data: [] };
+      const ownerDepts = ((ownerRoles ?? []) as { departments?: string[] | null }[]).flatMap(
+        (r) => r.departments ?? [],
+      );
+      if (!ownerDepts.some((d) => access.departments.includes(d)))
+        throw new Error("Only that person's department lead or a super admin can decide this.");
+    }
     const now = new Date().toISOString();
     if (data.approve && req.proposed_title) {
       const { error } = await client

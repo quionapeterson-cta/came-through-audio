@@ -103,11 +103,22 @@ export const Route = createFileRoute("/api/public/email/attachment")({
         }
 
         const path = inboundStoragePath({ mailbox, messageKey, index, filename });
-        const mimeType = (request.headers.get("content-type") ?? "").trim() || undefined;
+        const mimeType = (request.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
+        // Only the kinds of file business mail carries are kept; pages and programs that could run if opened are refused.
+        const allowedType =
+          /^(image\/(png|jpe?g|gif|webp|heic|heif|tiff)|audio\/[a-z0-9.+-]+|video\/(mp4|quicktime)|text\/(plain|csv)|application\/(pdf|zip|x-zip-compressed|msword|rtf|vnd\.ms-excel|vnd\.ms-powerpoint|vnd\.openxmlformats-officedocument\.[a-z.]+|vnd\.oasis\.opendocument\.[a-z.]+|octet-stream))$/.test(
+            mimeType,
+          );
+        const blockedName = /\.(html?|xhtml|svg|js|mjs|exe|bat|cmd|com|scr|msi|ps1|vbs|jar|sh|app|dmg|apk|php)$/i.test(
+          filename,
+        );
+        if (!allowedType || blockedName) {
+          return new Response("That file type is not stored", { status: 415 });
+        }
         const { error } = await db()
           .storage.from(INBOX_BUCKET)
           .upload(path, bytes, {
-            contentType: mimeType ?? "application/octet-stream",
+            contentType: mimeType,
             // The same mail retried by the worker writes the same key again, which must not be an error.
             upsert: true,
           });

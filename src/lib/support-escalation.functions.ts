@@ -58,6 +58,19 @@ function mayEscalate(access: ReturnType<typeof resolveAccess>): boolean {
   );
 }
 
+/**
+ * The thread itself must be one the caller can already open: read with their own session, so the support_tickets
+ * policies (Support all, Billing its own, a lead only the threads escalated to them) decide.
+ */
+async function canSeeTicket(context: Ctx, ticketId: string): Promise<boolean> {
+  const { data } = await context.supabase
+    .from("support_tickets")
+    .select("id")
+    .eq("id", ticketId)
+    .maybeSingle();
+  return !!data;
+}
+
 export type TicketEscalation = {
   id: string;
   tag: EscalationTag;
@@ -85,6 +98,8 @@ export const escalateTicket = createServerFn({ method: "POST" })
       throw new Error(
         "Only Support, the receiving department's lead, or the founder can escalate a thread.",
       );
+    if (!(await canSeeTicket(context as unknown as Ctx, data.ticketId)))
+      throw new Error("That thread is no longer here.");
     const tags: EscalationTag[] = [
       ...(data.marketing ? (["marketing"] as const) : []),
       ...(data.founder ? (["founder"] as const) : []),
@@ -168,7 +183,8 @@ export const listTicketEscalations = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<TicketEscalation[]> => {
     const { access } = await accessOf(context as unknown as Ctx);
-    if (!mayEscalate(access)) throw new Error("That thread isn't yours to read.");
+    if (!mayEscalate(access) || !(await canSeeTicket(context as unknown as Ctx, data.ticketId)))
+      throw new Error("That thread isn't yours to read.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await supabaseAdmin
       .from("support_ticket_escalations" as never)
@@ -347,7 +363,8 @@ export const markTicketViewing = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { access, name } = await accessOf(context as unknown as Ctx);
-    if (!mayEscalate(access)) return { ok: false as const };
+    if (!mayEscalate(access) || !(await canSeeTicket(context as unknown as Ctx, data.ticketId)))
+      return { ok: false as const };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("support_ticket_viewers" as never).upsert(
       {
@@ -366,7 +383,8 @@ export const listTicketViewers = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<TicketViewer[]> => {
     const { access } = await accessOf(context as unknown as Ctx);
-    if (!mayEscalate(access)) return [];
+    if (!mayEscalate(access) || !(await canSeeTicket(context as unknown as Ctx, data.ticketId)))
+      return [];
     const since = new Date(Date.now() - VIEWING_WINDOW_SECONDS * 1000).toISOString();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await supabaseAdmin
