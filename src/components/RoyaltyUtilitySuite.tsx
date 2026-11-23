@@ -24,14 +24,18 @@ import {
   ReceiptText,
   Repeat,
   Smartphone,
+  Shirt,
   Sparkles,
   Sun,
   TrendingUp,
+  Wallet,
   Waves,
   Youtube,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { LabBudgetPlanner } from "@/components/LabBudgetPlanner";
+import { LabMerchCalculator } from "@/components/LabMerchCalculator";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +76,43 @@ const money = (n: number) => n.toLocaleString("en-US", { style: "currency", curr
 const pct = (n: number) => `${Math.round(n * 100) / 100}%`;
 const SCALES = Object.keys(PRO_SCALES) as ProScale[];
 
+/**
+ * The Financial Lab's three sub-tabs: royalty intelligence, the production budget planner and the merch & sales
+ * calculator. The first keeps every panel that shipped before this split, unchanged.
+ */
+type LabTab = "royalty" | "budget" | "merch";
+const LAB_TABS: {
+  id: LabTab;
+  label: string;
+  eyebrow: string;
+  blurb: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    id: "royalty",
+    label: "Royalty Intelligence",
+    eyebrow: "Royalty intelligence",
+    blurb:
+      "Convert catalog splits, forecast every platform and hand each agency a clean registration sheet.",
+    icon: Gauge,
+  },
+  {
+    id: "budget",
+    label: "Budget Planner",
+    eyebrow: "Budget planner",
+    blurb:
+      "Pick a project, name the spend and let CTA split it — then track every line from estimated to paid.",
+    icon: Wallet,
+  },
+  {
+    id: "merch",
+    label: "Merch & Sales Calculator",
+    eyebrow: "Merch & sales",
+    blurb: "Model the run: upfront cost, the breakeven unit and the cash left at any number sold.",
+    icon: Shirt,
+  },
+];
+
 const PLATFORM_ICON: Record<string, LucideIcon> = {
   spotify: Music2,
   apple: Headphones,
@@ -110,7 +151,7 @@ export function RoyaltyUtilitySuite({
         title="The Financial Lab"
         tier="collaborate"
         onUpgrade={onUpgrade}
-        text="Turn your catalog splits into the numbers BMI, ASCAP and SESAC ask for, and forecast your payouts by platform."
+        text="Turn your catalog splits into the numbers BMI, ASCAP and SESAC ask for, forecast your payouts by platform, and plan a project budget or a merch run before you spend."
       />
     );
   }
@@ -142,6 +183,7 @@ function useLabTheme() {
 }
 
 function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: string | undefined }) {
+  const [tab, setTab] = useState<LabTab>("royalty");
   const [songId, setSongId] = useState("");
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry || "US");
   const [focus, setFocus] = useState("all");
@@ -151,6 +193,7 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
   const rows = useMemo(() => (song ? songShareRows(song.metadata) : []), [song]);
   const contributors = useMemo(() => [...new Set(rows.map((r) => r.label))], [rows]);
   const country = countryByCode(code) ?? COUNTRIES[0]!;
+  const activeTab = LAB_TABS.find((item) => item.id === tab) ?? LAB_TABS[0]!;
 
   useEffect(() => {
     setFocus((current) => (current !== "all" && !contributors.includes(current) ? "all" : current));
@@ -199,29 +242,78 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
         onTheme={theme.toggle}
         bedazzle={bedazzle}
         onBedazzle={setSparkle}
+        section={activeTab.eyebrow}
+        blurb={activeTab.blurb}
       />
-      <Intake
-        countryCode={country.code}
-        onCountry={setCode}
-        tracks={tracks}
-        songId={songId}
-        onSong={setSongId}
-        contributors={contributors}
-        focus={focus}
-        onFocus={setFocus}
-        songSelected={!!song}
-      />
-      <Converter
-        song={song}
-        rows={rows}
-        countryName={country.name}
-        societies={
-          (country.societies.performance ?? []).map((s) => s.name).join(", ") || "your society"
-        }
-        us={country.code === "US"}
-        focus={focus}
-      />
-      <Earnings tracks={tracks} song={song} songId={songId} userId={userId} bedazzle={bedazzle} />
+      <nav className="fl-tab-strip" role="tablist" aria-label="The Financial Lab sections">
+        {LAB_TABS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              id={`fl-tab-${item.id}`}
+              aria-selected={tab === item.id}
+              aria-controls={`fl-panel-${item.id}`}
+              className="fl-tab"
+              onClick={() => setTab(item.id)}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
+      {/*
+        All three panels stay mounted and only the active one is shown, so a half-tracked budget or a merch simulation
+        is still there after a look at another tab.
+      */}
+      {LAB_TABS.map((item) => (
+        <div
+          key={item.id}
+          role="tabpanel"
+          id={`fl-panel-${item.id}`}
+          aria-labelledby={`fl-tab-${item.id}`}
+          hidden={tab !== item.id}
+        >
+          {item.id === "royalty" && (
+            <div className="space-y-4">
+              <Intake
+                countryCode={country.code}
+                onCountry={setCode}
+                tracks={tracks}
+                songId={songId}
+                onSong={setSongId}
+                contributors={contributors}
+                focus={focus}
+                onFocus={setFocus}
+                songSelected={!!song}
+              />
+              <Converter
+                song={song}
+                rows={rows}
+                countryName={country.name}
+                societies={
+                  (country.societies.performance ?? []).map((s) => s.name).join(", ") ||
+                  "your society"
+                }
+                us={country.code === "US"}
+                focus={focus}
+              />
+              <Earnings
+                tracks={tracks}
+                song={song}
+                songId={songId}
+                userId={userId}
+                bedazzle={bedazzle}
+              />
+            </div>
+          )}
+          {item.id === "budget" && <LabBudgetPlanner />}
+          {item.id === "merch" && <LabMerchCalculator />}
+        </div>
+      ))}
       <p className="fl-footnote">
         Every number here is an estimate to help you plan and register. It isn't financial, legal or
         tax advice, and agencies decide the final amounts.
@@ -235,25 +327,26 @@ function LabHeader({
   onTheme,
   bedazzle,
   onBedazzle,
+  section,
+  blurb,
 }: {
   dark: boolean;
   onTheme: () => void;
   bedazzle: boolean;
   onBedazzle: (on: boolean) => void;
+  section: string;
+  blurb: string;
 }) {
   return (
     <header className="fl-header fl-crystal">
       <div className="relative z-10 min-w-0">
         <div className="flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.24em] text-[#4D8CFF]">
-          <span className="fl-live-dot" aria-hidden="true" /> Royalty intelligence
+          <span className="fl-live-dot" aria-hidden="true" /> {section}
         </div>
         <h2 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
           The Financial Lab
         </h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Convert catalog splits, forecast every platform and hand each agency a clean registration
-          sheet.
-        </p>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{blurb}</p>
       </div>
       <div className="relative z-10 flex flex-wrap items-center gap-2">
         <button
