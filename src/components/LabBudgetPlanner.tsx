@@ -226,7 +226,7 @@ export function LabBudgetPlanner() {
             </div>
             <h3 className="mt-1 text-lg font-extrabold">Where {whole(plan.target)} should go</h3>
           </div>
-          <span className="fl-chip">{blueprint.name}</span>
+          <span className="fl-chip ml-auto">{blueprint.name}</span>
         </div>
 
         <div className="fl-alloc-bar" aria-label="Allocation share">
@@ -280,7 +280,7 @@ export function LabBudgetPlanner() {
               </p>
             </div>
           </div>
-          <span className="fl-chip">
+          <span className="fl-chip ml-auto">
             {totals.paidCount} of {totals.total} paid
           </span>
         </div>

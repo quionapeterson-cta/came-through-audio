@@ -552,6 +552,36 @@
   background: rgb(255 215 0 / 6%);
   box-shadow: 0 0 14px rgb(255 215 0 / 24%);
 }
+/*
+ * The deck's buttons share the project-type grid's rhythm: two equal cells from a 360px phone up, so every row lines
+ * up and two-line labels still fit one height. Below 360px they stack, and an odd last button spans the pair rather
+ * than sitting alone at half width.
+ */
+.fl-copy-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+.fl-copy-row .fl-copy {
+  width: 100%;
+  min-height: 2.5rem;
+  justify-content: center;
+  /* A long label (COPY FOR SOUNDEXCHANGE) takes two lines in a phone cell; 1.2 keeps them apart. */
+  line-height: 1.2;
+  text-align: center;
+}
+.fl-copy-row > .fl-copy:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+@media (max-width: 359px) {
+  .fl-copy-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fl-copy-row > .fl-copy:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+}
 
 .fl-controls {
   display: grid;
@@ -1523,6 +1553,15 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+@media (max-width: 639px) {
+  /* "Remaining balance" needs two lines in a phone tile; reserving both keeps all three values on one baseline. */
+  .fl-budget-stat span {
+    display: flex;
+    min-height: 2.3em;
+    align-items: flex-end;
+    line-height: 1.15;
+  }
+}
 .fl-budget-stat strong {
   color: var(--fl-ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -1607,6 +1646,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.4rem;
+}
+/* On a phone the category and its buttons can't share one line; the buttons then stay right-aligned, under the tag. */
+.fl-check-top > div {
+  margin-left: auto;
 }
 .fl-check-cat {
   color: var(--fl-cobalt);
