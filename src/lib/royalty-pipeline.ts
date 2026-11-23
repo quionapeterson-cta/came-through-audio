@@ -20,10 +20,11 @@ export type PipelineBucketId = keyof typeof PIPELINE_SHARES;
 
 /**
  * SoundExchange's own published rates, not a per-stream average from a blog (founder, 2026-11-23). A "performance" is
- * one listener hearing one recording: Pandora radio, SiriusXM and webcasts are licensed by the statutory rate, which is
- * separate from an on-demand Spotify or Apple Music stream. The 2026 commercial-webcaster memo keeps the 2025 figures
- * while the Copyright Royalty Judges finish the 2026-2030 determination, so these are the rates SoundExchange itself
- * says a service pays today.
+ * one listener hearing one recording: Pandora radio and webcasts are licensed by the statutory rate, which is separate
+ * from an on-demand Spotify or Apple Music stream. Satellite radio such as SiriusXM is deliberately not here, because
+ * it pays a percentage of its revenue rather than a per-play rate. The 2026 commercial-webcaster memo keeps the 2025
+ * figures while the Copyright Royalty Judges finish the 2026-2030 determination, so these are the rates
+ * SoundExchange itself says a service pays today.
  */
 export const SOUNDEXCHANGE = {
   source: {
@@ -36,8 +37,9 @@ export const SOUNDEXCHANGE = {
   ],
   /**
    * 17 U.S.C. §114(g)(2): 50% to the recording's copyright owner, 45% to the featured artist, 2.5% each to the
-   * non-featured musicians' and vocalists' funds. An artist who owns their master keeps owner + featured, and the 5%
-   * is administered for session players and singers rather than paid to the artist.
+   * non-featured musicians' and vocalists' funds. The two shares are different money: the master share only reaches the
+   * owner half, because the 45% is paid for being the voice on the record, not for owning it. The 5% is administered
+   * for session players and singers rather than paid to the artist.
    */
   ownerShare: 0.5,
   featuredShare: 0.45,
@@ -94,13 +96,23 @@ export function pipelineBuckets(input: {
   ];
 }
 
-/** The non-interactive master row: what the plays pay, and the member's owner + featured-artist part of it. */
-export function soundExchangeMath(input: { plays: number; rate: number; masterShare: number }) {
+/**
+ * The non-interactive master row: what the plays pay, and the member's part of it. Only the recording-owner half
+ * follows the master share; the featured-artist half belongs to whoever sang the record, so a featured artist keeps it
+ * in full and a producer who only owns part of the master does not.
+ */
+export function soundExchangeMath(input: {
+  plays: number;
+  rate: number;
+  masterShare: number;
+  /** The member sang the record, so they keep the featured-artist share as well as the owner share they own. */
+  featuredArtist?: boolean;
+}) {
   const plays = Math.max(0, Number.isFinite(input.plays) ? input.plays : 0);
   const rate = Math.max(0, Number.isFinite(input.rate) ? input.rate : 0);
   const gross = plays * rate;
-  const share =
-    (SOUNDEXCHANGE.ownerShare + SOUNDEXCHANGE.featuredShare) * clampPercent(input.masterShare);
+  const owner = SOUNDEXCHANGE.ownerShare * clampPercent(input.masterShare);
+  const share = (input.featuredArtist ?? true) ? owner + SOUNDEXCHANGE.featuredShare : owner;
   return { plays, rate, gross, share, yours: gross * share };
 }
 

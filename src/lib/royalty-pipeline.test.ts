@@ -49,9 +49,27 @@ describe("SoundExchange", () => {
     expect(sx.yours).toBeCloseTo(2.375, 9);
   });
 
-  it("pays only the share of the master the member owns", () => {
+  it("scales only the recording-owner half by the master share", () => {
     const sx = soundExchangeMath({ plays: 1000, rate: 0.0025, masterShare: 50 });
-    expect(sx.yours).toBeCloseTo(1.1875, 9);
+    expect(sx.share).toBeCloseTo(0.7, 9);
+    expect(sx.yours).toBeCloseTo(1.75, 9);
+  });
+
+  it("keeps the featured-artist share even when the member owns no master", () => {
+    const sx = soundExchangeMath({ plays: 1000, rate: 0.0025, masterShare: 0 });
+    expect(sx.share).toBeCloseTo(0.45, 9);
+    expect(sx.yours).toBeCloseTo(1.125, 9);
+  });
+
+  it("pays an unfeatured owner only their share of the recording", () => {
+    const sx = soundExchangeMath({
+      plays: 1000,
+      rate: 0.0025,
+      masterShare: 50,
+      featuredArtist: false,
+    });
+    expect(sx.share).toBeCloseTo(0.25, 9);
+    expect(sx.yours).toBeCloseTo(0.625, 9);
   });
 
   it("counts nothing twice and survives an empty entry", () => {

@@ -144,6 +144,7 @@ export function RoyaltyPipelinePanel({
   const [service, setService] = useState<string>(SOUNDEXCHANGE.services[0]!.id);
   const [sxRate, setSxRate] = useState(() => String(SOUNDEXCHANGE.services[0]!.rate));
   const [sxPlays, setSxPlays] = useState("0");
+  const [featured, setFeatured] = useState(true);
 
   // A mark belongs to the song it was made on: switching songs starts the registration record clean.
   useEffect(() => setRegistered({}), [song?.id]);
@@ -219,6 +220,7 @@ export function RoyaltyPipelinePanel({
     plays: Number(sxPlays) || 0,
     rate: Number(sxRate) || 0,
     masterShare,
+    featuredArtist: featured,
   });
 
   const stageFor = (bucketPool: number, rows: AgencyRow[]) => {
@@ -388,10 +390,26 @@ export function RoyaltyPipelinePanel({
             <Radio className="h-4 w-4" aria-hidden="true" /> SoundExchange
           </div>
           <p className="fl-pipe-sx-sub">
-            Pandora radio, SiriusXM and webcasts — {count(sx.plays)} performances at{" "}
-            {perPlay(sx.rate)} pay {money(sx.gross)}. You keep {percent(sx.share * 100)} of it (45%
-            featured artist + 50% recording owner); 5% goes to the non-featured players and singers.
+            Pandora radio and webcasts — {count(sx.plays)} performances at {perPlay(sx.rate)} pay{" "}
+            {money(sx.gross)}.{" "}
+            {featured
+              ? `You keep ${percent(sx.share * 100)} of it: the 45% featured-artist share, plus ${percent(
+                  masterShare,
+                )} of the 50% recording-owner share.`
+              : `You keep ${percent(sx.share * 100)} of it: ${percent(
+                  masterShare,
+                )} of the 50% recording-owner share, while the 45% featured-artist share goes to the
+                featured artist.`}{" "}
+            5% goes to the non-featured players and singers.
           </p>
+          <label className="fl-pipe-sx-role">
+            <input
+              type="checkbox"
+              checked={featured}
+              onChange={(event) => setFeatured(event.target.checked)}
+            />
+            I&apos;m the featured artist on this recording
+          </label>
         </div>
         <div className="fl-pipe-sx-controls">
           <div className="fl-field">
@@ -513,9 +531,11 @@ export function RoyaltyPipelinePanel({
       <p className="fl-pipe-foot">
         The split is the Lab's own rule of thumb: {percent(PIPELINE_SHARES.master * 100)} recording,{" "}
         {percent(PIPELINE_SHARES.pro * 100)} performance and {percent(PIPELINE_SHARES.mlc * 100)}{" "}
-        mechanical. Registration state comes from this song's writers' PRO and IPI, its ISRC and its
-        UPC — and from the buttons you press here, which are kept for this session until the
-        catalog's saved registration record ships.{" "}
+        mechanical. The even split inside the publishing half is a convention for showing the two
+        sides, not an official rate; the real balance moves with the rates in force. Registration
+        state comes from this song's writers' PRO and IPI, its ISRC and its UPC — and from the
+        buttons you press here, which are kept for this session until the catalog's saved
+        registration record ships.{" "}
         <a
           href={SOUNDEXCHANGE.source.url}
           target="_blank"
@@ -524,7 +544,8 @@ export function RoyaltyPipelinePanel({
         >
           SoundExchange's own rates
         </a>
-        . Estimates only.
+        . Satellite radio (SiriusXM) pays a share of revenue rather than a per-play rate, so it is
+        not in this estimate. Estimates only.
       </p>
     </section>
   );
