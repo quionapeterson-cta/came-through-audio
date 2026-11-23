@@ -1102,6 +1102,21 @@
     0 0 0 1px rgb(77 140 255 / 55%),
     0 0 22px -4px rgb(77 140 255 / 60%);
 }
+/*
+ * On a phone the three names are wider than the strip's own row, and the strip hides its scrollbar, so the third tab
+ * was cut off with nothing to hint it could be scrolled. It wraps there instead, so all three sections stay visible.
+ */
+@media (max-width: 640px) {
+  .fl-tab-strip {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+  .fl-tab {
+    flex: 1 1 auto;
+    white-space: normal;
+    text-align: center;
+  }
+}
 
 .fl-step-label {
   display: flex;
