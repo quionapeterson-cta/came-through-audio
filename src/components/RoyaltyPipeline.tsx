@@ -292,7 +292,9 @@ export function RoyaltyPipelinePanel({
       id: "master",
       label: "Distributor · master",
       name: "Your recording",
-      share: `${percent(PIPELINE_SHARES.master * 100)} of the pool · your master share ${percent(masterShare)}`,
+      share: `${percent(PIPELINE_SHARES.master * 100)} of the pool · your master share ${percent(
+        masterShare,
+      )}, before your distributor's cut`,
       bucket: bucket("master"),
       stage: masterStage,
       rows: [] as AgencyRow[],
