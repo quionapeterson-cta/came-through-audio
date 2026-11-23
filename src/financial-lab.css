@@ -2490,22 +2490,28 @@
 .fl-pipe-sx-role {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.45rem;
+  gap: 0.45rem;
+  /* The label is the control, so it keeps the Lab's 44px phone thumb target and the copy's own type size. */
+  min-height: 2.75rem;
   color: var(--fl-muted);
-  font-size: 0.62rem;
-  line-height: 1.3;
+  font-size: 0.66rem;
+  line-height: 1.35;
   cursor: pointer;
 }
 .fl-pipe-sx-role input {
-  width: 0.8rem;
-  height: 0.8rem;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
   margin: 0;
   accent-color: var(--fl-electric);
 }
 .fl-pipe-sx-controls {
   display: grid;
   width: 100%;
+  /* A width of 100% inside the flex row with no min-width lets the grid's min-content size cycle back through the
+     panel's own max-content width, which crashed Chromium 140's renderer (the whole tab) on this row. Zeroing the
+     minimum ends the cycle; the grid still fills the row. */
+  min-width: 0;
   /* An auto column takes the select's longest option as its max-content width and pushes the rate field past the
      panel on a phone, so the phone column is pinned to the container. */
   grid-template-columns: minmax(0, 1fr);
