@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveAccess, type StaffAccess } from "./departments";
+import { requireStaffAccess, staffAccessOf } from "./staff-access.server";
 import { getPaymentsEnvironment } from "./payments-env";
 import { memberEmailProblem, staffPlanWindow } from "./staff-plan";
 
@@ -56,30 +56,6 @@ const COLS = "user_id, member_email, status, starts_at, ends_at, reported_by, cr
 
 const grantsTable = async () => (await db()) as unknown as Grants;
 
-type Ctx = {
-  supabase: {
-    from: (table: "user_roles") => {
-      select: (c: string) => { eq: (col: string, v: unknown) => PromiseLike<{ data: unknown }> };
-    };
-  };
-  userId: string;
-};
-
-async function accessOf(context: Ctx): Promise<StaffAccess | null> {
-  const { data } = await context.supabase
-    .from("user_roles")
-    .select("role, departments")
-    .eq("user_id", context.userId);
-  return resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]);
-}
-
-async function requireStaff(context: Ctx): Promise<StaffAccess> {
-  const access = await accessOf(context);
-  if (!access)
-    throw new Error("The staff plan is for team members. Ask HR if your access is missing.");
-  return access;
-}
-
 export type StaffGrant = {
   userId: string;
   memberEmail: string;
@@ -107,8 +83,7 @@ export const myStaffPlan = createServerFn({ method: "GET" })
     async ({
       context,
     }): Promise<{ isStaff: boolean; own: StaffGrant | null; reported: StaffGrant[] }> => {
-      if (!(await accessOf(context as unknown as Ctx)))
-        return { isStaff: false, own: null, reported: [] };
+      if (!(await staffAccessOf(context))) return { isStaff: false, own: null, reported: [] };
       try {
         const t = await grantsTable();
         const [own, reports] = await Promise.all([
@@ -137,7 +112,10 @@ export const reportStaffMemberEmail = createServerFn({ method: "POST" })
     z.object({ email: z.string().trim().toLowerCase().min(3).max(320) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await requireStaff(context as unknown as Ctx);
+    await requireStaffAccess(
+      context,
+      "The staff plan is for team members. Ask HR if your access is missing.",
+    );
     const problem = memberEmailProblem(data.email, false);
     if (problem) throw new Error(problem);
     const d = await db();
@@ -171,7 +149,10 @@ export const reportStaffMemberEmail = createServerFn({ method: "POST" })
 export const staffPlanQueue = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ grants: StaffGrant[] }> => {
-    const access = await requireStaff(context as unknown as Ctx);
+    const access = await requireStaffAccess(
+      context,
+      "The staff plan is for team members. Ask HR if your access is missing.",
+    );
     if (!access.canManageStaff)
       throw new Error("Only a super admin or HR can review staff plan requests.");
     const t = await grantsTable();
@@ -187,7 +168,10 @@ export const decideStaffPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ userId: z.string().uuid(), approve: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
-    const access = await requireStaff(context as unknown as Ctx);
+    const access = await requireStaffAccess(
+      context,
+      "The staff plan is for team members. Ask HR if your access is missing.",
+    );
     // Marking an account as staff is the founder's call, and HR may do it too; nobody may mark their own account.
     if (access.role !== "super_admin" && access.role !== "hr_admin")
       throw new Error("Only a super admin or HR can decide this.");

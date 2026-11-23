@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveAccess, type StaffAccess } from "./departments";
+import { requireStaffAccess, type StaffContext } from "./staff-access.server";
+import type { StaffAccess } from "./departments";
 
 /**
  * The admin hub's own tables (founder, 2026-11-05): step checklists with lead locks and approval requests, the live win
@@ -54,15 +55,6 @@ export type TeamPulse = {
   canPost: boolean;
 };
 
-type Ctx = {
-  supabase: {
-    from: (t: "user_roles") => {
-      select: (c: string) => { eq: (col: string, v: unknown) => PromiseLike<{ data: unknown }> };
-    };
-  };
-  userId: string;
-};
-
 /** The hub tables ship with their migration, so the generated types lag behind: reached through one cast client. */
 type Row = {
   id?: string;
@@ -109,19 +101,12 @@ async function tables() {
   return { client, supabaseAdmin };
 }
 
-async function accessOf(context: Ctx): Promise<StaffAccess> {
-  const { data } = await context.supabase
-    .from("user_roles")
-    .select("role, departments")
-    .eq("user_id", context.userId);
-  const access = resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]);
-  if (!access) throw new Error("Staff only.");
-  return access;
-}
+/** The one staff gate: `requireStaffAccess` in staff-access.server.ts, never a second lookup here. */
+const accessOf = (context: StaffContext) => requireStaffAccess(context, "Staff only.");
 
 const isLead = (a: StaffAccess) => a.role === "super_admin" || a.role === "department_lead";
 const canPostNotice = (a: StaffAccess) => isLead(a) || a.role === "project_manager";
-const me = (context: unknown) => (context as Ctx).userId;
+const me = (context: StaffContext) => context.userId;
 
 const stepType = z.object({ id: z.string().uuid() });
 const lockType = z.enum(["open", "locked", "approval"]);
@@ -147,7 +132,7 @@ function nameOf(
 export const listMySteps = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<TaskStep[]> => {
-    await accessOf(context as unknown as Ctx);
+    await requireStaffAccess(context, "Staff only.");
     const { client } = await tables();
     try {
       const { data } = await client
@@ -172,7 +157,7 @@ export const addStep = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await accessOf(context as unknown as Ctx);
+    await requireStaffAccess(context, "Staff only.");
     const { client } = await tables();
     const { data: have } = await client
       .from("task_steps")
@@ -196,7 +181,7 @@ export const editStep = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => stepType.extend({ title: z.string().trim().min(1).max(200) }).parse(d))
   .handler(async ({ data, context }) => {
-    await accessOf(context as unknown as Ctx);
+    await requireStaffAccess(context, "Staff only.");
     const { client } = await tables();
     const { data: found } = await client
       .from("task_steps")
@@ -218,7 +203,7 @@ export const toggleStep = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => stepType.extend({ done: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
-    await accessOf(context as unknown as Ctx);
+    await requireStaffAccess(context, "Staff only.");
     const { client } = await tables();
     const { data: found } = await client.from("task_steps").select("user_id").eq("id", data.id);
     if (found?.[0]?.user_id !== me(context)) throw new Error("That step isn't yours.");
@@ -237,7 +222,7 @@ export const deleteStep = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => stepType.parse(d))
   .handler(async ({ data, context }) => {
-    await accessOf(context as unknown as Ctx);
+    await requireStaffAccess(context, "Staff only.");
     const { client } = await tables();
     const { data: found } = await client
       .from("task_steps")
@@ -257,7 +242,7 @@ export const setStepLock = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => stepType.extend({ lock: lockType }).parse(d))
   .handler(async ({ data, context }) => {
-    const access = await accessOf(context as unknown as Ctx);
+    const access = await requireStaffAccess(context, "Staff only.");
     if (!isLead(access)) throw new Error("Only a super admin or department lead can lock steps.");
     const { client } = await tables();
     const { error } = await client
@@ -284,7 +269,7 @@ export const requestStepChange = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await accessOf(context as unknown as Ctx);
+    await requireStaffAccess(context, "Staff only.");
     const { client } = await tables();
     const { data: found } = await client
       .from("task_steps")
@@ -308,7 +293,7 @@ export const requestStepChange = createServerFn({ method: "POST" })
 export const listStepRequests = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<StepRequest[]> => {
-    const access = await accessOf(context as unknown as Ctx);
+    const access = await requireStaffAccess(context, "Staff only.");
     if (!isLead(access)) return [];
     const { client, supabaseAdmin } = await tables();
     try {
@@ -346,7 +331,7 @@ export const decideStepRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid(), approve: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
-    const access = await accessOf(context as unknown as Ctx);
+    const access = await requireStaffAccess(context, "Staff only.");
     if (!isLead(access)) throw new Error("Only a super admin or department lead can decide this.");
     const { client } = await tables();
     const { data: found } = await client
@@ -384,7 +369,7 @@ export const recordWin = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<Win> => {
-    await accessOf(context as unknown as Ctx);
+    await requireStaffAccess(context, "Staff only.");
     const { client, supabaseAdmin } = await tables();
     const { data: profiles } = await supabaseAdmin
       .from("profiles")
@@ -416,7 +401,7 @@ export const recordWin = createServerFn({ method: "POST" })
 export const listWins = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<Win[]> => {
-    await accessOf(context as unknown as Ctx);
+    await requireStaffAccess(context, "Staff only.");
     const { client } = await tables();
     try {
       const { data } = await client
@@ -440,7 +425,7 @@ export const listWins = createServerFn({ method: "GET" })
 export const teamPulse = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<TeamPulse> => {
-    const access = await accessOf(context as unknown as Ctx);
+    const access = await requireStaffAccess(context, "Staff only.");
     const { client, supabaseAdmin } = await tables();
     try {
       // Launch work is super-admin only (public.in_department never admits anyone else to it).
@@ -532,7 +517,7 @@ export const postNotice = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const access = await accessOf(context as unknown as Ctx);
+    const access = await requireStaffAccess(context, "Staff only.");
     if (!canPostNotice(access))
       throw new Error("Only leads and super admins post here. Send it to your lead.");
     const { client, supabaseAdmin } = await tables();
