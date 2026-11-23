@@ -242,7 +242,6 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
         onTheme={theme.toggle}
         bedazzle={bedazzle}
         onBedazzle={setSparkle}
-        section={activeTab.eyebrow}
         blurb={activeTab.blurb}
       />
       <nav className="fl-tab-strip" role="tablist" aria-label="The Financial Lab sections">
@@ -327,25 +326,18 @@ function LabHeader({
   onTheme,
   bedazzle,
   onBedazzle,
-  section,
   blurb,
 }: {
   dark: boolean;
   onTheme: () => void;
   bedazzle: boolean;
   onBedazzle: (on: boolean) => void;
-  section: string;
   blurb: string;
 }) {
   return (
     <header className="fl-header fl-crystal">
       <div className="relative z-10 min-w-0">
-        <div className="fl-eyebrow flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.24em]">
-          <span className="fl-live-dot" aria-hidden="true" /> {section}
-        </div>
-        <h2 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
-          The Financial Lab
-        </h2>
+        <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">The Financial Lab</h2>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{blurb}</p>
       </div>
       <div className="relative z-10 flex flex-wrap items-center gap-2">
