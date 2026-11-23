@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveAccess } from "@/lib/departments";
+import { requireStaffAccess } from "@/lib/staff-access.server";
 import type { SupportScript } from "@/lib/support-scripts";
 import { SUPPORT_SCRIPTS } from "@/lib/support-scripts.server";
 
@@ -12,12 +12,6 @@ import { SUPPORT_SCRIPTS } from "@/lib/support-scripts.server";
 export const listSupportScripts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SupportScript[]> => {
-    // Every staff seat, the HR Admin included: is_staff leaves hr_admin out, resolveAccess does not (founder, 2026-11-23).
-    const { data } = await context.supabase
-      .from("user_roles")
-      .select("role, departments")
-      .eq("user_id", context.userId);
-    if (!resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]))
-      throw new Error("Support Scripts are for team members.");
+    await requireStaffAccess(context, "Support Scripts are for team members.");
     return [...SUPPORT_SCRIPTS];
   });
