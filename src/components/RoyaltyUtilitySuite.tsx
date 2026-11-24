@@ -246,6 +246,9 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
     setBudgetCap(value);
     writeLabJson(budgetKey, value);
   }
+  // One click carries the member between the recoupment tool and the merch calculator, so the "Set a merch price" note
+  // lands on the field it names. The anchor scrolls after the tab has rendered, never during the click (2026-11-24).
+  const [anchor, setAnchor] = useState<string | null>(null);
   const theme = useLabTheme();
   const song = tracks.find((t) => t.id === songId);
   const rows = useMemo(() => (song ? songShareRows(song.metadata) : []), [song]);
@@ -264,6 +267,19 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
       /* storage blocked */
     }
   }, []);
+
+  useEffect(() => {
+    if (!anchor) return;
+    document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // The clicked link lives in the panel that just went hidden, so focus moves to the tab that is now open.
+    document.getElementById(`fl-tab-${tab}`)?.focus({ preventScroll: true });
+    setAnchor(null);
+  }, [anchor, tab]);
+
+  function openTab(next: LabTab, anchorId: string) {
+    setTab(next);
+    setAnchor(anchorId);
+  }
 
   function setSparkle(on: boolean) {
     setBedazzle(on);
@@ -367,14 +383,23 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
                 budgetCap={budgetCap}
                 merchMargin={merchMargin}
                 onBudgetCap={changeBudget}
+                onOpenMerch={() => openTab("merch", "fl-panel-merch")}
+                onOpenBudget={() => openTab("budget", "fl-panel-budget")}
               />
             </div>
           )}
-          {item.id === "budget" && <LabBudgetPlanner target={budgetCap} onTarget={changeBudget} />}
+          {item.id === "budget" && (
+            <LabBudgetPlanner
+              target={budgetCap}
+              onTarget={changeBudget}
+              onOpenRecoupment={() => openTab("royalty", "fl-recoupment")}
+            />
+          )}
           {item.id === "merch" && (
             <LabMerchCalculator
               onMarginChange={setMerchMargin}
               storageKey={labStorageKey(userId, songId, "merch")}
+              onOpenRecoupment={() => openTab("royalty", "fl-recoupment")}
             />
           )}
         </div>
@@ -570,7 +595,7 @@ function Converter({
 
       <div className="mt-3">
         <div className="fl-step-label">
-          <span className="fl-step-num">1</span> Choose a song above, or enter the share by hand
+          <span className="fl-step-num">1</span> Choose a song above, or enter your share by hand
         </div>
         <p className="fl-hint">
           Country and song sit at the top of this tab. A song brings its catalog splits; with no
@@ -739,6 +764,8 @@ function Earnings({
   budgetCap,
   merchMargin,
   onBudgetCap,
+  onOpenMerch,
+  onOpenBudget,
 }: {
   tracks: CatalogTrack[];
   song: CatalogTrack | undefined;
@@ -748,6 +775,8 @@ function Earnings({
   budgetCap: string;
   merchMargin: { price: number; cost: number };
   onBudgetCap: (value: string) => void;
+  onOpenMerch?: () => void;
+  onOpenBudget?: () => void;
 }) {
   // Everything typed here lives in one store, saved against the open song: the Lab still opens on no streams entered (a
   // pre-filled count would put a projection on screen that isn't the member's own, founder 2026-11-24), and a refresh,
@@ -1443,6 +1472,8 @@ function Earnings({
         merchProfit={merchMargin.price - merchMargin.cost}
         spotifyRate={Number(rates["spotify"]) || 0}
         appleRate={Number(rates["apple"]) || 0}
+        onOpenMerch={onOpenMerch}
+        onOpenBudget={onOpenBudget}
       />
 
       <TotalDock
@@ -1778,7 +1809,6 @@ function CopyDeck({
             Paste into a registration form, email or your own notes.
           </p>
         </div>
-        <span className="fl-chip ml-auto">Ready to paste</span>
       </div>
       <div className="fl-copy-row">
         {COPY_AGENCIES.map((a) => (

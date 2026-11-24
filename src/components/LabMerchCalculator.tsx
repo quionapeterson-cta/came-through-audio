@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
+  ArrowUpRight,
   CircleDollarSign,
   Gauge,
   Package,
@@ -73,11 +74,14 @@ function savedRun(key: string | undefined): Run | null {
 export function LabMerchCalculator({
   onMarginChange,
   storageKey,
+  onOpenRecoupment,
 }: {
   /** Reports the live price and unit cost so the Lab's recoupment tool can price a shirt recovery. */
   onMarginChange?: (margin: { price: number; cost: number }) => void;
   /** Where this song's run is kept, so a refresh brings back the invoice instead of an empty panel. */
   storageKey?: string;
+  /** Sends the member back to the recoupment tool that asked for a merch price. */
+  onOpenRecoupment?: (() => void) | undefined;
 } = {}) {
   // The panel opens empty: every figure here is the artist's own invoice, and a product chip fills a typical estimate
   // they can replace rather than one already sitting there as if it were theirs (founder, 2026-11-24). What they typed
@@ -123,7 +127,8 @@ export function LabMerchCalculator({
     setQuantity(String(preset.quantity));
     setUnitCost(String(preset.unitCost));
     setPrice(String(preset.price));
-    setUnitsSold(Math.round(preset.quantity / 2));
+    // The run starts unsold: a preset that also claims half of it sold is a made-up result, not an invoice.
+    setUnitsSold(0);
     setEntry("");
   }
 
@@ -195,6 +200,12 @@ export function LabMerchCalculator({
                 Three numbers and one slider: what the run costs, the unit that pays it back and the
                 cash left when you sell through.
               </p>
+              {onOpenRecoupment && (
+                <button type="button" className="fl-jump mt-2" onClick={onOpenRecoupment}>
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  Back to Recoupment
+                </button>
+              )}
             </div>
           </div>
           <span className="fl-chip">{product ? presetOf(product).name : "No product yet"}</span>

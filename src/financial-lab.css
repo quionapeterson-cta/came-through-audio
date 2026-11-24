@@ -585,6 +585,19 @@
 .fl-copy-row > .fl-copy:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
+/*
+ * A phone cell centres its label on one line: the padding, gap and tracking give up just enough room that "COPY FOR THE
+ * MLC" fits beside its icon, so every button reads as one centred unit instead of a wrapped block hanging off the icon
+ * (founder, 2026-11-24).
+ */
+@media (max-width: 639px) {
+  .fl-copy-row .fl-copy {
+    gap: 0.28rem;
+    padding: 0.38rem 0.4rem;
+    font-size: 0.58rem;
+    letter-spacing: 0.03em;
+  }
+}
 @media (max-width: 359px) {
   .fl-copy-row {
     grid-template-columns: minmax(0, 1fr);
@@ -1483,7 +1496,6 @@
   border: 1px solid transparent;
   border-radius: 0.55rem;
   padding: 0;
-  background: color-mix(in srgb, var(--tone) 22%, transparent);
   color: var(--fl-ink);
   cursor: pointer;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -1500,20 +1512,15 @@
 }
 .fl-alloc-seg[data-on="true"] {
   border-color: var(--tone);
-  background: color-mix(in srgb, var(--tone) 34%, transparent);
   box-shadow:
-    inset 0 0 16px color-mix(in srgb, var(--tone) 65%, transparent),
     0 0 14px -2px color-mix(in srgb, var(--tone) 70%, transparent),
     0 0 0 1px rgb(229 228 226 / 32%);
 }
 .dark .fl-alloc-seg {
   color: #fff;
-  background: color-mix(in srgb, var(--tone) 30%, transparent);
-  box-shadow: inset 0 0 14px rgb(0 0 0 / 35%);
 }
 .dark .fl-alloc-seg[data-on="true"] {
   box-shadow:
-    inset 0 0 18px color-mix(in srgb, var(--tone) 80%, transparent),
     0 0 16px 0 color-mix(in srgb, var(--tone) 75%, transparent),
     0 0 28px -8px rgb(255 215 0 / 45%),
     0 0 0 1px rgb(229 228 226 / 42%);
@@ -1550,22 +1557,37 @@
   border: 1px solid #e5edf8;
   border-radius: 0.7rem;
   padding: 0.5rem 0.65rem;
-  /* The row wears its own line's tone as a wash, at a strength that keeps the note readable. */
-  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 9%, #fbfdff);
 }
 .fl-alloc-list li[data-on="true"] {
   border-color: var(--fl-cobalt);
-  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 16%, #fbfdff);
-  box-shadow: inset 0 0 20px rgb(77 140 255 / 10%);
 }
 .dark .fl-alloc-list li {
   border-color: rgb(255 255 255 / 8%);
-  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 12%, #0b0b0b);
 }
 .dark .fl-alloc-list li[data-on="true"] {
   border-color: var(--fl-electric);
-  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 15%, #0b0b0b);
-  box-shadow: inset 0 0 22px rgb(77 140 255 / 22%);
+}
+/*
+ * One wash per tone, painted by the same rule for the bar's tab and the row it refers to, so a category's tab and its
+ * row are the same colour instead of two strengths of it (founder, 2026-11-24). Lit is a state, and it is the same
+ * state on both, so a tap lights the tab and the row together. The inner glow that used to tint each one separately is
+ * gone: the colour you see is this one mix, and the glow sits outside the shape.
+ */
+.fl-alloc-seg,
+.fl-alloc-list li {
+  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 22%, #fbfdff);
+}
+.fl-alloc-seg[data-on="true"],
+.fl-alloc-list li[data-on="true"] {
+  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 34%, #fbfdff);
+}
+.dark .fl-alloc-seg,
+.dark .fl-alloc-list li {
+  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 22%, #0b0b0b);
+}
+.dark .fl-alloc-seg[data-on="true"],
+.dark .fl-alloc-list li[data-on="true"] {
+  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 34%, #0b0b0b);
 }
 .fl-alloc-name {
   display: flex;
@@ -1630,6 +1652,19 @@
 .dark .fl-alloc-money span {
   color: #a9b8cc;
 }
+/*
+ * The row's wash is a full tone deep, so the small type on it keeps a darker slate: #53657d on the deepest tone
+ * (Cobalt) measured 4.0:1, and a note is body text, not decoration (founder, 2026-11-24). The obsidian canvas already
+ * clears AA, so it keeps the token it shipped with.
+ */
+.fl-alloc-list li .fl-alloc-note,
+.fl-alloc-list li .fl-alloc-money span {
+  color: #3f4f66;
+}
+.dark .fl-alloc-list li .fl-alloc-note,
+.dark .fl-alloc-list li .fl-alloc-money span {
+  color: #a9b8cc;
+}
 
 .fl-tip {
   margin-top: 0.75rem;
@@ -1673,12 +1708,24 @@
   text-transform: uppercase;
 }
 @media (max-width: 639px) {
+  /*
+   * A phone tile is narrow, so the row is tightened rather than reflowed: less padding, a tighter gap and a value that
+   * scales with the viewport, which keeps "$2,000.00" on one line beside its neighbours (founder, 2026-11-24).
+   */
+  .fl-budget-head {
+    gap: 0.3rem;
+  }
+  .fl-budget-stat {
+    padding: 0.45rem 0.5rem;
+  }
   /* "Remaining balance" needs two lines in a phone tile; reserving both keeps all three values on one baseline. */
   .fl-budget-stat span {
     display: flex;
     min-height: 2.3em;
     align-items: flex-end;
     line-height: 1.15;
+    font-size: 0.55rem;
+    letter-spacing: 0.05em;
   }
 }
 .fl-budget-stat strong {
@@ -1686,10 +1733,21 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.98rem;
   font-variant-numeric: tabular-nums;
+  /* A money value is one number: it may never break between its dollars and its cents. */
+  white-space: nowrap;
 }
 .fl-budget-stat[data-low="true"] strong {
   color: var(--fl-cobalt);
   text-shadow: 0 0 14px rgb(77 140 255 / 35%);
+}
+/*
+ * The value scales with a phone's width, so a three-column row still holds "$2,000.00" whole inside its tile. It sits
+ * after the base size on purpose: an earlier override loses to it (founder, 2026-11-24).
+ */
+@media (max-width: 639px) {
+  .fl-budget-stat strong {
+    font-size: clamp(0.72rem, 3.3vw, 0.98rem);
+  }
 }
 .dark .fl-budget-stat {
   border-color: rgb(255 255 255 / 10%);
@@ -1724,6 +1782,18 @@
   transition: width 380ms ease;
 }
 
+/*
+ * One category at a time: its line cards, then the planned-vs-paid pair that measures them (founder, 2026-11-24), so a
+ * bar is read beside the line it belongs to instead of in a block of every other category's bars.
+ */
+.fl-check-group {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.75rem;
+}
+.fl-check-group .fl-check-list {
+  margin-top: 0;
+}
 .fl-check-list {
   display: grid;
   gap: 0.4rem;
@@ -3027,6 +3097,10 @@
   justify-content: space-between;
   gap: 0.3rem;
 }
+/* Under its own card the category is already in the header, so the status leads the pair instead of trailing it. */
+.fl-pair[data-noname="true"] .fl-pair-head {
+  justify-content: flex-start;
+}
 .fl-pair-name {
   color: var(--fl-ink);
   font-size: 0.72rem;
@@ -3669,5 +3743,86 @@
   .fl-territory-grid,
   .fl-timeline-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* A jump between the recoupment tool and the merch calculator (founder, 2026-11-24). */
+.fl-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: var(--fl-cobalt);
+  font-size: inherit;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+  /* Padded, with the same amount taken back in margin: the tap area clears 24px and no line moves. */
+  padding: 0.16rem 0.1rem;
+  margin: -0.16rem -0.1rem;
+  border-radius: 0.35rem;
+}
+.fl-jump:hover {
+  text-decoration-style: solid;
+}
+.fl-jump:focus-visible {
+  border-radius: 0.35rem;
+  outline: 2px solid var(--fl-cobalt);
+  outline-offset: 2px;
+}.dark .fl-jump {
+  color: #4d8cff;
+}
+.dark .fl-jump:focus-visible {
+  outline-color: #4d8cff;
+}
+/*
+ * The footnote link runs inside the sentence, so it takes the sentence's own line height: the phone's 44px button
+ * target would otherwise stretch its line box and split the paragraph around it. The padding still widens the hit area
+ * (an inline box's padding is clickable without moving the line), which is how the one inline target on this panel
+ * stays reachable (founder, 2026-11-24).
+ */
+.fl-pipe-foot .fl-jump {
+  display: inline;
+  min-height: 0;
+  margin: 0;
+  padding: 0.12rem 0.08rem;
+  border-radius: 0.25rem;
+}
+/* The recoupment chip reads as a link without losing the chip shape it shipped with. */
+.fl-chip-jump {
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.fl-chip-jump:hover {
+  border-color: var(--fl-cobalt);
+  background: #e2eeff;
+}
+.fl-chip-jump:focus-visible {
+  outline: 2px solid var(--fl-cobalt);
+  outline-offset: 2px;
+}
+.dark .fl-chip-jump:focus-visible {
+  outline-color: #4d8cff;
+}
+/* The tile's own type is small, so the link keeps its look but gains a real tap area. */
+.fl-recoup-name .fl-jump {
+  min-height: 1.5rem;
+  margin: -0.22rem -0.4rem;
+  padding: 0.22rem 0.4rem;
+  border-radius: 0.45rem;
+}
+#fl-recoupment,
+#fl-panel-merch,
+#fl-panel-budget {
+  scroll-margin-top: 6rem;
+}
+/* The pre-launch bar is fixed and wraps to several lines on a phone, so a jump clears its full height. */
+@media (max-width: 640px) {
+  #fl-recoupment,
+  #fl-panel-merch,
+  #fl-panel-budget {
+    scroll-margin-top: 22rem;
   }
 }

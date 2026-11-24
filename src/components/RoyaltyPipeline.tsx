@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ExternalLink, Radio, ReceiptText, Shirt } from "lucide-react";
+import { ArrowUpRight, Check, ExternalLink, Radio, ReceiptText, Shirt } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { RecoupGauge } from "@/components/LabCharts";
 import type { CatalogTrack } from "@/lib/catalog";
@@ -606,6 +606,8 @@ export function RecoupmentPanel({
   merchProfit,
   spotifyRate,
   appleRate,
+  onOpenMerch,
+  onOpenBudget,
 }: {
   target: string;
   /** The Lab's projected take for the streams and plays already entered, read as money back on the project. */
@@ -614,6 +616,10 @@ export function RecoupmentPanel({
   merchProfit: number;
   spotifyRate: number;
   appleRate: number;
+  /** Carries the member to the merch calculator when a shirt target needs a price it has not got yet. */
+  onOpenMerch?: (() => void) | undefined;
+  /** Carries the member to the Budget Planner whose target spend is the prefill this cost starts from. */
+  onOpenBudget?: (() => void) | undefined;
 }) {
   const [value, setValue] = useState(target);
   // The Budget Planner's target spend is the prefill: change it there and every target here moves with it.
@@ -659,7 +665,11 @@ export function RecoupmentPanel({
   ];
 
   return (
-    <section className="fl-telemetry fl-pipe" aria-label="Recoupment and goal reality">
+    <section
+      id="fl-recoupment"
+      className="fl-telemetry fl-pipe"
+      aria-label="Recoupment and goal reality"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="fl-eyebrow flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em]">
@@ -671,7 +681,20 @@ export function RecoupmentPanel({
             stream cut. No growth curve and no twelve-month promise.
           </p>
         </div>
-        <span className="fl-chip ml-auto">FROM YOUR BUDGET</span>
+        {/* The chip names where the cost comes from, so it is also the way to the field that sets it. */}
+        {onOpenBudget ? (
+          <button
+            type="button"
+            className="fl-chip fl-chip-jump ml-auto"
+            onClick={onOpenBudget}
+            title="Open the Budget Planner to set your target spend"
+          >
+            FROM YOUR BUDGET
+            <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="fl-chip ml-auto">FROM YOUR BUDGET</span>
+        )}
       </div>
 
       <div className="fl-step-label mt-3">
@@ -721,7 +744,14 @@ export function RecoupmentPanel({
                   <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   {tile.name}
                 </span>
-                <em>{tile.note}</em>
+                {/* Without a price there is no shirt target, so the note becomes the way to the field that sets one. */}
+                {tile.id === "merch" && merchProfit <= 0 && onOpenMerch ? (
+                  <button type="button" className="fl-jump" onClick={onOpenMerch}>
+                    Set a merch price
+                  </button>
+                ) : (
+                  <em>{tile.note}</em>
+                )}
               </div>
               <div className="fl-recoup-number">
                 {tile.units === null ? "—" : count(tile.units)}
@@ -744,8 +774,16 @@ export function RecoupmentPanel({
 
       <p className="fl-pipe-foot">
         Spotify and Apple Music multiply the editable rates in Projected Royalty Earnings by your{" "}
-        {percent(cut)} cut. T-shirt units divide the cost by the Merch &amp; Sales Calculator's
-        price minus unit cost
+        {percent(cut)} cut. T-shirt units divide the cost by the{" "}
+        {/* Every mention of another tool is the way to it, so the footnote's calculator opens too. */}
+        {onOpenMerch ? (
+          <button type="button" className="fl-jump" onClick={onOpenMerch}>
+            Merch &amp; Sales Calculator
+          </button>
+        ) : (
+          <>Merch &amp; Sales Calculator</>
+        )}
+        {"'s price minus unit cost"}
         {merchProfit > 0 ? ` (${money(merchProfit)} a shirt)` : ""}. Real payouts vary by country,
         subscription tier and deal, so treat these as targets to aim at.
       </p>

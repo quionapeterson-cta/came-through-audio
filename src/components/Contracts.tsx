@@ -389,7 +389,7 @@ export function Contracts({
       <div className="mt-6 space-y-6">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <div
-            className="inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1"
+            className="contract-tabs inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1 max-sm:grid max-sm:w-full max-sm:grid-cols-2"
             role="tablist"
             aria-label="Contracts"
           >
@@ -411,6 +411,7 @@ export function Contracts({
                 role="tab"
                 aria-selected={view === id}
                 size="sm"
+                className="max-sm:w-full"
                 variant={view === id ? "default" : "ghost"}
                 onClick={() => {
                   setFocusGuide(undefined);
@@ -734,7 +735,7 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
                           </p>
                         </div>
                       )}
-                      <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                      <div className="mt-auto grid grid-cols-2 gap-2 pt-4 sm:flex sm:flex-wrap">
                         <Button
                           size="sm"
                           variant="ghost"
@@ -777,7 +778,11 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
                           )}
                           Blank PDF
                         </Button>
-                        <Button size="sm" onClick={() => onUse(bp)}>
+                        <Button
+                          size="sm"
+                          className="col-span-2 sm:col-auto"
+                          onClick={() => onUse(bp)}
+                        >
                           {unlocked ? (
                             <PenLine className="h-4 w-4" />
                           ) : (
@@ -982,14 +987,14 @@ function Guides({
               type="button"
               aria-expanded={open}
               onClick={() => setOpenGroup(open ? undefined : name)}
-              className="flex w-full items-center gap-2 p-4 text-left"
+              className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 p-4 text-left sm:flex sm:flex-wrap sm:gap-2"
             >
               <span className="text-lg font-bold">{name}</span>
-              <span className="truncate text-sm text-muted-foreground">
+              <span className="col-span-2 text-sm text-muted-foreground sm:col-auto sm:min-w-0 sm:truncate">
                 · {list.length} · {hint}
               </span>
               <ChevronDown
-                className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`}
+                className={`col-start-2 row-start-1 ml-auto h-5 w-5 shrink-0 justify-self-end transition ${open ? "rotate-180" : ""}`}
               />
             </button>
             {open && (
@@ -1211,7 +1216,7 @@ function Guides({
                           )}
                         </div>
                       )}
-                      <div className="mt-auto flex flex-wrap pt-4">
+                      <div className="guide-card-actions mt-auto grid grid-cols-2 gap-2 pt-4 [&>*:last-child:nth-child(odd)]:col-span-2 sm:flex sm:flex-wrap sm:gap-0">
                         <Button
                           size="sm"
                           variant="ghost"
