@@ -15,13 +15,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { AllocationDonut, SpentPairs } from "@/components/LabCharts";
 import { downloadBudgetPdf } from "@/lib/budget-pdf";
 import {
   BUDGET_BLUEPRINTS,
   QUICK_PICKS,
   allocateBudget,
+  allocationSlices,
   blueprintOf,
   budgetProgress,
+  categorySpend,
   customExpenseRow,
   expenseActual,
   rowsFromAllocation,
@@ -87,6 +90,12 @@ export function LabBudgetPlanner({
 
   const blueprint = blueprintOf(plan.kind);
   const totals = useMemo(() => budgetProgress(plan.rows, plan.target), [plan.rows, plan.target]);
+  const slices = useMemo(() => allocationSlices(plan.lines), [plan.lines]);
+  const spends = useMemo(() => categorySpend(plan.rows), [plan.rows]);
+  const allocated = useMemo(
+    () => slices.reduce((sum, slice) => sum + slice.budget, 0),
+    [slices],
+  );
   const targetNumber = Number(target) || 0;
   const stale =
     plan.kind !== kind || Math.round(plan.target * 100) !== Math.round(targetNumber * 100);
@@ -235,6 +244,8 @@ export function LabBudgetPlanner({
           <span className="fl-chip ml-auto">{blueprint.name}</span>
         </div>
 
+        <AllocationDonut slices={slices} total={allocated} active={active} />
+
         <div className="fl-alloc-bar" aria-label="Allocation share">
           {plan.lines.map((line, index) => (
             <button
@@ -314,6 +325,17 @@ export function LabBudgetPlanner({
           aria-valuenow={Math.round(totals.spentPercent)}
         >
           <span className="fl-budget-fill" style={{ width: `${totals.spentPercent}%` }} />
+        </div>
+
+        <div className="mt-3">
+          <div className="fl-step-label">
+            <span className="fl-step-num">4</span> Planned vs paid
+          </div>
+          <p className="fl-hint">
+            Each pair is one category: the plan on top, the money that has actually left your
+            account underneath.
+          </p>
+          <SpentPairs groups={spends} />
         </div>
 
         <ul className="fl-check-list">

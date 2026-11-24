@@ -338,6 +338,70 @@ export type BudgetProgress = {
   total: number;
 };
 
+/**
+ * The allocation ring's geometry: each line's share of the money actually allocated, as a fraction of the whole ring.
+ * A line's budget can be typed by the artist, so the slices follow the dollars rather than the blueprint's percentage.
+ */
+export type AllocationSlice = {
+  id: string;
+  label: string;
+  budget: number;
+  /** Share of the allocated total, rounded to one decimal for the label. */
+  percent: number;
+  /** Where the slice starts on the ring, 0 to 1 clockwise from the top. */
+  start: number;
+  /** Where it ends. A zero-dollar total leaves every slice empty rather than dividing by zero. */
+  end: number;
+};
+
+export function allocationSlices(lines: AllocatedLine[]): AllocationSlice[] {
+  const total = lines.reduce((sum, line) => sum + Math.max(0, Number(line.budget) || 0), 0);
+  let cursor = 0;
+  return lines.map((line) => {
+    const budget = Math.max(0, Number(line.budget) || 0);
+    const share = total > 0 ? budget / total : 0;
+    const start = cursor;
+    cursor = Math.min(1, cursor + share);
+    return {
+      id: line.id,
+      label: line.label,
+      budget,
+      percent: Math.round(share * 1000) / 10,
+      start,
+      end: cursor,
+    };
+  });
+}
+
+/**
+ * One bar pair per category in the checklist: what was planned against what has actually been paid. Rows sharing a
+ * category add up, so a custom entry named after a blueprint line shows in the same pair, and `over` only ever counts
+ * money spent past the plan (never a line that is still estimated).
+ */
+export type CategorySpend = {
+  id: string;
+  label: string;
+  planned: number;
+  spent: number;
+  /** Dollars paid past the planned amount; 0 while the line is inside its plan. */
+  over: number;
+};
+
+export function categorySpend(rows: ExpenseRow[]): CategorySpend[] {
+  const groups = new Map<string, CategorySpend>();
+  for (const row of rows) {
+    const label = row.category.trim() || "Custom";
+    const id = label.toLowerCase();
+    const group = groups.get(id) ?? { id, label, planned: 0, spent: 0, over: 0 };
+    group.planned += Math.max(0, Number(row.budget) || 0);
+    group.spent += row.paid ? Math.max(0, expenseActual(row)) : 0;
+    groups.set(id, group);
+  }
+  return [...groups.values()]
+    .map((group) => ({ ...group, over: Math.max(0, group.spent - group.planned) }))
+    .filter((group) => group.planned > 0 || group.spent > 0);
+}
+
 export function budgetProgress(rows: ExpenseRow[], cap: number): BudgetProgress {
   const planned = rows.reduce((sum, row) => sum + (Number(row.budget) || 0), 0);
   const spent = rows.reduce((sum, row) => sum + (row.paid ? expenseActual(row) : 0), 0);

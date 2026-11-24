@@ -4,6 +4,7 @@ import {
   PIPELINE_SHARES,
   pipelineBuckets,
   pipelineState,
+  recoupmentProgress,
   recoupmentTargets,
   soundExchangeMath,
 } from "./royalty-pipeline";
@@ -107,6 +108,62 @@ describe("pipeline registration state", () => {
     expect(pipelineState({ agency: "ASCAP", pool: 40, registered: true, gaps: [] }).kind).toBe(
       "collected",
     );
+  });
+});
+
+describe("recoupment gauge", () => {
+  it("reads the earned money back against the project cost", () => {
+    const progress = recoupmentProgress({
+      cost: 500,
+      earned: 310,
+      streamCut: 80,
+      spotifyRate: 0.004,
+      appleRate: 0.0085,
+    });
+    expect(progress.percent).toBeCloseTo(62, 9);
+    expect(progress.remaining).toBeCloseTo(190, 9);
+    expect(progress.done).toBe(false);
+    expect(progress.streamsLeft).toBe(59375);
+    expect(progress.appleLeft).toBe(27942);
+  });
+
+  it("closes the dial once the project is paid off", () => {
+    const progress = recoupmentProgress({
+      cost: 500,
+      earned: 640,
+      streamCut: 80,
+      spotifyRate: 0.004,
+      appleRate: 0.0085,
+    });
+    expect(progress.percent).toBe(100);
+    expect(progress.remaining).toBe(0);
+    expect(progress.done).toBe(true);
+    expect(progress.streamsLeft).toBe(0);
+  });
+
+  it("stays empty when there is no cost to recover", () => {
+    const progress = recoupmentProgress({
+      cost: 0,
+      earned: 120,
+      streamCut: 80,
+      spotifyRate: 0.004,
+      appleRate: 0.0085,
+    });
+    expect(progress.percent).toBe(0);
+    expect(progress.done).toBe(false);
+  });
+
+  it("survives an empty or negative entry without a negative arc", () => {
+    const progress = recoupmentProgress({
+      cost: Number.NaN,
+      earned: -40,
+      streamCut: 80,
+      spotifyRate: 0.004,
+      appleRate: 0.0085,
+    });
+    expect(progress.cost).toBe(0);
+    expect(progress.earned).toBe(0);
+    expect(progress.percent).toBe(0);
   });
 });
 

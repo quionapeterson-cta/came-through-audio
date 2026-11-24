@@ -169,6 +169,53 @@ export type RecoupmentTargets = {
  * The reverse of the earnings forecast: a project cost over what one stream (or one shirt) actually pays the member. It
  * uses the Lab's own editable rates and combined stream cut, so changing a rate above moves these targets.
  */
+/**
+ * The recoupment gauge: how much of a project cost the forecast has already earned back, and what is left to go. The
+ * earned figure is the Lab's own projection for the streams and plays entered above; it is never a payout statement. A
+ * cost of zero leaves the gauge empty rather than full, so a blank box never reads as a finished project.
+ */
+export type RecoupmentProgress = {
+  cost: number;
+  earned: number;
+  /** Share of the cost earned back, 0 to 100. */
+  percent: number;
+  remaining: number;
+  done: boolean;
+  /** Streams still needed at this platform's rate and the member's own cut; null when there is no rate to divide by. */
+  streamsLeft: number | null;
+  appleLeft: number | null;
+};
+
+export function recoupmentProgress(input: {
+  cost: number;
+  earned: number;
+  streamCut: number;
+  spotifyRate: number;
+  appleRate: number;
+}): RecoupmentProgress {
+  const cost = Math.max(0, Number.isFinite(input.cost) ? input.cost : 0);
+  const earned = Math.max(0, Number.isFinite(input.earned) ? input.earned : 0);
+  const remaining = Math.max(0, cost - earned);
+  const done = cost > 0 && remaining <= 0;
+  const percent = cost > 0 ? Math.min(100, Math.max(0, (earned / cost) * 100)) : 0;
+  const left = recoupmentTargets({
+    cost: remaining,
+    streamCut: input.streamCut,
+    spotifyRate: input.spotifyRate,
+    appleRate: input.appleRate,
+    merchProfit: 0,
+  });
+  return {
+    cost,
+    earned,
+    percent,
+    remaining,
+    done,
+    streamsLeft: done ? 0 : left.spotify,
+    appleLeft: done ? 0 : left.apple,
+  };
+}
+
 export function recoupmentTargets(input: {
   cost: number;
   streamCut: number;

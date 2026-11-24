@@ -140,6 +140,35 @@ export function merchMath(input: MerchInput): MerchMath {
 }
 
 /**
+ * The breakeven chart's axes. Revenue rises with every unit sold and the run's cost stays flat, so the two lines cross
+ * once — at the safe zone. The axis always reaches that crossing, even when the run alone would never get there, so an
+ * out-of-reach breakeven is visible as a gap rather than as a chart that simply stops. Null when there is no price to
+ * charge or no cost to recover, because then there is no crossing to draw.
+ */
+export type BreakevenChart = {
+  /** Units at the right-hand end of the X axis. */
+  upto: number;
+  /** Dollars at the top of the Y axis. */
+  top: number;
+  /** The whole run's cost, drawn as the flat line. */
+  upfront: number;
+  breakevenUnits: number;
+};
+
+export function breakevenChart(input: {
+  quantity: number;
+  unitCost: number;
+  price: number;
+}): BreakevenChart | null {
+  const math = merchMath({ ...input, unitsSold: 0 });
+  if (math.upfront <= 0 || math.breakevenUnits === null) return null;
+  const breakevenUnits = math.breakevenUnits;
+  const upto = Math.max(math.quantity, breakevenUnits, 1);
+  const top = Math.max(upto * finite(input.price), math.upfront, 1);
+  return { upto, top, upfront: math.upfront, breakevenUnits };
+}
+
+/**
  * The one box takes either an exact count ("35", "35 shirts") or a percentage of the run ("35%"). Returns null when the
  * text holds no number, so the slider keeps its last position instead of snapping to zero mid-typing.
  */

@@ -10,8 +10,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { BreakevenChartView } from "@/components/LabCharts";
 import {
   PRODUCT_PRESETS,
+  breakevenChart,
   clampUnits,
   merchMath,
   parseSalesEntry,
@@ -64,6 +66,10 @@ export function LabMerchCalculator({
   const math = useMemo(
     () => merchMath({ quantity: run, unitCost: cost, price: retail, unitsSold }),
     [run, cost, retail, unitsSold],
+  );
+  const chart = useMemo(
+    () => breakevenChart({ quantity: run, unitCost: cost, price: retail }),
+    [run, cost, retail],
   );
 
   useEffect(() => {
@@ -371,6 +377,13 @@ export function LabMerchCalculator({
               )}
             </span>
           </article>
+        </div>
+
+        <div className="mt-3">
+          <div className="fl-step-label">
+            <span className="fl-step-num">3</span> Where the lines cross
+          </div>
+          <BreakevenChartView chart={chart} unitsSold={math.unitsSold} price={retail} />
         </div>
 
         <p className="fl-hint">

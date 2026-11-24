@@ -920,6 +920,7 @@ function Earnings({
 
       <RecoupmentPanel
         target={budgetCap}
+        earned={r.yours}
         streamCut={streamCut}
         merchProfit={merchMargin.price - merchMargin.cost}
         spotifyRate={Number(rates["spotify"]) || 0}

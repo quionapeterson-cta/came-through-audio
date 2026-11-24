@@ -2234,25 +2234,33 @@
   padding: 0.25rem;
   background: var(--fl-soft);
 }
+/*
+ * The one split bar. A segment is too narrow for a name, so it carries the share and the money one stream puts in that
+ * bucket; the legend under it names all three. Merged from the separate per-unit bars, so the panel has one bar.
+ */
 .fl-pipe-seg {
   display: flex;
   min-width: 0;
-  min-height: 2.1rem;
+  min-height: 2.6rem;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.35rem;
+  justify-content: center;
+  gap: 0.1rem;
   border-radius: 0.45rem;
-  padding: 0 0.5rem;
+  padding: 0 0.35rem;
   color: #fff;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.62rem;
+  font-size: 0.64rem;
   font-weight: 800;
   letter-spacing: 0.04em;
+  line-height: 1.1;
 }
 .fl-pipe-seg small {
   font-size: 0.55rem;
-  font-weight: 700;
-  opacity: 0.85;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  opacity: 0.92;
 }
 .fl-pipe-seg-master {
   background: linear-gradient(90deg, var(--fl-cobalt-shade), var(--fl-cobalt));
@@ -2744,39 +2752,471 @@
   }
 }
 
-/* The phone legend for the split bar: the same 80 / 10 / 10, spelled out under it. */
+/*
+ * The legend always shows now: the bar's segments carry the share and the money, and the names live here, so the same
+ * three buckets read at every width.
+ */
 .fl-pipe-legend {
-  display: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  margin-top: 0.45rem;
+  color: var(--fl-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-@media (max-width: 639px) {
-  .fl-pipe-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 0.75rem;
-    margin-top: 0.45rem;
-    color: var(--fl-muted);
-    font-size: 0.58rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-  .fl-pipe-legend li {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-  .fl-pipe-dot {
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: 0.15rem;
-  }
-  .fl-pipe-dot-master {
-    background: var(--fl-cobalt);
-  }
-  .fl-pipe-dot-pro {
-    background: var(--fl-electric);
-  }
-  .fl-pipe-dot-mlc {
-    background: var(--fl-platinum-shade);
+.dark .fl-pipe-legend {
+  color: #a9b8cc;
+}
+.fl-pipe-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.fl-pipe-legend b {
+  color: var(--fl-ink);
+  font-weight: 800;
+}
+.dark .fl-pipe-legend b {
+  color: #fff;
+}
+.fl-pipe-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 0.15rem;
+}
+.fl-pipe-dot-master {
+  background: var(--fl-cobalt);
+}
+.dark .fl-pipe-dot-master {
+  background: var(--fl-electric);
+}
+.fl-pipe-dot-pro {
+  background: var(--fl-electric);
+}
+.fl-pipe-dot-mlc {
+  background: var(--fl-platinum-shade);
+}
+.dark .fl-pipe-dot-mlc {
+  background: var(--fl-platinum);
+}
+
+/*
+ * The Financial Lab's five visuals: the allocation ring, the planned-vs-paid pairs, the breakeven crossing, the
+ * per-stream pipeline split and the recoupment gauge. Same canvas and same four colours as the rest of the Lab —
+ * Cobalt ink in daylight, Electric Cobalt on obsidian, platinum for a reference line and gold only for the money
+ * already earned. Nothing here overrides an existing Lab surface.
+ */
+.fl-donut-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+.fl-donut {
+  width: 8.5rem;
+  height: 8.5rem;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.fl-donut-track {
+  fill: none;
+  /* Darker than the Lab's usual track: the platinum slice sits above it, so the ring can't use the palest grey for both. */
+  stroke: #d7e3f4;
+  stroke-width: 14;
+}
+.dark .fl-donut-track {
+  stroke: rgb(255 255 255 / 8%);
+}
+.fl-donut-seg {
+  stroke: var(--tone, var(--fl-cobalt));
+  stroke-width: 14;
+  filter: drop-shadow(0 0 0.6px rgb(11 11 11 / 45%));
+  transition:
+    opacity 200ms ease,
+    filter 200ms ease;
+}
+.dark .fl-donut-seg {
+  filter: none;
+}
+.fl-donut-seg[data-dim="true"] {
+  opacity: 0.35;
+}
+/* The ring's last tone is platinum, which is also the metal of the track, so the pale slice takes the darker stone. */
+.fl-donut-seg[data-pale="true"] {
+  --tone: var(--fl-platinum-shade);
+}
+.fl-donut-seg[data-on="true"] {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tone) 70%, transparent));
+}
+.fl-donut-value {
+  fill: var(--fl-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+.dark .fl-donut-value {
+  fill: #fff;
+}
+.fl-donut-caption {
+  fill: var(--fl-muted);
+  font-size: 6.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+.dark .fl-donut-caption {
+  fill: #a9b8cc;
+}
+
+/* Estimated against paid: one pair per category, both bars on the same scale. */
+.fl-pair-list {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+}
+.fl-pair {
+  border: 1px solid #e5edf8;
+  border-radius: 0.7rem;
+  padding: 0.5rem 0.6rem;
+  background: #fbfdff;
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+.dark .fl-pair {
+  border-color: rgb(255 255 255 / 8%);
+  background: rgb(255 255 255 / 2.5%);
+}
+/* Overspent is the Lab's own warning read: Cobalt, the same tone a negative balance already takes. */
+.fl-pair[data-over="true"] {
+  border-color: rgb(77 140 255 / 55%);
+  box-shadow: inset 0 0 18px rgb(77 140 255 / 8%);
+}
+.dark .fl-pair[data-over="true"] {
+  border-color: rgb(77 140 255 / 70%);
+}
+.fl-pair-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem;
+}
+.fl-pair-name {
+  color: var(--fl-ink);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.dark .fl-pair-name {
+  color: #fff;
+}
+.fl-pair-flag {
+  color: var(--fl-muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fl-pair[data-over="true"] .fl-pair-flag {
+  color: var(--fl-cobalt);
+  text-shadow: 0 0 12px rgb(77 140 255 / 35%);
+}
+.dark .fl-pair-flag {
+  color: #a9b8cc;
+}
+.dark .fl-pair[data-over="true"] .fl-pair-flag {
+  color: var(--fl-electric);
+  text-shadow: 0 0 14px rgb(77 140 255 / 55%);
+}
+.fl-pair-row {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr) 4.4rem;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.28rem;
+}
+.fl-pair-tag {
+  color: var(--fl-muted);
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dark .fl-pair-tag {
+  color: #a9b8cc;
+}
+.fl-pair-track {
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9f0fa;
+}
+.dark .fl-pair-track {
+  background: rgb(255 255 255 / 8%);
+}
+.fl-pair-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.fl-pair-row[data-kind="planned"] .fl-pair-track span {
+  background: var(--fl-platinum-shade);
+}
+.dark .fl-pair-row[data-kind="planned"] .fl-pair-track span {
+  background: var(--fl-platinum);
+  opacity: 0.75;
+}
+.fl-pair-row[data-kind="spent"] .fl-pair-track span {
+  background: linear-gradient(90deg, var(--fl-cobalt), var(--fl-electric));
+  box-shadow: 0 0 10px rgb(77 140 255 / 45%);
+}
+.fl-pair-row b {
+  color: var(--fl-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.dark .fl-pair-row b {
+  color: #fff;
+}
+.fl-pair[data-over="true"] .fl-pair-row[data-kind="spent"] b {
+  color: var(--fl-cobalt);
+}
+.dark .fl-pair[data-over="true"] .fl-pair-row[data-kind="spent"] b {
+  color: var(--fl-electric);
+}
+
+/* The breakeven crossing. */
+.fl-chart-empty {
+  margin-top: 0.7rem;
+  border: 1px dashed var(--fl-panel-rule);
+  border-radius: 0.75rem;
+  padding: 1rem 0.8rem;
+  color: var(--fl-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  text-align: center;
+}
+.dark .fl-chart-empty {
+  color: #a9b8cc;
+}
+.fl-breakeven {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 0.6rem;
+  overflow: visible;
+}
+.fl-breakeven-grid {
+  stroke: rgb(0 74 173 / 12%);
+  stroke-width: 1;
+}
+.dark .fl-breakeven-grid {
+  stroke: rgb(255 255 255 / 10%);
+}
+.fl-breakeven-cost {
+  stroke: var(--fl-platinum-shade);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+.dark .fl-breakeven-cost {
+  stroke: var(--fl-platinum);
+  opacity: 0.8;
+}
+.fl-breakeven-revenue {
+  stroke: var(--fl-cobalt);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgb(0 74 173 / 30%));
+}
+.dark .fl-breakeven-revenue {
+  stroke: var(--fl-electric);
+  filter: drop-shadow(0 0 6px rgb(77 140 255 / 65%));
+}
+.fl-breakeven-dot {
+  fill: var(--fl-gold);
+  stroke: var(--fl-gold-shade);
+  stroke-width: 1.2;
+  filter: drop-shadow(0 0 5px rgb(255 215 0 / 55%));
+}
+.fl-breakeven-sold {
+  stroke: var(--fl-electric);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.8;
+}
+.fl-breakeven-sold-dot {
+  fill: var(--fl-electric);
+  stroke: #fff;
+  stroke-width: 1;
+}
+.fl-breakeven-label {
+  fill: var(--fl-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 8px;
+}
+.dark .fl-breakeven-label {
+  fill: #a9b8cc;
+}
+/* The crossing label sits over the revenue line, so it carries a halo rather than a position that never collides. */
+.fl-breakeven-label-strong {
+  fill: var(--fl-ink);
+  stroke: #ffffff;
+  stroke-width: 2.6px;
+  paint-order: stroke;
+  stroke-linejoin: round;
+  font-weight: 800;
+  font-size: 8.5px;
+}
+.dark .fl-breakeven-label-strong {
+  fill: #fff;
+  stroke: #0b0b0b;
+}
+.fl-breakeven-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.8rem;
+  margin-top: 0.35rem;
+  color: var(--fl-muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+}
+.dark .fl-breakeven-key {
+  color: #a9b8cc;
+}
+.fl-breakeven-key i {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.28rem;
+  border-radius: 0.15rem;
+  vertical-align: middle;
+}
+.fl-breakeven-key i[data-tone="revenue"] {
+  background: var(--fl-cobalt);
+}
+.dark .fl-breakeven-key i[data-tone="revenue"] {
+  background: var(--fl-electric);
+}
+.fl-breakeven-key i[data-tone="cost"] {
+  background: var(--fl-platinum-shade);
+}
+.dark .fl-breakeven-key i[data-tone="cost"] {
+  background: var(--fl-platinum);
+}
+.fl-breakeven-key i[data-tone="profit"] {
+  background: var(--fl-cobalt);
+  opacity: 0.35;
+}
+
+/* The recoupment dial. */
+.fl-gauge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-top: 0.65rem;
+  border: 1px solid #e0eaf7;
+  border-radius: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  background: #fbfdff;
+}
+.dark .fl-gauge {
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(255 255 255 / 3%);
+}
+.fl-gauge-ring {
+  width: 7.25rem;
+  height: 7.25rem;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.fl-gauge-track {
+  fill: none;
+  stroke: #e4edf9;
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+.dark .fl-gauge-track {
+  stroke: rgb(255 255 255 / 9%);
+}
+.fl-gauge-fill {
+  fill: none;
+  stroke: var(--fl-cobalt);
+  stroke-width: 10;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgb(77 140 255 / 55%));
+  transition: stroke-dasharray 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.dark .fl-gauge-fill {
+  stroke: var(--fl-electric);
+}
+.fl-gauge-fill[data-done="true"] {
+  stroke: var(--fl-gold);
+  filter: drop-shadow(0 0 8px rgb(255 215 0 / 60%));
+}
+.fl-gauge-pct {
+  fill: var(--fl-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 15px;
+  font-weight: 800;
+}
+.dark .fl-gauge-pct {
+  fill: #fff;
+}
+.fl-gauge-read {
+  min-width: 0;
+  flex: 1 1 10rem;
+}
+.fl-gauge-read strong {
+  display: block;
+  color: var(--fl-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.45rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.dark .fl-gauge-read strong {
+  color: #fff;
+}
+.fl-gauge-read > span {
+  display: block;
+  color: var(--fl-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+.dark .fl-gauge-read > span {
+  color: #a9b8cc;
+}
+.fl-gauge-read em {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--fl-cobalt);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.dark .fl-gauge-read em {
+  color: var(--fl-electric);
+}
+.fl-gauge-read .fl-gauge-streams {
+  margin-top: 0.25rem;
+  font-size: 0.62rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-donut-seg,
+  .fl-pair,
+  .fl-pair-track span,
+  .fl-gauge-fill {
+    transition: none;
   }
 }

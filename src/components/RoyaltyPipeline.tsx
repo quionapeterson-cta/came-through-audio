@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, ExternalLink, Radio, ReceiptText, Shirt } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { RecoupGauge } from "@/components/LabCharts";
 import type { CatalogTrack } from "@/lib/catalog";
 import {
   PIPELINE_SHARES,
   SOUNDEXCHANGE,
   pipelineBuckets,
   pipelineState,
+  recoupmentProgress,
   recoupmentTargets,
   soundExchangeMath,
   type PipelineStage,
@@ -21,7 +23,8 @@ import {
 const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const count = (n: number) => n.toLocaleString("en-US");
 const percent = (n: number) => `${Math.round(n * 10) / 10}%`;
-const perPlay = (n: number) => `$${n.toFixed(4)}`;
+/** A rate's own four decimals: one play, or one stream, in the money it actually pays. */
+const unitMoney = (n: number) => `$${n.toFixed(4)}`;
 
 /** Each agency's own site, so a flagged registration is one click from the filing. */
 const AGENCY_URL: Record<string, string | undefined> = {
@@ -216,6 +219,8 @@ export function RoyaltyPipelinePanel({
     [pool, masterShare, songShare],
   );
   const bucket = (id: "master" | "pro" | "mlc") => buckets.find((b) => b.id === id)!;
+  // One stream's own money: the pool divided by the streams entered, so the bar carries cents rather than only shares.
+  const oneStream = streams > 0 ? Math.max(0, pool) / streams : 0;
   const sx = soundExchangeMath({
     plays: Number(sxPlays) || 0,
     rate: Number(sxRate) || 0,
@@ -344,35 +349,44 @@ export function RoyaltyPipelinePanel({
       <div
         className="fl-pipe-bar"
         role="img"
-        aria-label={`${percent(PIPELINE_SHARES.master * 100)} master, ${percent(PIPELINE_SHARES.pro * 100)} performance, ${percent(PIPELINE_SHARES.mlc * 100)} mechanical`}
+        aria-label={`One stream: ${unitMoney(oneStream * PIPELINE_SHARES.master)} to the master (${percent(
+          PIPELINE_SHARES.master * 100,
+        )}), ${unitMoney(oneStream * PIPELINE_SHARES.pro)} to the performance (${percent(
+          PIPELINE_SHARES.pro * 100,
+        )}) and ${unitMoney(oneStream * PIPELINE_SHARES.mlc)} to the mechanical (${percent(
+          PIPELINE_SHARES.mlc * 100,
+        )}).`}
       >
         <div className="fl-pipe-seg fl-pipe-seg-master" style={{ flex: 8 }}>
           <span>{percent(PIPELINE_SHARES.master * 100)}</span>
-          <small>MASTER</small>
+          <small>{unitMoney(oneStream * PIPELINE_SHARES.master)}</small>
         </div>
         <div className="fl-pipe-seg fl-pipe-seg-pro" style={{ flex: 1 }}>
           <span>{percent(PIPELINE_SHARES.pro * 100)}</span>
-          <small>PRO</small>
+          <small>{unitMoney(oneStream * PIPELINE_SHARES.pro)}</small>
         </div>
         <div className="fl-pipe-seg fl-pipe-seg-mlc" style={{ flex: 1 }}>
           <span>{percent(PIPELINE_SHARES.mlc * 100)}</span>
-          <small>MLC</small>
+          <small>{unitMoney(oneStream * PIPELINE_SHARES.mlc)}</small>
         </div>
       </div>
-      {/* The two 10% segments are too narrow for a word on a phone, so the same three shares are spelled out under the
-          bar there. The bar itself already carries the split for a screen reader. */}
+      {/* The bar's own segments are too narrow for a name, so the three buckets are always spelled out under it, with
+          the money one stream puts in each. The bar carries the same split for a screen reader. */}
       <ul className="fl-pipe-legend" aria-hidden="true">
         <li>
           <span className="fl-pipe-dot fl-pipe-dot-master" />
-          {percent(PIPELINE_SHARES.master * 100)} master
+          Master <b>{percent(PIPELINE_SHARES.master * 100)}</b> ·{" "}
+          {unitMoney(oneStream * PIPELINE_SHARES.master)} a stream
         </li>
         <li>
           <span className="fl-pipe-dot fl-pipe-dot-pro" />
-          {percent(PIPELINE_SHARES.pro * 100)} performance
+          PRO <b>{percent(PIPELINE_SHARES.pro * 100)}</b> ·{" "}
+          {unitMoney(oneStream * PIPELINE_SHARES.pro)}
         </li>
         <li>
           <span className="fl-pipe-dot fl-pipe-dot-mlc" />
-          {percent(PIPELINE_SHARES.mlc * 100)} mechanical
+          The MLC <b>{percent(PIPELINE_SHARES.mlc * 100)}</b> ·{" "}
+          {unitMoney(oneStream * PIPELINE_SHARES.mlc)}
         </li>
       </ul>
 
@@ -398,7 +412,7 @@ export function RoyaltyPipelinePanel({
             <Radio className="h-4 w-4" aria-hidden="true" /> SoundExchange
           </div>
           <p className="fl-pipe-sx-sub">
-            Pandora radio and webcasts — {count(sx.plays)} performances at {perPlay(sx.rate)} pay{" "}
+            Pandora radio and webcasts — {count(sx.plays)} performances at {unitMoney(sx.rate)} pay{" "}
             {money(sx.gross)}.{" "}
             {featured
               ? `You keep ${percent(sx.share * 100)} of it: the 45% featured-artist share, plus ${percent(
@@ -565,12 +579,15 @@ export function RoyaltyPipelinePanel({
  */
 export function RecoupmentPanel({
   target,
+  earned,
   streamCut,
   merchProfit,
   spotifyRate,
   appleRate,
 }: {
   target: string;
+  /** The Lab's projected take for the streams and plays already entered, read as money back on the project. */
+  earned: number;
   streamCut: number;
   merchProfit: number;
   spotifyRate: number;
@@ -588,18 +605,25 @@ export function RecoupmentPanel({
     appleRate,
     merchProfit,
   });
+  const progress = recoupmentProgress({
+    cost,
+    earned,
+    streamCut: cut,
+    spotifyRate,
+    appleRate,
+  });
   const tiles = [
     {
       id: "spotify",
       name: "Spotify",
-      note: `${perPlay(spotifyRate)} per stream`,
+      note: `${unitMoney(spotifyRate)} per stream`,
       units: targets.spotify,
       icon: Radio,
     },
     {
       id: "apple",
       name: "Apple Music",
-      note: `${perPlay(appleRate)} per stream`,
+      note: `${unitMoney(appleRate)} per stream`,
       units: targets.apple,
       icon: ReceiptText,
     },
@@ -651,6 +675,11 @@ export function RecoupmentPanel({
       <p className="fl-hint">
         Prefilled from the Budget Planner's target spend. Change the cost here and every target
         below follows it.
+      </p>
+
+      <RecoupGauge progress={progress} spotifyRate={spotifyRate} />
+      <p className="fl-hint">
+        Earned is the projection from the streams and plays entered above, not a payout statement.
       </p>
 
       <div className="fl-recoup-grid">
