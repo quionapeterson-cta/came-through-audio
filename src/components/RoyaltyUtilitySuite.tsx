@@ -753,9 +753,9 @@ function Earnings({
           <div>
             <h3 className="text-xl font-extrabold tracking-tight">Projected Royalty Earnings</h3>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              Rates start at published 2025 averages and stay editable. About{" "}
-              {Math.round(MASTER_PORTION * 100)}% of a stream goes to the master and{" "}
-              {Math.round((1 - MASTER_PORTION) * 100)}% to the song.
+              Rates start at the published average for each platform, checked against the source
+              beside it, and stay editable. About {Math.round(MASTER_PORTION * 100)}% of a stream
+              goes to the master and {Math.round((1 - MASTER_PORTION) * 100)}% to the song.
             </p>
           </div>
         </div>
@@ -852,11 +852,12 @@ function Earnings({
                 href={selectedSource.url}
                 target="_blank"
                 rel="noreferrer"
-                className="fl-ref-link"
+                className="fl-ref-link fl-ref-link-named"
                 title={`${selectedSource.label} source`}
                 aria-label={`${selectedSource.label} source`}
               >
                 <ExternalLink className="h-3 w-3" />
+                {selectedSource.label}
               </a>
             )}
           </p>
@@ -902,7 +903,11 @@ function Earnings({
             </output>
           </div>
         </div>
-        <p className="fl-platform-note">Performance royalties: the song side only.</p>
+        <p className="fl-platform-note">
+          Performance royalties: the song side only. Airplay pays through your PRO&apos;s blanket
+          licences, so there is no public per-play rate to prefill; digital radio&apos;s statutory
+          per-play rates sit in the Royalty Pipeline below.
+        </p>
       </div>
 
       <CopyDeck context={copyContext} />

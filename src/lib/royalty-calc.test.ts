@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
-import { convertBetween, estimateEarnings, songShareRows, yourSongShare } from "@/lib/royalty-calc";
+import {
+  PLATFORMS,
+  convertBetween,
+  estimateEarnings,
+  songShareRows,
+  yourSongShare,
+} from "@/lib/royalty-calc";
 
 describe("the financial lab", () => {
   it("moves shares between BMI's 200% scale and ASCAP/SESAC's 100% scale", () => {
@@ -23,6 +29,28 @@ describe("the financial lab", () => {
     // No publisher and BMI writers: BMI pays each their publisher share, at their writer split.
     expect(rows.filter((r) => r.half === "Publisher").map((r) => r.catalog)).toEqual([60, 40]);
     expect(yourSongShare(rows, ["Ann Lee"])).toBe(60);
+  });
+  it("opens every streaming platform on a published rate, and per-use only at zero", () => {
+    const byId = Object.fromEntries(PLATFORMS.map((p) => [p.id, p]));
+    for (const id of [
+      "spotify",
+      "apple",
+      "amazon",
+      "youtube_music",
+      "tidal",
+      "deezer",
+      "pandora",
+      "youtube",
+      "soundcloud",
+      "audiomack",
+    ])
+      expect(byId[id]?.rate, id).toBeGreaterThan(0);
+    // TikTok and Meta pay per video use, not per stream, so a per-stream default would be the wrong unit.
+    for (const id of ["tiktok", "meta"]) expect(byId[id]?.rate, id).toBe(0);
+    for (const p of PLATFORMS) {
+      expect(Number.isFinite(p.rate), p.id).toBe(true);
+      if (p.rate > 0) expect(p.source, p.id).toBeTruthy();
+    }
   });
   it("estimates your cut: about 80% of a stream pays the master side, 20% the song side", () => {
     const r = estimateEarnings({

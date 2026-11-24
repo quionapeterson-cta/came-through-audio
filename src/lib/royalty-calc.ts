@@ -53,18 +53,32 @@ export function songShareRows(
 }
 
 /**
- * Published average payouts per stream (USD, paid to all rights holders together): the middle of each 2025 range in
- * the cited source. Platforms with no published average start at 0 so nobody mistakes a guess for a rate; every
- * rate is editable. Real rates vary by country, subscription tier and deal.
+ * Published average payouts per stream (USD, paid to all rights holders together), checked against each source in
+ * 2026. No interactive service publishes a fixed per-stream rate: each pools its revenue and splits it by share of
+ * streams, so these are the averages the cited pages report and every rate is editable. A platform that pays per video
+ * use rather than per stream (TikTok, Instagram/Facebook) starts at 0, because a per-stream figure there would be the
+ * wrong unit. Real rates vary by country, subscription tier and deal.
  */
 export const RATE_SOURCES = {
   re: {
-    label: "Royalty Exchange (2025)",
-    url: "https://royaltyexchange.com/blog/how-music-streaming-platforms-calculate-payouts-per-stream-2025",
+    label: "Royalty Exchange (2026)",
+    url: "https://royaltyexchange.com/blog/how-much-do-streaming-platforms-pay-per-stream",
   },
   isrc: {
     label: "ISRC.com (2025)",
     url: "https://isrc.com/how-much-streaming-services-pay-artists-per-play-2025.php",
+  },
+  contentId: {
+    label: "RouteNote (2025)",
+    url: "https://routenote.com/blog/how-much-music-streaming-services-pay/",
+  },
+  soundcloud: {
+    label: "SoundCloud payout comparison (2026)",
+    url: "https://soundcloud.com/topic/category/which-music-streaming-service-pays-artists-the-most",
+  },
+  audiomack: {
+    label: "Audiomack monetization (2026)",
+    url: "https://creators.audiomack.com/monetization",
   },
 } as const;
 export const PLATFORMS: {
@@ -96,32 +110,35 @@ export const PLATFORMS: {
   {
     id: "youtube",
     name: "YouTube (videos)",
-    rate: 0,
-    note: "No published per-stream average. Enter your own.",
+    rate: 0.00087,
+    source: "contentId",
+    note: "Content ID pays per video that uses your music, not per music stream.",
   },
   {
     id: "soundcloud",
     name: "SoundCloud",
-    rate: 0,
-    note: "No published per-stream average. Enter your own.",
+    rate: 0.003,
+    source: "soundcloud",
+    note: "Fan-powered royalties: about $0.0025–$0.004 a stream.",
   },
   {
     id: "audiomack",
     name: "Audiomack",
-    rate: 0,
-    note: "No published per-stream average. Enter your own.",
+    rate: 0.003,
+    source: "audiomack",
+    note: "AMP pays 50% of its monthly revenue per stream: about $0.001–$0.005.",
   },
   {
     id: "tiktok",
     name: "TikTok",
     rate: 0,
-    note: "Paid per video use, not per stream. Enter your own.",
+    note: "No per-stream rate: paid per video that uses your music. Enter your own.",
   },
   {
     id: "meta",
     name: "Instagram / Facebook",
     rate: 0,
-    note: "Paid per video use, not per stream. Enter your own.",
+    note: "No per-stream rate: paid per video that uses your music. Enter your own.",
   },
 ];
 

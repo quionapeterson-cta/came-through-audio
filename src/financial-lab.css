@@ -719,6 +719,19 @@
 .fl-ref-link:focus-visible {
   opacity: 1;
 }
+/* A source link that spells out its name beside the icon is read, not glanced at, so it keeps full contrast instead
+   of the faded icon-only treatment above. */
+.fl-ref-link-named {
+  gap: 0.3rem;
+  opacity: 1;
+  color: #1b57c9;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dark .fl-ref-link-named {
+  color: #9db8ff;
+}
 
 .fl-telemetry {
   margin-top: 0.25rem;
