@@ -670,7 +670,9 @@ function Earnings({
   budgetCap: string;
   merchMargin: { price: number; cost: number };
 }) {
-  const [streams, setStreams] = useState<Record<string, string>>({ spotify: "100000" });
+  // The Lab opens on no streams entered: a pre-filled count would put a projection on screen that isn't the member's
+  // own (founder, 2026-11-24).
+  const [streams, setStreams] = useState<Record<string, string>>({ spotify: "0" });
   const [rates, setRates] = useState<Record<string, string>>(() =>
     Object.fromEntries(PLATFORMS.map((p) => [p.id, String(p.rate)])),
   );

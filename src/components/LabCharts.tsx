@@ -279,7 +279,7 @@ export function BreakevenChartView({
       </svg>
       <div className="fl-breakeven-key" aria-hidden="true">
         <span>
-          <i data-tone="revenue" /> Revenue {money4(price)} a unit
+          <i data-tone="revenue" /> Revenue {money(price)} a unit
         </span>
         <span>
           <i data-tone="cost" /> Run cost {money(chart.upfront)}
