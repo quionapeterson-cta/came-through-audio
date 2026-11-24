@@ -55,10 +55,10 @@ export function songShareRows(
 /**
  * Published average payouts per stream (USD, paid to all rights holders together), checked against each source in
  * 2026. No interactive service publishes a fixed per-stream rate: each pools its revenue and splits it by share of
- * streams, so these are the averages the cited pages report and every rate is editable. Audiomack starts at 0 because
- * it publishes no per-stream figure, only its 50% revenue share. A platform that pays per video use rather than per
- * stream (TikTok, Instagram/Facebook) starts at 0 too, because a per-stream figure there would be the wrong unit. Real
- * rates vary by country, subscription tier and deal.
+ * streams, so these are the averages the cited pages report and every rate is editable. Audiomack publishes only its
+ * 50% revenue share, so its default is the published estimate range's midpoint and the member can replace it with
+ * their own statement totals. A platform that pays per video use rather than per stream (TikTok, Instagram/Facebook)
+ * starts at 0, because a per-stream figure there would be the wrong unit. Real rates vary by country, tier and deal.
  */
 export const RATE_SOURCES = {
   re: {
@@ -78,8 +78,8 @@ export const RATE_SOURCES = {
     url: "https://soundcloud.com/topic/category/which-music-streaming-service-pays-artists-the-most",
   },
   audiomack: {
-    label: "Audiomack monetization (2026)",
-    url: "https://creators.audiomack.com/monetization",
+    label: "Audiomack payout comparison (2026)",
+    url: "https://soundcloud.com/topic/category/how-much-does-audiomack-pay-per-stream",
   },
 } as const;
 export const PLATFORMS: {
@@ -125,9 +125,9 @@ export const PLATFORMS: {
   {
     id: "audiomack",
     name: "Audiomack",
-    rate: 0,
+    rate: 0.004,
     source: "audiomack",
-    note: "No published per-stream rate: AMP pays 50% of its monthly revenue per stream. Enter your own.",
+    note: "Estimate only: AMP pays 50% of its monthly revenue per stream, about $0.003–$0.005.",
   },
   {
     id: "tiktok",
@@ -142,6 +142,26 @@ export const PLATFORMS: {
     note: "No per-stream rate: paid per video that uses your music. Enter your own.",
   },
 ];
+
+/**
+ * A typed count is kept as plain digits, so the maths never has to read a comma, and shown with its thousands
+ * separated, so 1250000 reads as 1,250,000. Grouping is done on the string rather than through Number, so a long
+ * paste keeps every digit instead of rounding.
+ */
+export const countDigits = (value: string) => value.replace(/\D/g, "");
+export const groupCount = (value: string) => {
+  const digits = countDigits(value).replace(/^0+(?=\d)/, "");
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
+/**
+ * A member's own average from two pasted totals: what a platform paid and the streams it paid for. Null until both
+ * are positive, so an empty or half-filled statement can never become a rate of zero.
+ */
+export const rateFromTotals = (paid: number, streams: number): number | null => {
+  if (!Number.isFinite(paid) || !Number.isFinite(streams) || paid <= 0 || streams <= 0) return null;
+  return paid / streams;
+};
 
 /**
  * Roughly how a streaming payout splits between the recording and the song: about 80% to the master side, 20% to

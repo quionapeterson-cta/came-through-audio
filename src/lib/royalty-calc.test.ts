@@ -3,7 +3,10 @@ import { emptyMetadata } from "@/lib/metadata";
 import {
   PLATFORMS,
   convertBetween,
+  countDigits,
   estimateEarnings,
+  groupCount,
+  rateFromTotals,
   songShareRows,
   yourSongShare,
 } from "@/lib/royalty-calc";
@@ -30,6 +33,25 @@ describe("the financial lab", () => {
     expect(rows.filter((r) => r.half === "Publisher").map((r) => r.catalog)).toEqual([60, 40]);
     expect(yourSongShare(rows, ["Ann Lee"])).toBe(60);
   });
+  it("groups a typed stream or play count in threes, and keeps only its digits for the maths", () => {
+    expect(groupCount("1250000")).toBe("1,250,000");
+    expect(groupCount("1000")).toBe("1,000");
+    expect(groupCount("999")).toBe("999");
+    expect(groupCount("0000")).toBe("0");
+    expect(groupCount("")).toBe("");
+    expect(countDigits("1,250,000")).toBe("1250000");
+    expect(countDigits("12 345abc")).toBe("12345");
+    // A count longer than Number can hold keeps every digit rather than turning into 1e+21.
+    expect(groupCount("1234567890123456789012")).toBe("1,234,567,890,123,456,789,012");
+  });
+  it("turns a member's own statement totals into their average rate", () => {
+    expect(rateFromTotals(12.5, 5000)).toBeCloseTo(0.0025);
+    expect(rateFromTotals(1250, 250000)).toBeCloseTo(0.005);
+    // A blank, half-filled or nonsense statement is no rate at all, never zero.
+    expect(rateFromTotals(0, 5000)).toBeNull();
+    expect(rateFromTotals(12.5, 0)).toBeNull();
+    expect(rateFromTotals(Number.NaN, 100)).toBeNull();
+  });
   it("opens every streaming platform on a published rate, and per-use only at zero", () => {
     const byId = Object.fromEntries(PLATFORMS.map((p) => [p.id, p]));
     for (const id of [
@@ -42,10 +64,9 @@ describe("the financial lab", () => {
       "pandora",
       "youtube",
       "soundcloud",
+      "audiomack",
     ])
       expect(byId[id]?.rate, id).toBeGreaterThan(0);
-    // Audiomack publishes only its 50% revenue share, no per-stream figure, so it stays at 0 rather than guessing.
-    expect(byId["audiomack"]?.rate).toBe(0);
     // TikTok and Meta pay per video use, not per stream, so a per-stream default would be the wrong unit.
     for (const id of ["tiktok", "meta"]) expect(byId[id]?.rate, id).toBe(0);
     for (const p of PLATFORMS) {

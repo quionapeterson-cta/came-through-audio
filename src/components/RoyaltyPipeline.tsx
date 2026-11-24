@@ -3,6 +3,8 @@ import { Check, ExternalLink, Radio, ReceiptText, Shirt } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { RecoupGauge } from "@/components/LabCharts";
 import type { CatalogTrack } from "@/lib/catalog";
+import { countDigits, groupCount } from "@/lib/royalty-calc";
+import { cn } from "@/lib/utils";
 import {
   PIPELINE_SHARES,
   SOUNDEXCHANGE,
@@ -221,6 +223,7 @@ export function RoyaltyPipelinePanel({
   const bucket = (id: "master" | "pro" | "mlc") => buckets.find((b) => b.id === id)!;
   // One stream's own money: the pool divided by the streams entered, so the bar carries cents rather than only shares.
   const oneStream = streams > 0 ? Math.max(0, pool) / streams : 0;
+  const shownSxPlays = groupCount(sxPlays);
   const sx = soundExchangeMath({
     plays: Number(sxPlays) || 0,
     rate: Number(sxRate) || 0,
@@ -346,6 +349,10 @@ export function RoyaltyPipelinePanel({
         <span className="fl-chip ml-auto">{count(streams)} STREAMS</span>
       </div>
 
+      <div className="fl-step-label mt-3">
+        <span className="fl-step-num">1</span> Read where the stream pool goes
+      </div>
+
       <div
         className="fl-pipe-bar"
         role="img"
@@ -390,6 +397,10 @@ export function RoyaltyPipelinePanel({
         </li>
       </ul>
 
+      <div className="fl-step-label mt-3">
+        <span className="fl-step-num">2</span> Mark the registrations you&apos;ve filed
+      </div>
+
       <div className="fl-pipe-grid">
         {cards.map((card) => (
           <BucketCard
@@ -404,6 +415,10 @@ export function RoyaltyPipelinePanel({
             onToggle={toggle}
           />
         ))}
+      </div>
+
+      <div className="fl-step-label mt-3">
+        <span className="fl-step-num">3</span> Add your non-interactive plays
       </div>
 
       <div className="fl-pipe-sx">
@@ -453,12 +468,19 @@ export function RoyaltyPipelinePanel({
             <label htmlFor="fl-sx-plays">Plays</label>
             <Input
               id="fl-sx-plays"
-              type="number"
-              min={0}
+              type="text"
               inputMode="numeric"
-              className="fl-input fl-mono h-8 w-full text-right"
-              value={sxPlays}
-              onChange={(event) => setSxPlays(event.target.value)}
+              autoComplete="off"
+              className={cn(
+                "fl-input fl-mono fl-count h-8 w-full text-right",
+                shownSxPlays.length > 12 && "fl-count-long",
+              )}
+              value={shownSxPlays}
+              placeholder="0"
+              onFocus={(event) => {
+                if (event.currentTarget.value === "0") event.currentTarget.select();
+              }}
+              onChange={(event) => setSxPlays(countDigits(event.target.value))}
             />
           </div>
           <div className="fl-field">
@@ -652,6 +674,10 @@ export function RecoupmentPanel({
         <span className="fl-chip ml-auto">FROM YOUR BUDGET</span>
       </div>
 
+      <div className="fl-step-label mt-3">
+        <span className="fl-step-num">1</span> Name the project cost
+      </div>
+
       <div className="fl-recoup-controls">
         <div className="fl-field">
           <label htmlFor="fl-recoup-cost">Project cost ($)</label>
@@ -677,6 +703,9 @@ export function RecoupmentPanel({
           : "Name the cost here, or set a target spend in the Budget Planner and it fills in."}
       </p>
 
+      <div className="fl-step-label mt-3">
+        <span className="fl-step-num">2</span> Read what it takes to earn it back
+      </div>
       <RecoupGauge progress={progress} spotifyRate={spotifyRate} />
       <p className="fl-hint">
         Earned is the projection from the streams and plays entered above, not a payout statement.

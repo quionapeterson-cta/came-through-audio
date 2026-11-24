@@ -440,6 +440,15 @@
   color: #fff;
   border-bottom-color: rgb(255 255 255 / 28%);
 }
+/* A grouped count (1,250,000) runs longer than a bare one, so a count box keeps a slightly smaller type and a phone
+   still shows every digit instead of clipping the leading ones. */
+.fl-input.fl-count {
+  font-size: 0.8rem;
+}
+/* Past a billion the grouped count needs one more step down, or the narrowest count box would hide its leading digits. */
+.fl-input.fl-count-long {
+  font-size: 0.7rem;
+}
 .fl-input:focus-visible {
   outline: none;
   border-bottom-color: var(--fl-electric);
@@ -731,6 +740,39 @@
 }
 .dark .fl-ref-link-named {
   color: #9db8ff;
+}
+
+/* The member's own averages, under the published rate: two pasted totals and the rate they imply. */
+.fl-ownavg {
+  margin-top: 0.6rem;
+  border: 1px dashed #c9dcf2;
+  border-radius: 0.55rem;
+  padding: 0.5rem 0.55rem;
+  background: #f6faff;
+}
+.dark .fl-ownavg {
+  border-color: rgb(255 255 255 / 14%);
+  background: #0c141e;
+}
+.fl-ownavg-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--fl-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fl-ownavg-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.fl-ownavg-foot .fl-ghost-btn {
+  flex: 0 0 auto;
 }
 
 .fl-telemetry {

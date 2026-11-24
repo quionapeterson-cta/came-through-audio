@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
   type CSSProperties,
+  type FocusEvent as ReactFocusEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
@@ -57,7 +58,10 @@ import {
   PRO_SCALES,
   RATE_SOURCES,
   convertBetween,
+  countDigits,
   estimateEarnings,
+  groupCount,
+  rateFromTotals,
   songShareRows,
   yourSongShare,
   type ProScale,
@@ -75,6 +79,15 @@ import { cn } from "@/lib/utils";
 
 const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const pct = (n: number) => `${Math.round(n * 100) / 100}%`;
+/** A per-stream rate's own decimals: four is enough for a statement average, six for a very small one. */
+const rateMoney = (n: number) => `$${n.toFixed(n >= 0.0001 ? 4 : 6)}`;
+/**
+ * A count box that opens on 0 is right-aligned, so a click lands the caret before that zero and the first digit typed
+ * turns 0 into 10. Selecting the lone zero makes the first keystroke replace it, the way a number field would.
+ */
+const selectZero = (event: ReactFocusEvent<HTMLInputElement>) => {
+  if (event.currentTarget.value === "0") event.currentTarget.select();
+};
 const SCALES = Object.keys(PRO_SCALES) as ProScale[];
 
 /**
@@ -513,7 +526,57 @@ function Converter({
         <span className="fl-chip">PRO SHARE</span>
       </div>
 
-      <SplitMeter values={totals} />
+      <div className="mt-3">
+        <div className="fl-step-label">
+          <span className="fl-step-num">1</span> Choose a song above, or enter the share by hand
+        </div>
+        <p className="fl-hint">
+          Country and song sit at the top of this tab. A song brings its catalog splits; with no
+          song, type one share and pick the scale it is written on.
+        </p>
+      </div>
+
+      {!song && (
+        <div className="fl-manual mt-3">
+          <div className="fl-field">
+            <Label htmlFor="calc-from">Convert from</Label>
+            <select
+              id="calc-from"
+              value={from}
+              onChange={(e) => setFrom(e.target.value as ProScale)}
+              className="fl-select"
+            >
+              {SCALES.map((k) => (
+                <option key={k} value={k}>
+                  {PRO_SCALES[k].name} ({PRO_SCALES[k].total}%)
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="fl-field">
+            <Label htmlFor="calc-value">Share (%)</Label>
+            <Input
+              id="calc-value"
+              type="number"
+              min={0}
+              max={PRO_SCALES[from].total}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              className="fl-input fl-mono"
+            />
+          </div>
+          <p className="fl-hint sm:col-span-2">
+            The meter and every agency copy update as you type. Nothing is saved to the catalog.
+          </p>
+        </div>
+      )}
+
+      <div className="mt-3">
+        <div className="fl-step-label">
+          <span className="fl-step-num">2</span> Read each society&apos;s converted shares
+        </div>
+        <SplitMeter values={totals} />
+      </div>
 
       {song ? (
         visibleRows.length ? (
@@ -578,40 +641,7 @@ function Converter({
             hand” above.
           </p>
         )
-      ) : (
-        <div className="fl-manual">
-          <div className="fl-field">
-            <Label htmlFor="calc-from">Convert from</Label>
-            <select
-              id="calc-from"
-              value={from}
-              onChange={(e) => setFrom(e.target.value as ProScale)}
-              className="fl-select"
-            >
-              {SCALES.map((k) => (
-                <option key={k} value={k}>
-                  {PRO_SCALES[k].name} ({PRO_SCALES[k].total}%)
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="fl-field">
-            <Label htmlFor="calc-value">Share (%)</Label>
-            <Input
-              id="calc-value"
-              type="number"
-              min={0}
-              max={PRO_SCALES[from].total}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="fl-input fl-mono"
-            />
-          </div>
-          <p className="fl-hint sm:col-span-2">
-            The meter and every agency copy update as you type. Nothing is saved to the catalog.
-          </p>
-        </div>
-      )}
+      ) : null}
 
       {!us && (
         <p className="fl-note">
@@ -623,7 +653,12 @@ function Converter({
       <p className="fl-hint">
         Country: {countryName}. Shares are catalog values; no calculation was changed.
       </p>
-      <CopyDeck context={copyContext} showFullReport={false} />
+      <div className="mt-3">
+        <div className="fl-step-label">
+          <span className="fl-step-num">3</span> Copy the result for your agency
+        </div>
+        <CopyDeck context={copyContext} showFullReport={false} />
+      </div>
     </section>
   );
 }
@@ -673,6 +708,9 @@ function Earnings({
   // The Lab opens on no streams entered: a pre-filled count would put a projection on screen that isn't the member's
   // own (founder, 2026-11-24).
   const [streams, setStreams] = useState<Record<string, string>>({ spotify: "0" });
+  // The member's own statement totals for the platform in view: pasting a payout and its streams gives their real
+  // average, which they can apply over the published default.
+  const [own, setOwn] = useState({ paid: "", streams: "" });
   const [rates, setRates] = useState<Record<string, string>>(() =>
     Object.fromEntries(PLATFORMS.map((p) => [p.id, String(p.rate)])),
   );
@@ -703,6 +741,21 @@ function Earnings({
   });
   const selected = PLATFORMS.find((p) => p.id === platform) ?? PLATFORMS[0]!;
   const selectedRow = r.platforms.find((x) => x.id === selected.id)!;
+  // What the two count boxes show: grouped digits, with a smaller size once the number outgrows the box.
+  const shownStreams = groupCount(streams[selected.id] ?? "");
+  const shownPlays = groupCount(radio.plays);
+  const longCount = (shown: string) => (shown.length > 12 ? "fl-count-long" : "");
+  const ownRate = rateFromTotals(Number(own.paid) || 0, Number(own.streams) || 0);
+
+  // A pasted statement belongs to the platform it came from: switching platforms starts the paste clean.
+  useEffect(() => setOwn({ paid: "", streams: "" }), [selected.id]);
+
+  function useOwnAverage() {
+    if (ownRate === null) return;
+    setRates((current) => ({ ...current, [selected.id]: String(Number(ownRate.toFixed(6))) }));
+    setPulse((p) => p + 1);
+    toast.success(`${selected.name} now uses your own average of ${rateMoney(ownRate)} a stream.`);
+  }
   const selectedSource = selected.source ? RATE_SOURCES[selected.source] : undefined;
   const enteredCount = PLATFORMS.filter((p) => Number(streams[p.id]) > 0).length;
   const enteredLabel =
@@ -759,7 +812,20 @@ function Earnings({
             </p>
           </div>
         </div>
-        <span className="fl-chip">{song ? song.title : "MANUAL SHARES"}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="fl-chip">STEP 1–4</span>
+          <span className="fl-chip">{song ? song.title : "MANUAL SHARES"}</span>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div className="fl-step-label">
+          <span className="fl-step-num">1</span> Set your share of the master and the song
+        </div>
+        <p className="fl-hint">
+          From your split sheet: the master share you own and the song share you hold. The combined
+          cut is what one stream pays you.
+        </p>
       </div>
 
       <div className="fl-controls">
@@ -794,7 +860,15 @@ function Earnings({
       </div>
 
       <div className="fl-platform-block">
-        <div className="fl-field">
+        <div className="fl-step-label">
+          <span className="fl-step-num">2</span> Pick each platform you&apos;re on and add its
+          streams
+        </div>
+        <p className="fl-hint">
+          Choose a platform, type its streams, then switch to the next. Each platform keeps its own
+          count, and your total adds them all together.
+        </p>
+        <div className="fl-field mt-2">
           <Label htmlFor="earn-platform">Platform</Label>
           <Select value={platform} onValueChange={setPlatform}>
             <SelectTrigger id="earn-platform" className="fl-select">
@@ -815,12 +889,17 @@ function Earnings({
             <Label htmlFor="earn-streams">Streams</Label>
             <Input
               id="earn-streams"
-              type="number"
-              min={0}
-              className="fl-input fl-mono h-8 w-full text-right"
-              value={streams[selected.id] ?? ""}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              className={cn(
+                "fl-input fl-mono fl-count h-8 w-full text-right",
+                longCount(shownStreams),
+              )}
+              value={shownStreams}
               placeholder="0"
-              onChange={(e) => setStream(selected.id, e.target.value)}
+              onFocus={selectZero}
+              onChange={(e) => setStream(selected.id, countDigits(e.target.value))}
             />
           </div>
           <div className="fl-field">
@@ -865,21 +944,87 @@ function Earnings({
         <p className="fl-platform-note">
           {enteredLabel} Switching platforms keeps every number you type.
         </p>
+
+        <div className="fl-ownavg">
+          <div className="fl-ownavg-head">
+            <ReceiptText className="h-3.5 w-3.5" aria-hidden="true" /> Use your own totals
+          </div>
+          <div className="fl-platform-grid">
+            <div className="fl-field">
+              <Label htmlFor="earn-own-paid">Total paid ($)</Label>
+              <Input
+                id="earn-own-paid"
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                className="fl-input fl-mono h-8 w-full text-right"
+                value={own.paid}
+                placeholder="0.00"
+                onChange={(e) => setOwn({ ...own, paid: e.target.value.replace(/[^0-9.]/g, "") })}
+              />
+            </div>
+            <div className="fl-field">
+              <Label htmlFor="earn-own-streams">Streams</Label>
+              <Input
+                id="earn-own-streams"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                className={cn(
+                  "fl-input fl-mono fl-count h-8 w-full text-right",
+                  longCount(groupCount(own.streams)),
+                )}
+                value={groupCount(own.streams)}
+                placeholder="0"
+                onFocus={selectZero}
+                onChange={(e) => setOwn({ ...own, streams: countDigits(e.target.value) })}
+              />
+            </div>
+            <div className="fl-field">
+              <Label htmlFor="earn-own-average">Your average</Label>
+              <output id="earn-own-average" className="fl-estimate">
+                {ownRate === null ? "—" : rateMoney(ownRate)}
+              </output>
+            </div>
+          </div>
+          <div className="fl-ownavg-foot">
+            <button
+              type="button"
+              className="fl-ghost-btn disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={useOwnAverage}
+              disabled={ownRate === null}
+            >
+              Use this rate for {selected.name}
+            </button>
+            <span className="fl-platform-note !mt-0">
+              Paste a distributor statement&apos;s total and its streams for any period. It replaces
+              the published rate above for this platform only.
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="fl-platform-block">
-        <h4 className="fl-block-title">Radio, SiriusXM and live</h4>
+        <h4 className="fl-step-label">
+          <span className="fl-step-num">3</span> Add radio, SiriusXM and live plays
+        </h4>
         <div className="fl-platform-grid">
           <div className="fl-field">
             <Label htmlFor="earn-radio-plays">Plays</Label>
             <Input
               id="earn-radio-plays"
-              type="number"
-              min={0}
-              className="fl-input fl-mono h-8 w-full text-right"
-              value={radio.plays}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              className={cn(
+                "fl-input fl-mono fl-count h-8 w-full text-right",
+                longCount(shownPlays),
+              )}
+              value={shownPlays}
+              placeholder="0"
+              onFocus={selectZero}
               onChange={(e) => {
-                setRadio({ ...radio, plays: e.target.value });
+                setRadio({ ...radio, plays: countDigits(e.target.value) });
                 setPulse((p) => p + 1);
               }}
             />
@@ -910,7 +1055,12 @@ function Earnings({
         </p>
       </div>
 
-      <CopyDeck context={copyContext} />
+      <div className="mt-4">
+        <div className="fl-step-label">
+          <span className="fl-step-num">4</span> Copy the breakdown for your notes
+        </div>
+        <CopyDeck context={copyContext} />
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
         <Telemetry r={r} streams={streams} rates={rates} />
