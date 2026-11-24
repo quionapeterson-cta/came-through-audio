@@ -211,6 +211,9 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
   // No shirt margin until the merch calculator reports one: a preset margin here would price the recoupment panel's
   // shirts tile with a run nobody made (founder, 2026-11-24).
   const [merchMargin, setMerchMargin] = useState({ price: 0, cost: 0 });
+  // One click carries the member between the recoupment tool and the merch calculator, so the "Set a merch price" note
+  // lands on the field it names. The anchor scrolls after the tab has rendered, never during the click (2026-11-24).
+  const [anchor, setAnchor] = useState<string | null>(null);
   const theme = useLabTheme();
   const song = tracks.find((t) => t.id === songId);
   const rows = useMemo(() => (song ? songShareRows(song.metadata) : []), [song]);
@@ -229,6 +232,19 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
       /* storage blocked */
     }
   }, []);
+
+  useEffect(() => {
+    if (!anchor) return;
+    document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // The clicked link lives in the panel that just went hidden, so focus moves to the tab that is now open.
+    document.getElementById(`fl-tab-${tab}`)?.focus({ preventScroll: true });
+    setAnchor(null);
+  }, [anchor, tab]);
+
+  function openTab(next: LabTab, anchorId: string) {
+    setTab(next);
+    setAnchor(anchorId);
+  }
 
   function setSparkle(on: boolean) {
     setBedazzle(on);
@@ -331,11 +347,17 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
                 bedazzle={bedazzle}
                 budgetCap={budgetCap}
                 merchMargin={merchMargin}
+                onOpenMerch={() => openTab("merch", "fl-panel-merch")}
               />
             </div>
           )}
           {item.id === "budget" && <LabBudgetPlanner target={budgetCap} onTarget={setBudgetCap} />}
-          {item.id === "merch" && <LabMerchCalculator onMarginChange={setMerchMargin} />}
+          {item.id === "merch" && (
+            <LabMerchCalculator
+              onMarginChange={setMerchMargin}
+              onOpenRecoupment={() => openTab("royalty", "fl-recoupment")}
+            />
+          )}
         </div>
       ))}
       <p className="fl-footnote">
@@ -697,6 +719,7 @@ function Earnings({
   bedazzle,
   budgetCap,
   merchMargin,
+  onOpenMerch,
 }: {
   tracks: CatalogTrack[];
   song: CatalogTrack | undefined;
@@ -705,6 +728,7 @@ function Earnings({
   bedazzle: boolean;
   budgetCap: string;
   merchMargin: { price: number; cost: number };
+  onOpenMerch?: () => void;
 }) {
   // The Lab opens on no streams entered: a pre-filled count would put a projection on screen that isn't the member's
   // own (founder, 2026-11-24).
@@ -1100,6 +1124,7 @@ function Earnings({
         merchProfit={merchMargin.price - merchMargin.cost}
         spotifyRate={Number(rates["spotify"]) || 0}
         appleRate={Number(rates["apple"]) || 0}
+        onOpenMerch={onOpenMerch}
       />
 
       <TotalDock total={r.yours} context={copyContext} pulse={pulse} bedazzle={bedazzle} />

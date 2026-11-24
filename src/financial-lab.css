@@ -3378,3 +3378,51 @@
   fill: #fff;
   filter: drop-shadow(0 0 3px rgb(255 255 255 / 60%)) drop-shadow(0 0 8px rgb(77 140 255 / 45%));
 }
+
+/* A jump between the recoupment tool and the merch calculator (founder, 2026-11-24). */
+.fl-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: var(--fl-cobalt);
+  font-size: inherit;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+.fl-jump:hover {
+  text-decoration-style: solid;
+}
+.fl-jump:focus-visible {
+  border-radius: 0.35rem;
+  outline: 2px solid var(--fl-cobalt);
+  outline-offset: 2px;
+}
+.dark .fl-jump {
+  color: #4d8cff;
+}
+.dark .fl-jump:focus-visible {
+  outline-color: #4d8cff;
+}
+/* The tile's own type is small, so the link keeps its look but gains a real tap area. */
+.fl-recoup-name .fl-jump {
+  min-height: 1.5rem;
+  margin: -0.22rem -0.4rem;
+  padding: 0.22rem 0.4rem;
+  border-radius: 0.45rem;
+}
+#fl-recoupment,
+#fl-panel-merch {
+  scroll-margin-top: 6rem;
+}
+/* The pre-launch bar is fixed and wraps to several lines on a phone, so a jump clears its full height. */
+@media (max-width: 640px) {
+  #fl-recoupment,
+  #fl-panel-merch {
+    scroll-margin-top: 22rem;
+  }
+}

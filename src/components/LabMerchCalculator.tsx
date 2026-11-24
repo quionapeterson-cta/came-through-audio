@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
+  ArrowUpRight,
   CircleDollarSign,
   Gauge,
   Package,
@@ -47,9 +48,12 @@ const STATE_COPY = {
 
 export function LabMerchCalculator({
   onMarginChange,
+  onOpenRecoupment,
 }: {
   /** Reports the live price and unit cost so the Lab's recoupment tool can price a shirt recovery. */
   onMarginChange?: (margin: { price: number; cost: number }) => void;
+  /** Sends the member back to the recoupment tool that asked for a merch price. */
+  onOpenRecoupment?: (() => void) | undefined;
 } = {}) {
   // The panel opens empty: every figure here is the artist's own invoice, and a product chip fills a typical estimate
   // they can replace rather than one already sitting there as if it were theirs (founder, 2026-11-24).
@@ -156,6 +160,12 @@ export function LabMerchCalculator({
                 Three numbers and one slider: what the run costs, the unit that pays it back and the
                 cash left when you sell through.
               </p>
+              {onOpenRecoupment && (
+                <button type="button" className="fl-jump mt-2" onClick={onOpenRecoupment}>
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  Back to Recoupment
+                </button>
+              )}
             </div>
           </div>
           <span className="fl-chip">{product ? presetOf(product).name : "No product yet"}</span>

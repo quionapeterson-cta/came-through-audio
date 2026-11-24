@@ -606,6 +606,7 @@ export function RecoupmentPanel({
   merchProfit,
   spotifyRate,
   appleRate,
+  onOpenMerch,
 }: {
   target: string;
   /** The Lab's projected take for the streams and plays already entered, read as money back on the project. */
@@ -614,6 +615,8 @@ export function RecoupmentPanel({
   merchProfit: number;
   spotifyRate: number;
   appleRate: number;
+  /** Carries the member to the merch calculator when a shirt target needs a price it has not got yet. */
+  onOpenMerch?: (() => void) | undefined;
 }) {
   const [value, setValue] = useState(target);
   // The Budget Planner's target spend is the prefill: change it there and every target here moves with it.
@@ -659,7 +662,11 @@ export function RecoupmentPanel({
   ];
 
   return (
-    <section className="fl-telemetry fl-pipe" aria-label="Recoupment and goal reality">
+    <section
+      id="fl-recoupment"
+      className="fl-telemetry fl-pipe"
+      aria-label="Recoupment and goal reality"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="fl-eyebrow flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em]">
@@ -721,7 +728,14 @@ export function RecoupmentPanel({
                   <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   {tile.name}
                 </span>
-                <em>{tile.note}</em>
+                {/* Without a price there is no shirt target, so the note becomes the way to the field that sets one. */}
+                {tile.id === "merch" && merchProfit <= 0 && onOpenMerch ? (
+                  <button type="button" className="fl-jump" onClick={onOpenMerch}>
+                    Set a merch price
+                  </button>
+                ) : (
+                  <em>{tile.note}</em>
+                )}
               </div>
               <div className="fl-recoup-number">
                 {tile.units === null ? "—" : count(tile.units)}
