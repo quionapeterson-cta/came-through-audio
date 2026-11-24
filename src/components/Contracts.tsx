@@ -389,7 +389,7 @@ export function Contracts({
       <div className="mt-6 space-y-6">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <div
-            className="inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1"
+            className="inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1 max-sm:grid max-sm:w-full max-sm:grid-cols-2"
             role="tablist"
             aria-label="Contracts"
           >
@@ -411,6 +411,7 @@ export function Contracts({
                 role="tab"
                 aria-selected={view === id}
                 size="sm"
+                className="max-sm:w-full"
                 variant={view === id ? "default" : "ghost"}
                 onClick={() => {
                   setFocusGuide(undefined);
@@ -1215,7 +1216,7 @@ function Guides({
                           )}
                         </div>
                       )}
-                      <div className="mt-auto flex flex-wrap pt-4">
+                      <div className="guide-card-actions mt-auto grid grid-cols-2 gap-2 pt-4 sm:flex sm:flex-wrap sm:gap-0">
                         <Button
                           size="sm"
                           variant="ghost"

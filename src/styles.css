@@ -916,6 +916,25 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
   background: rgba(255, 255, 255, 0.1);
 }
 
+/*
+ * A guide card's action grid puts every button in its own cell, so on a phone each one starts at the same inset: the
+ * icons then stand in a straight column, one directly under the other, instead of drifting with the length of each
+ * label (founder, 2026-11-24). "Scheduled · Nov 27" is the longest label a cell holds, so the follow-up pill steps down
+ * a point to stay clear of its own border.
+ */
+@media (max-width: 639px) {
+  .guide-card-actions > button {
+    justify-content: flex-start;
+    padding-inline: 0.5rem;
+  }
+  .guide-card-actions > .cta-followup {
+    padding-inline: 0.5rem;
+  }
+  .guide-card-actions .cta-followup {
+    font-size: 11px;
+  }
+}
+
 /* The strip's four controls share one height, so a row of them reads even whatever their labels are. */
 .cta-reminder-actions > .cta-reminder-pager,
 .cta-reminder-actions > .cta-reminder-open,
