@@ -1483,7 +1483,6 @@
   border: 1px solid transparent;
   border-radius: 0.55rem;
   padding: 0;
-  background: color-mix(in srgb, var(--tone) 22%, transparent);
   color: var(--fl-ink);
   cursor: pointer;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -1500,20 +1499,15 @@
 }
 .fl-alloc-seg[data-on="true"] {
   border-color: var(--tone);
-  background: color-mix(in srgb, var(--tone) 34%, transparent);
   box-shadow:
-    inset 0 0 16px color-mix(in srgb, var(--tone) 65%, transparent),
     0 0 14px -2px color-mix(in srgb, var(--tone) 70%, transparent),
     0 0 0 1px rgb(229 228 226 / 32%);
 }
 .dark .fl-alloc-seg {
   color: #fff;
-  background: color-mix(in srgb, var(--tone) 30%, transparent);
-  box-shadow: inset 0 0 14px rgb(0 0 0 / 35%);
 }
 .dark .fl-alloc-seg[data-on="true"] {
   box-shadow:
-    inset 0 0 18px color-mix(in srgb, var(--tone) 80%, transparent),
     0 0 16px 0 color-mix(in srgb, var(--tone) 75%, transparent),
     0 0 28px -8px rgb(255 215 0 / 45%),
     0 0 0 1px rgb(229 228 226 / 42%);
@@ -1550,22 +1544,37 @@
   border: 1px solid #e5edf8;
   border-radius: 0.7rem;
   padding: 0.5rem 0.65rem;
-  /* The row wears its own line's tone as a wash, at a strength that keeps the note readable. */
-  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 9%, #fbfdff);
 }
 .fl-alloc-list li[data-on="true"] {
   border-color: var(--fl-cobalt);
-  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 16%, #fbfdff);
-  box-shadow: inset 0 0 20px rgb(77 140 255 / 10%);
 }
 .dark .fl-alloc-list li {
   border-color: rgb(255 255 255 / 8%);
-  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 12%, #0b0b0b);
 }
 .dark .fl-alloc-list li[data-on="true"] {
   border-color: var(--fl-electric);
-  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 15%, #0b0b0b);
-  box-shadow: inset 0 0 22px rgb(77 140 255 / 22%);
+}
+/*
+ * One wash per tone, painted by the same rule for the bar's tab and the row it refers to, so a category's tab and its
+ * row are the same colour instead of two strengths of it (founder, 2026-11-24). Lit is a state, and it is the same
+ * state on both, so a tap lights the tab and the row together. The inner glow that used to tint each one separately is
+ * gone: the colour you see is this one mix, and the glow sits outside the shape.
+ */
+.fl-alloc-seg,
+.fl-alloc-list li {
+  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 22%, #fbfdff);
+}
+.fl-alloc-seg[data-on="true"],
+.fl-alloc-list li[data-on="true"] {
+  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 34%, #fbfdff);
+}
+.dark .fl-alloc-seg,
+.dark .fl-alloc-list li {
+  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 22%, #0b0b0b);
+}
+.dark .fl-alloc-seg[data-on="true"],
+.dark .fl-alloc-list li[data-on="true"] {
+  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 34%, #0b0b0b);
 }
 .fl-alloc-name {
   display: flex;
@@ -1628,6 +1637,19 @@
     0 0 20px rgb(77 140 255 / 45%);
 }
 .dark .fl-alloc-money span {
+  color: #a9b8cc;
+}
+/*
+ * The row's wash is a full tone deep, so the small type on it keeps a darker slate: #53657d on the deepest tone
+ * (Cobalt) measured 4.0:1, and a note is body text, not decoration (founder, 2026-11-24). The obsidian canvas already
+ * clears AA, so it keeps the token it shipped with.
+ */
+.fl-alloc-list li .fl-alloc-note,
+.fl-alloc-list li .fl-alloc-money span {
+  color: #3f4f66;
+}
+.dark .fl-alloc-list li .fl-alloc-note,
+.dark .fl-alloc-list li .fl-alloc-money span {
   color: #a9b8cc;
 }
 
@@ -1724,6 +1746,18 @@
   transition: width 380ms ease;
 }
 
+/*
+ * One category at a time: its line cards, then the planned-vs-paid pair that measures them (founder, 2026-11-24), so a
+ * bar is read beside the line it belongs to instead of in a block of every other category's bars.
+ */
+.fl-check-group {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.75rem;
+}
+.fl-check-group .fl-check-list {
+  margin-top: 0;
+}
 .fl-check-list {
   display: grid;
   gap: 0.4rem;
@@ -3410,6 +3444,19 @@
 }
 .dark .fl-jump:focus-visible {
   outline-color: #4d8cff;
+}
+/*
+ * The footnote link runs inside the sentence, so it takes the sentence's own line height: the phone's 44px button
+ * target would otherwise stretch its line box and split the paragraph around it. The padding still widens the hit area
+ * (an inline box's padding is clickable without moving the line), which is how the one inline target on this panel
+ * stays reachable (founder, 2026-11-24).
+ */
+.fl-pipe-foot .fl-jump {
+  display: inline;
+  min-height: 0;
+  margin: 0;
+  padding: 0.12rem 0.08rem;
+  border-radius: 0.25rem;
 }
 /* The recoupment chip reads as a link without losing the chip shape it shipped with. */
 .fl-chip-jump {

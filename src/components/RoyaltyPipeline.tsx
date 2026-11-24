@@ -774,8 +774,16 @@ export function RecoupmentPanel({
 
       <p className="fl-pipe-foot">
         Spotify and Apple Music multiply the editable rates in Projected Royalty Earnings by your{" "}
-        {percent(cut)} cut. T-shirt units divide the cost by the Merch &amp; Sales Calculator's
-        price minus unit cost
+        {percent(cut)} cut. T-shirt units divide the cost by the{" "}
+        {/* Every mention of another tool is the way to it, so the footnote's calculator opens too. */}
+        {onOpenMerch ? (
+          <button type="button" className="fl-jump" onClick={onOpenMerch}>
+            Merch &amp; Sales Calculator
+          </button>
+        ) : (
+          <>Merch &amp; Sales Calculator</>
+        )}
+        {"'s price minus unit cost"}
         {merchProfit > 0 ? ` (${money(merchProfit)} a shirt)` : ""}. Real payouts vary by country,
         subscription tier and deal, so treat these as targets to aim at.
       </p>

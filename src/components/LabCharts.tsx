@@ -102,7 +102,17 @@ export function AllocationDonut({
  * Estimated against spent, one pair of bars per category. Both bars share one scale, so the longer bar is always the
  * bigger number, and a paid line past its plan is flagged where the overspend is rather than only in the total.
  */
-export function SpentPairs({ groups }: { groups: CategorySpend[] }) {
+export function SpentPairs({
+  groups,
+  scale: sharedScale,
+}: {
+  groups: CategorySpend[];
+  /**
+   * The scale the bars are drawn against. A pair shown on its own under its own category still measures against the
+   * whole plan, so the longest bar is the biggest number whichever card it sits under.
+   */
+  scale?: number | undefined;
+}) {
   if (!groups.length)
     return (
       <p className="fl-chart-empty">
@@ -110,7 +120,8 @@ export function SpentPairs({ groups }: { groups: CategorySpend[] }) {
         paid.
       </p>
     );
-  const scale = Math.max(1, ...groups.map((group) => Math.max(group.planned, group.spent)));
+  const scale =
+    sharedScale ?? Math.max(1, ...groups.map((group) => Math.max(group.planned, group.spent)));
   return (
     <div className="fl-pair-list">
       {groups.map((group) => (

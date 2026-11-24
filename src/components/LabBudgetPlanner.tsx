@@ -97,10 +97,30 @@ export function LabBudgetPlanner({
   const totals = useMemo(() => budgetProgress(plan.rows, plan.target), [plan.rows, plan.target]);
   const slices = useMemo(() => allocationSlices(plan.lines), [plan.lines]);
   const spends = useMemo(() => categorySpend(plan.rows), [plan.rows]);
-  const allocated = useMemo(
-    () => slices.reduce((sum, slice) => sum + slice.budget, 0),
-    [slices],
+  /** One scale for every pair, wherever it sits, so the longest bar is still the biggest number on the page. */
+  const pairScale = useMemo(
+    () => Math.max(1, ...spends.map((group) => Math.max(group.planned, group.spent))),
+    [spends],
   );
+  /**
+   * The checklist by category, in the order the plan lists them, carrying each category's own planned-vs-paid pair — so
+   * a bar sits with the line it measures instead of a screen above it (founder, 2026-11-24).
+   */
+  const checkGroups = useMemo(() => {
+    const order = new Map<string, { id: string; label: string; rows: ExpenseRow[] }>();
+    for (const row of plan.rows) {
+      const label = row.category.trim() || "Custom";
+      const id = label.toLowerCase();
+      const found = order.get(id);
+      if (found) found.rows.push(row);
+      else order.set(id, { id, label, rows: [row] });
+    }
+    return [...order.values()].map((group) => ({
+      ...group,
+      spend: spends.find((entry) => entry.id === group.id),
+    }));
+  }, [plan.rows, spends]);
+  const allocated = useMemo(() => slices.reduce((sum, slice) => sum + slice.budget, 0), [slices]);
   const targetNumber = Number(target) || 0;
   const stale =
     plan.kind !== kind || Math.round(plan.target * 100) !== Math.round(targetNumber * 100);
@@ -260,8 +280,8 @@ export function LabBudgetPlanner({
           <span className="fl-step-num">3</span> Review and adjust the CTA allocation
         </div>
         <p className="fl-hint">
-          The ring, the bar and the rows below are the same split: tap a category to light it up, then
-          carry any change into the checklist underneath.
+          The ring, the bar and the rows below are the same split: tap a category to light it up,
+          then carry any change into the checklist underneath.
         </p>
 
         <AllocationDonut slices={slices} total={allocated} active={active} />
@@ -286,11 +306,7 @@ export function LabBudgetPlanner({
 
         <ul className="fl-alloc-list">
           {plan.lines.map((line, index) => (
-            <li
-              key={line.id}
-              className={allocationTone(index)}
-              data-on={active === line.id}
-            >
+            <li key={line.id} className={allocationTone(index)} data-on={active === line.id}>
               <div className="min-w-0">
                 <div className="fl-alloc-name">
                   {/* The same tone this line wears in the ring, so the row and its slice read as one colour. */}
@@ -366,87 +382,95 @@ export function LabBudgetPlanner({
             Each pair is one category: the plan on top, the money that has actually left your
             account underneath.
           </p>
-          <SpentPairs groups={spends} />
+          {spends.length === 0 ? <SpentPairs groups={[]} /> : null}
         </div>
 
-        <ul className="fl-check-list">
-          {plan.rows.map((row) => (
-            <li key={row.id} className={cn("fl-check", row.paid && "fl-check-paid")}>
-              <div className="fl-check-top">
-                <span className="fl-check-cat">{row.category}</span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    className="fl-check-toggle"
-                    data-paid={row.paid}
-                    aria-pressed={row.paid}
-                    onClick={() =>
-                      patchRow(row.id, {
-                        paid: !row.paid,
-                        actual: !row.paid && !row.actual ? String(row.budget || "") : row.actual,
-                      })
-                    }
-                  >
-                    {row.paid ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                    {row.paid ? "Paid" : "Estimated"}
-                  </button>
-                  {plan.rows.length > 1 && (
-                    <button
-                      type="button"
-                      className="fl-check-del"
-                      aria-label={`Remove ${row.item || row.category}`}
-                      onClick={() => setRows((rows) => rows.filter((entry) => entry.id !== row.id))}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="fl-check-grid">
-                <div className="fl-field">
-                  <label htmlFor={`${row.id}-item`}>Item name</label>
-                  <Input
-                    id={`${row.id}-item`}
-                    className="fl-row-input"
-                    value={row.item}
-                    placeholder={row.category}
-                    onChange={(event) => patchRow(row.id, { item: event.target.value })}
-                  />
-                </div>
-                <div className="fl-field">
-                  <label htmlFor={`${row.id}-budget`}>Budgeted ($)</label>
-                  <Input
-                    id={`${row.id}-budget`}
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    inputMode="decimal"
-                    className="fl-row-input fl-mono"
-                    value={row.budget === 0 ? "" : String(row.budget)}
-                    placeholder="0"
-                    onChange={(event) =>
-                      patchRow(row.id, { budget: Number(event.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="fl-field">
-                  <label htmlFor={`${row.id}-actual`}>Actual ($)</label>
-                  <Input
-                    id={`${row.id}-actual`}
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    inputMode="decimal"
-                    className="fl-row-input fl-mono"
-                    value={row.actual}
-                    placeholder={row.paid ? String(expenseActual(row)) : "—"}
-                    onChange={(event) => patchRow(row.id, { actual: event.target.value })}
-                  />
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {checkGroups.map((group) => (
+          <div key={group.id} className="fl-check-group">
+            <ul className="fl-check-list">
+              {group.rows.map((row) => (
+                <li key={row.id} className={cn("fl-check", row.paid && "fl-check-paid")}>
+                  <div className="fl-check-top">
+                    <span className="fl-check-cat">{row.category}</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        className="fl-check-toggle"
+                        data-paid={row.paid}
+                        aria-pressed={row.paid}
+                        onClick={() =>
+                          patchRow(row.id, {
+                            paid: !row.paid,
+                            actual:
+                              !row.paid && !row.actual ? String(row.budget || "") : row.actual,
+                          })
+                        }
+                      >
+                        {row.paid ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+                        {row.paid ? "Paid" : "Estimated"}
+                      </button>
+                      {plan.rows.length > 1 && (
+                        <button
+                          type="button"
+                          className="fl-check-del"
+                          aria-label={`Remove ${row.item || row.category}`}
+                          onClick={() =>
+                            setRows((rows) => rows.filter((entry) => entry.id !== row.id))
+                          }
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="fl-check-grid">
+                    <div className="fl-field">
+                      <label htmlFor={`${row.id}-item`}>Item name</label>
+                      <Input
+                        id={`${row.id}-item`}
+                        className="fl-row-input"
+                        value={row.item}
+                        placeholder={row.category}
+                        onChange={(event) => patchRow(row.id, { item: event.target.value })}
+                      />
+                    </div>
+                    <div className="fl-field">
+                      <label htmlFor={`${row.id}-budget`}>Budgeted ($)</label>
+                      <Input
+                        id={`${row.id}-budget`}
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        inputMode="decimal"
+                        className="fl-row-input fl-mono"
+                        value={row.budget === 0 ? "" : String(row.budget)}
+                        placeholder="0"
+                        onChange={(event) =>
+                          patchRow(row.id, { budget: Number(event.target.value) || 0 })
+                        }
+                      />
+                    </div>
+                    <div className="fl-field">
+                      <label htmlFor={`${row.id}-actual`}>Actual ($)</label>
+                      <Input
+                        id={`${row.id}-actual`}
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        inputMode="decimal"
+                        className="fl-row-input fl-mono"
+                        value={row.actual}
+                        placeholder={row.paid ? String(expenseActual(row)) : "—"}
+                        onChange={(event) => patchRow(row.id, { actual: event.target.value })}
+                      />
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {group.spend ? <SpentPairs groups={[group.spend]} scale={pairScale} /> : null}
+          </div>
+        ))}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
