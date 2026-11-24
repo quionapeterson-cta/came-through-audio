@@ -1464,27 +1464,48 @@
   border: 1px solid #e5edf8;
   border-radius: 0.7rem;
   padding: 0.5rem 0.65rem;
-  background: #fbfdff;
+  /* The row wears its own line's tone as a wash, at a strength that keeps the note readable. */
+  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 9%, #fbfdff);
 }
 .fl-alloc-list li[data-on="true"] {
   border-color: var(--fl-cobalt);
+  background: color-mix(in srgb, var(--tone, var(--fl-cobalt)) 16%, #fbfdff);
   box-shadow: inset 0 0 20px rgb(77 140 255 / 10%);
 }
 .dark .fl-alloc-list li {
   border-color: rgb(255 255 255 / 8%);
-  background: rgb(255 255 255 / 2.5%);
+  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 12%, #0b0b0b);
 }
 .dark .fl-alloc-list li[data-on="true"] {
   border-color: var(--fl-electric);
+  background: color-mix(in srgb, var(--tone, var(--fl-electric)) 15%, #0b0b0b);
   box-shadow: inset 0 0 22px rgb(77 140 255 / 22%);
 }
 .fl-alloc-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   color: var(--fl-ink);
   font-size: 0.8rem;
   font-weight: 800;
 }
 .dark .fl-alloc-name {
   color: #fff;
+}
+/*
+ * The line's own tone, exactly as the ring paints it: both take --tone from allocationTone(), so light and dark mode
+ * move the two together. The hairline only keeps the chip's edge visible on the panel, never changes its colour.
+ */
+.fl-alloc-swatch {
+  flex: 0 0 auto;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 0.16rem;
+  background: var(--tone, var(--fl-cobalt));
+  box-shadow: 0 0 0 1px rgb(11 11 11 / 14%);
+}
+.dark .fl-alloc-swatch {
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 30%);
 }
 .fl-alloc-note {
   margin: 0.15rem 0 0;
@@ -1513,7 +1534,12 @@
   font-weight: 700;
 }
 .dark .fl-alloc-money strong {
-  color: var(--fl-electric);
+  /* On the obsidian canvas the figure reads as lit white rather than a second blue, so it stays the brightest thing
+     in its row while the tint carries the colour. */
+  color: #fff;
+  text-shadow:
+    0 0 10px rgb(255 255 255 / 55%),
+    0 0 20px rgb(77 140 255 / 45%);
 }
 .dark .fl-alloc-money span {
   color: #a9b8cc;
@@ -2842,10 +2868,6 @@
 }
 .fl-donut-seg[data-dim="true"] {
   opacity: 0.35;
-}
-/* The ring's last tone is platinum, which is also the metal of the track, so the pale slice takes the darker stone. */
-.fl-donut-seg[data-pale="true"] {
-  --tone: var(--fl-platinum-shade);
 }
 .fl-donut-seg[data-on="true"] {
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tone) 70%, transparent));

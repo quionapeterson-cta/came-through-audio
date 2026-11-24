@@ -19,6 +19,13 @@ const money4 = (n: number) => `$${n.toFixed(4)}`;
 const pct = (n: number) => `${Math.round(n * 10) / 10}%`;
 const count = (n: number) => n.toLocaleString("en-US");
 
+/**
+ * The one tone a line wears, in the ring and beside its name. Ring and list both call this, so a category's colour can
+ * never drift between the graph and the row — and because the tone is a class, each theme paints it from the same place.
+ * Platinum (tone 5) is the ring's own track metal, so the last line takes the darker stone instead.
+ */
+export const allocationTone = (index: number) => `fl-tone-${index % 6 === 5 ? 1 : index % 6}`;
+
 /** The allocation donut: where each dollar of the project budget goes, resizing with the plan. */
 export function AllocationDonut({
   slices,
@@ -62,10 +69,9 @@ export function AllocationDonut({
                 cy="60"
                 r={radius}
                 fill="none"
-                className={cn("fl-donut-seg", `fl-tone-${index % 6}`)}
+                className={cn("fl-donut-seg", allocationTone(index))}
                 data-on={active === slice.id}
                 data-dim={!!active && active !== slice.id}
-                data-pale={index % 6 === 5}
                 strokeDasharray={`${drawn} ${circumference - drawn}`}
                 strokeDashoffset={-slice.start * circumference}
               >

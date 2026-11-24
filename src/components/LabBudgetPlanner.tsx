@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { AllocationDonut, SpentPairs } from "@/components/LabCharts";
+import { AllocationDonut, SpentPairs, allocationTone } from "@/components/LabCharts";
 import { downloadBudgetPdf } from "@/lib/budget-pdf";
 import {
   BUDGET_BLUEPRINTS,
@@ -251,7 +251,7 @@ export function LabBudgetPlanner({
             <button
               key={line.id}
               type="button"
-              className={cn("fl-alloc-seg", `fl-tone-${index % 6}`)}
+              className={cn("fl-alloc-seg", allocationTone(index))}
               data-on={active === line.id}
               data-dim={!!active && active !== line.id}
               style={{ flexGrow: Math.max(0.001, line.budget) } as CSSProperties}
@@ -265,10 +265,21 @@ export function LabBudgetPlanner({
         </div>
 
         <ul className="fl-alloc-list">
-          {plan.lines.map((line) => (
-            <li key={line.id} data-on={active === line.id}>
+          {plan.lines.map((line, index) => (
+            <li
+              key={line.id}
+              className={allocationTone(index)}
+              data-on={active === line.id}
+            >
               <div className="min-w-0">
-                <div className="fl-alloc-name">{line.label}</div>
+                <div className="fl-alloc-name">
+                  {/* The same tone this line wears in the ring, so the row and its slice read as one colour. */}
+                  <span
+                    className={cn("fl-alloc-swatch", allocationTone(index))}
+                    aria-hidden="true"
+                  />
+                  {line.label}
+                </div>
                 <p className="fl-alloc-note">{line.note}</p>
               </div>
               <div className="fl-alloc-money">
