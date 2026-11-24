@@ -56,7 +56,7 @@ export function songShareRows(
  * Published average payouts per stream (USD, paid to all rights holders together), checked against each source in
  * 2026. No interactive service publishes a fixed per-stream rate: each pools its revenue and splits it by share of
  * streams, so these are the averages the cited pages report and every rate is editable. Audiomack publishes only its
- * 50% revenue share, so its default is the published estimate range's midpoint and the member can replace it with
+ * 50% revenue share, so its default is the middle of the most-quoted estimate range and the member can replace it with
  * their own statement totals. A platform that pays per video use rather than per stream (TikTok, Instagram/Facebook)
  * starts at 0, because a per-stream figure there would be the wrong unit. Real rates vary by country, tier and deal.
  */
@@ -78,8 +78,8 @@ export const RATE_SOURCES = {
     url: "https://soundcloud.com/topic/category/which-music-streaming-service-pays-artists-the-most",
   },
   audiomack: {
-    label: "Audiomack payout comparison (2026)",
-    url: "https://soundcloud.com/topic/category/how-much-does-audiomack-pay-per-stream",
+    label: "Audiomack monetization (2026)",
+    url: "https://creators.audiomack.com/monetization",
   },
 } as const;
 export const PLATFORMS: {
@@ -127,7 +127,7 @@ export const PLATFORMS: {
     name: "Audiomack",
     rate: 0.004,
     source: "audiomack",
-    note: "Estimate only: AMP pays 50% of its monthly revenue per stream, about $0.003–$0.005.",
+    note: "Audiomack publishes only its 50% revenue share, no per-stream rate. Third-party estimates run about $0.001–$0.005; this opens on $0.004, the middle of the most-quoted range.",
   },
   {
     id: "tiktok",

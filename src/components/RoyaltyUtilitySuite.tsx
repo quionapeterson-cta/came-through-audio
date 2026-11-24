@@ -24,6 +24,7 @@ import {
   Radio,
   ReceiptText,
   Repeat,
+  RotateCcw,
   Smartphone,
   Shirt,
   Sparkles,
@@ -79,8 +80,8 @@ import { cn } from "@/lib/utils";
 
 const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const pct = (n: number) => `${Math.round(n * 100) / 100}%`;
-/** A per-stream rate's own decimals: four is enough for a statement average, six for a very small one. */
-const rateMoney = (n: number) => `$${n.toFixed(n >= 0.0001 ? 4 : 6)}`;
+/** A per-stream rate's own decimals, trailing zeros trimmed: four for a statement average, six for a tiny one. */
+const rateMoney = (n: number) => `$${Number(n.toFixed(n >= 0.0001 ? 4 : 6))}`;
 /**
  * A count box that opens on 0 is right-aligned, so a click lands the caret before that zero and the first digit typed
  * turns 0 into 10. Selecting the lone zero makes the first keystroke replace it, the way a number field would.
@@ -750,11 +751,21 @@ function Earnings({
   // A pasted statement belongs to the platform it came from: switching platforms starts the paste clean.
   useEffect(() => setOwn({ paid: "", streams: "" }), [selected.id]);
 
+  // A rate the member changed — by hand or with their own statement — can go back to the one the platform opened on,
+  // so nobody has to remember the published figure.
+  const rateChanged = (Number(rates[selected.id]) || 0) !== selected.rate;
+
   function useOwnAverage() {
     if (ownRate === null) return;
     setRates((current) => ({ ...current, [selected.id]: String(Number(ownRate.toFixed(6))) }));
     setPulse((p) => p + 1);
     toast.success(`${selected.name} now uses your own average of ${rateMoney(ownRate)} a stream.`);
+  }
+
+  function resetRate() {
+    setRates((current) => ({ ...current, [selected.id]: String(selected.rate) }));
+    setPulse((p) => p + 1);
+    toast.success(`${selected.name} is back on ${rateMoney(selected.rate)} a stream.`);
   }
   const selectedSource = selected.source ? RATE_SOURCES[selected.source] : undefined;
   const enteredCount = PLATFORMS.filter((p) => Number(streams[p.id]) > 0).length;
@@ -921,6 +932,13 @@ function Earnings({
             </output>
           </div>
         </div>
+
+        {rateChanged && (
+          <button type="button" className="fl-rate-reset" onClick={resetRate}>
+            <RotateCcw className="h-3 w-3" aria-hidden="true" />
+            Back to the published rate: {rateMoney(selected.rate)}
+          </button>
+        )}
 
         {(selected.note || selectedSource) && (
           <p className="fl-platform-note">
