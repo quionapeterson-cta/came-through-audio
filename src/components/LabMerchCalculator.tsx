@@ -51,12 +51,13 @@ export function LabMerchCalculator({
   /** Reports the live price and unit cost so the Lab's recoupment tool can price a shirt recovery. */
   onMarginChange?: (margin: { price: number; cost: number }) => void;
 } = {}) {
-  const start = presetOf("tshirt");
-  const [product, setProduct] = useState<ProductKind>(start.id);
-  const [quantity, setQuantity] = useState(String(start.quantity));
-  const [unitCost, setUnitCost] = useState(String(start.unitCost));
-  const [price, setPrice] = useState(String(start.price));
-  const [unitsSold, setUnitsSold] = useState(Math.round(start.quantity / 2));
+  // The panel opens empty: every figure here is the artist's own invoice, and a product chip fills a typical estimate
+  // they can replace rather than one already sitting there as if it were theirs (founder, 2026-11-24).
+  const [product, setProduct] = useState<ProductKind | "">("");
+  const [quantity, setQuantity] = useState("");
+  const [unitCost, setUnitCost] = useState("");
+  const [price, setPrice] = useState("");
+  const [unitsSold, setUnitsSold] = useState(0);
   const [entry, setEntry] = useState("");
 
   const run = Math.max(0, Math.round(Number(quantity) || 0));
@@ -116,14 +117,15 @@ export function LabMerchCalculator({
       id: "half",
       label: "50% sold",
       note: `${Math.round(run * 0.5)} units`,
-      on: math.unitsSold === Math.round(run * 0.5),
+      // A run of zero would otherwise match both 50% and 75% and light them as chosen.
+      on: run > 0 && math.unitsSold === Math.round(run * 0.5),
       run: () => sell(run * 0.5),
     },
     {
       id: "three-quarter",
       label: "75% sold",
       note: `${Math.round(run * 0.75)} units`,
-      on: math.unitsSold === Math.round(run * 0.75),
+      on: run > 0 && math.unitsSold === Math.round(run * 0.75),
       run: () => sell(run * 0.75),
     },
     {
@@ -155,7 +157,7 @@ export function LabMerchCalculator({
               </p>
             </div>
           </div>
-          <span className="fl-chip">{presetOf(product).name}</span>
+          <span className="fl-chip">{product ? presetOf(product).name : "No product yet"}</span>
         </div>
 
         <div className="mt-3">
@@ -182,7 +184,7 @@ export function LabMerchCalculator({
             })}
           </div>
           <p className="fl-hint">
-            Starting estimates only: replace each one with your invoice and your retail price.
+            Pick one to fill a typical invoice, then replace it with what yours actually cost.
           </p>
         </div>
 
@@ -246,7 +248,7 @@ export function LabMerchCalculator({
             <h3 className="mt-1 text-lg font-extrabold">How much will you sell?</h3>
           </div>
           {/* Without a price the state is a placeholder, so the chip never claims the costs came back. */}
-          <span className="fl-chip" data-state={math.state}>
+          <span className="fl-chip" data-state={math.breakevenUnits === null ? undefined : math.state}>
             {math.breakevenUnits === null ? "Set a price" : STATE_COPY[math.state]}
           </span>
         </div>
@@ -256,10 +258,11 @@ export function LabMerchCalculator({
             <button
               key={milestone.id}
               type="button"
-              className="fl-pill fl-milestone"
-              data-on={milestone.on}
-              aria-pressed={milestone.on}
-              onClick={milestone.run}
+                                className="fl-pill fl-milestone disabled:cursor-not-allowed disabled:opacity-50"
+                  data-on={milestone.on}
+                  aria-pressed={milestone.on}
+                  disabled={run === 0}
+                  onClick={milestone.run}
             >
               <strong>{milestone.label}</strong>
               <span>{milestone.note}</span>
@@ -373,7 +376,7 @@ export function LabMerchCalculator({
                   {math.soldOut ? "Sold out and in profit." : `${money(math.profit)} in pocket.`}
                 </>
               ) : (
-                <>Add a selling price to see the profit.</>
+                <>Add your costs and selling price to see the profit.</>
               )}
             </span>
           </article>

@@ -50,7 +50,6 @@ import {
 } from "@/components/ui/select";
 import { loadOnboarding } from "@/lib/artist-profile";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { presetOf } from "@/lib/financial-lab-merch";
 import { COUNTRIES, countryByCode } from "@/lib/repertoires";
 import {
   MASTER_PORTION,
@@ -195,10 +194,9 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
   // Empty until the artist names their own spend: a filled-in target pre-prices the recoupment tool with a project
   // that isn't theirs (founder, 2026-11-24).
   const [budgetCap, setBudgetCap] = useState("");
-  const [merchMargin, setMerchMargin] = useState(() => {
-    const preset = presetOf("tshirt");
-    return { price: preset.price, cost: preset.unitCost };
-  });
+  // No shirt margin until the merch calculator reports one: a preset margin here would price the recoupment panel's
+  // shirts tile with a run nobody made (founder, 2026-11-24).
+  const [merchMargin, setMerchMargin] = useState({ price: 0, cost: 0 });
   const theme = useLabTheme();
   const song = tracks.find((t) => t.id === songId);
   const rows = useMemo(() => (song ? songShareRows(song.metadata) : []), [song]);

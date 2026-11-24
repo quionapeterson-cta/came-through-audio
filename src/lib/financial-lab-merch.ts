@@ -53,7 +53,7 @@ export const PRODUCT_PRESETS: ProductPreset[] = [
     id: "custom",
     name: "Custom Item",
     hint: "Posters, stickers, VIP packages",
-    quantity: 25,
+    quantity: 0,
     unitCost: 0,
     price: 0,
   },
