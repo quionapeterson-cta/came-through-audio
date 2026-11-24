@@ -916,6 +916,49 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* The strip's four controls share one height, so a row of them reads even whatever their labels are. */
+.cta-reminder-actions > .cta-reminder-pager,
+.cta-reminder-actions > .cta-reminder-open,
+.cta-reminder-actions > .cta-reminder-ghost {
+  min-height: 2rem;
+}
+
+/*
+ * Mobile: the strip's controls become one symmetrical grid (founder, 2026-11-24). Two equal cells per row — the pager
+ * beside Open, the two acknowledgments under them — every cell the same width and height with its words centred, so the
+ * block reads even instead of two ragged rows of different widths. A single due reminder has no pager, so Open takes
+ * the full width above the pair rather than sitting alone in half a row.
+ */
+@media (max-width: 767px) {
+  .cta-reminder-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Equal rows, so a row holding the pager is exactly as tall as a row of buttons. */
+    grid-auto-rows: 1fr;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .cta-reminder-actions > .cta-reminder-pager,
+  .cta-reminder-actions > .cta-reminder-open,
+  .cta-reminder-actions > .cta-reminder-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 2.75rem;
+    text-align: center;
+  }
+  /* The chevrons sit at the cell's own edges, so the pager reads as wide as the buttons beside it. */
+  .cta-reminder-actions > .cta-reminder-pager {
+    justify-content: space-between;
+    padding: 0.1rem 0.85rem;
+  }
+  .cta-reminder-actions > .cta-reminder-open:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
 .cta-reminder-quick,
 .cta-reminder-mine,
 .cta-reminder-open,

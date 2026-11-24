@@ -1425,7 +1425,6 @@ function CopyDeck({
             Paste into a registration form, email or your own notes.
           </p>
         </div>
-        <span className="fl-chip ml-auto">Ready to paste</span>
       </div>
       <div className="fl-copy-row">
         {COPY_AGENCIES.map((a) => (

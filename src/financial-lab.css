@@ -585,6 +585,19 @@
 .fl-copy-row > .fl-copy:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
+/*
+ * A phone cell centres its label on one line: the padding, gap and tracking give up just enough room that "COPY FOR THE
+ * MLC" fits beside its icon, so every button reads as one centred unit instead of a wrapped block hanging off the icon
+ * (founder, 2026-11-24).
+ */
+@media (max-width: 639px) {
+  .fl-copy-row .fl-copy {
+    gap: 0.28rem;
+    padding: 0.38rem 0.4rem;
+    font-size: 0.58rem;
+    letter-spacing: 0.03em;
+  }
+}
 @media (max-width: 359px) {
   .fl-copy-row {
     grid-template-columns: minmax(0, 1fr);

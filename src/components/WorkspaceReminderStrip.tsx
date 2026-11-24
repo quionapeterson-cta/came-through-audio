@@ -53,7 +53,7 @@ export function WorkspaceReminderStrip() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="cta-reminder-actions flex flex-wrap items-center gap-2">
           {due.length > 1 && (
             <div className="cta-reminder-pager" aria-label={`Reminder ${at + 1} of ${due.length}`}>
               <button
