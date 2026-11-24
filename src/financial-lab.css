@@ -89,9 +89,10 @@
   --fl-soft: #0d1117;
   --fl-muted: #a9b8cc;
   --fl-rim-line: rgb(229 228 226 / 58%);
-  --fl-rim-gold: rgb(255 215 0 / 38%);
+  /* No gold ring on obsidian (founder, 2026-11-24): the rim is platinum and cobalt alone, so the sections read cool. */
+  --fl-rim-gold: transparent;
   --fl-rim-cobalt: rgb(77 140 255 / 62%);
-  --fl-rim-gold-bloom: rgb(255 215 0 / 52%);
+  --fl-rim-gold-bloom: transparent;
   --fl-rim-shadow:
     0 0 0 1px var(--fl-rim-gold), 0 0 18px -2px var(--fl-rim-cobalt),
     0 0 34px -8px var(--fl-rim-gold-bloom), 0 0 56px -20px rgb(229 228 226 / 48%),
@@ -1557,8 +1558,9 @@
   line-height: 1.5;
 }
 .dark .fl-tip {
-  border-color: rgb(255 215 0 / 32%);
-  border-left-color: var(--fl-gold);
+  /* No gold outline on obsidian (founder, 2026-11-24): the edge is platinum and the gold stays in the wash. */
+  border-color: rgb(229 228 226 / 34%);
+  border-left-color: var(--fl-platinum);
   background: rgb(255 215 0 / 6%);
   color: #f5edcf;
 }
@@ -2120,6 +2122,15 @@
     0 0 44px -18px rgb(229 228 226 / 55%),
     0 0 24px rgba(77, 140, 255, 0.28);
 }
+.dark .fl-profit[data-state="profit"] {
+  /* Platinum rim on obsidian (founder, 2026-11-24); the gold figure, dot and glow carry the profit. */
+  border-color: rgb(229 228 226 / 62%);
+  box-shadow:
+    inset 0 0 30px rgb(77 140 255 / 12%),
+    0 0 0 1px rgb(229 228 226 / 30%),
+    0 0 26px -6px rgb(77 140 255 / 55%),
+    0 0 44px -18px rgb(229 228 226 / 45%);
+}
 .fl-profit[data-state="profit"] .fl-hero-number {
   color: var(--fl-gold);
   text-shadow:
@@ -2155,10 +2166,10 @@
 }
 .dark .fl-chip[data-state="profit"] {
   color: var(--fl-gold);
-  border-color: rgb(255 215 0 / 70%);
+  border-color: rgb(229 228 226 / 62%);
   background: rgb(255 215 0 / 12%);
   box-shadow:
-    0 0 14px rgb(255 215 0 / 32%),
+    0 0 14px rgb(77 140 255 / 32%),
     0 0 24px -10px rgb(229 228 226 / 55%);
 }
 
@@ -2330,6 +2341,10 @@
   border-color: rgb(255 215 0 / 55%);
   box-shadow: inset 0 0 22px rgb(255 215 0 / 7%);
 }
+.dark .fl-pipe-card[data-state="collected"] {
+  border-color: rgb(229 228 226 / 62%);
+  box-shadow: inset 0 0 22px rgb(77 140 255 / 10%);
+}
 .fl-pipe-card[data-state="waiting"],
 .fl-pipe-card[data-state="mismatch"] {
   border-color: rgb(77 140 255 / 55%);
@@ -2414,9 +2429,9 @@
 }
 .dark .fl-pipe-state[data-kind="collected"] {
   color: var(--fl-gold);
-  border-color: rgb(255 215 0 / 60%);
+  border-color: rgb(229 228 226 / 62%);
   background: rgb(255 215 0 / 10%);
-  box-shadow: 0 0 12px rgb(255 215 0 / 26%);
+  box-shadow: 0 0 12px rgb(77 140 255 / 26%);
 }
 .fl-pipe-state[data-kind="waiting"],
 .fl-pipe-state[data-kind="mismatch"] {
@@ -3241,4 +3256,40 @@
   .fl-gauge-fill {
     transition: none;
   }
+}
+
+/*
+ * Obsidian's figures are lit, not tinted: a white core with a cobalt bloom, the same light the allocation rows wear.
+ * The colour then belongs to the shape around the number — the slice, the ring, the bar — so every figure in the Lab
+ * reads at one brightness and a blue number never competes with a blue graph.
+ */
+.dark .fl-dock-total,
+.dark .fl-tel-value,
+.dark .fl-hero-number,
+.dark .fl-gauge-read strong,
+.dark .fl-budget-stat strong,
+.dark .fl-recoup-number,
+.dark .fl-pipe-money,
+.dark .fl-pipe-summary b,
+.dark .fl-pair-row b,
+.dark .fl-profit[data-state="below"] .fl-tel-value,
+.dark .fl-profit[data-state="below"] .fl-hero-number,
+.dark .fl-budget-stat[data-low="true"] strong,
+.dark .fl-pair[data-over="true"] .fl-pair-row[data-kind="spent"] b,
+.dark .fl-pipe-card[data-state="waiting"] .fl-pipe-money,
+.dark .fl-pipe-card[data-state="mismatch"] .fl-pipe-money,
+.dark .fl-slider-pct,
+.dark .fl-gauge-read em {
+  color: #fff;
+  text-shadow:
+    0 0 10px rgb(255 255 255 / 45%),
+    0 0 20px rgb(77 140 255 / 40%);
+}
+
+/* An SVG figure carries the same light through a drop shadow, which is the glow a fill can take. */
+.dark .fl-donut-value,
+.dark .fl-gauge-pct,
+.dark .fl-breakeven-label-strong {
+  fill: #fff;
+  filter: drop-shadow(0 0 3px rgb(255 255 255 / 60%)) drop-shadow(0 0 8px rgb(77 140 255 / 45%));
 }

@@ -156,7 +156,7 @@ export function LabBudgetPlanner({
               </p>
             </div>
           </div>
-          <span className="fl-chip">STEP 1–3</span>
+          <span className="fl-chip">STEP 1–5</span>
         </div>
 
         <div className="mt-3">
@@ -243,6 +243,14 @@ export function LabBudgetPlanner({
           </div>
           <span className="fl-chip ml-auto">{blueprint.name}</span>
         </div>
+
+        <div className="fl-step-label mt-3">
+          <span className="fl-step-num">3</span> Review and adjust the CTA allocation
+        </div>
+        <p className="fl-hint">
+          The ring, the bar and the rows below are the same split: tap a category to light it up, then
+          carry any change into the checklist underneath.
+        </p>
 
         <AllocationDonut slices={slices} total={allocated} active={active} />
 

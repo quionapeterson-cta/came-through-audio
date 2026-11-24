@@ -381,7 +381,7 @@ export function LabMerchCalculator({
 
         <div className="mt-3">
           <div className="fl-step-label">
-            <span className="fl-step-num">3</span> Where the lines cross
+            <span className="fl-step-num">3</span> Break even point
           </div>
           <BreakevenChartView chart={chart} unitsSold={math.unitsSold} price={retail} />
         </div>
