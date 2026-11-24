@@ -144,6 +144,81 @@ export const PLATFORMS: {
 ];
 
 /**
+ * The platforms whose own cited pages publish a range rather than one average. A rate typed outside that range is far
+ * more likely to be a decimal slip than a discovery, so the calculator says so beside the box.
+ */
+export const PUBLISHED_RANGES: Record<string, { low: number; high: number; label: string }> = {
+  audiomack: { low: 0.001, high: 0.005, label: "$0.0010–$0.0050" },
+  soundcloud: { low: 0.0025, high: 0.004, label: "$0.0025–$0.004" },
+};
+
+export type RateWarning = { message: string; fix?: number };
+
+const usdRate = (n: number) => `$${n.toFixed(n < 0.01 ? 4 : 2)}`;
+
+/**
+ * A gentle guard on an edited rate, never a block: a figure outside the published range, or more than ten times the
+ * published average, gets a sentence and (where the slip is obvious) the value that was probably meant. A rate of 0 is
+ * silent, because the per-video platforms open there.
+ */
+export function rateWarning(platformId: string, rate: number): RateWarning | null {
+  if (!Number.isFinite(rate) || rate <= 0) return null;
+  const platform = PLATFORMS.find((p) => p.id === platformId);
+  if (!platform) return null;
+  const range = PUBLISHED_RANGES[platformId];
+  if (range) {
+    if (rate >= range.low && rate <= range.high) return null;
+    return {
+      message: `${platform.name}'s published estimate is ${range.label} a stream. Check the decimal, or keep your own figure if a statement gave it to you.`,
+    };
+  }
+  if (platform.rate <= 0 || rate <= platform.rate * 10) return null;
+  // Only offer a fix when the figure is a decimal slip away from the published rate; a genuinely different rate gets
+  // the sentence and nothing else.
+  const ratio = rate / platform.rate;
+  const fix = ratio >= 9 && ratio <= 11 ? platform.rate : undefined;
+  return {
+    message: `That is more than 10× ${platform.name}'s published average of ${usdRate(platform.rate)} a stream. Check the decimal.`,
+    ...(fix ? { fix } : {}),
+  };
+}
+
+/**
+ * How much of a platform's published rate a listener mix is worth, as a factor. The multipliers are a planning
+ * assumption, not a published rate: advertising and subscriptions are worth more in some countries than others, which
+ * is why a flat per-stream figure is only ever a starting point. Shares are normalized, so a mix that adds to 92% still
+ * gives a sensible factor instead of quietly shrinking the estimate.
+ */
+export const TERRITORY_MULTIPLIERS = { us: 1, uk: 0.85, ng: 0.3, row: 0.55 } as const;
+export const TERRITORY_ROWS: { id: keyof typeof TERRITORY_MULTIPLIERS; label: string }[] = [
+  { id: "us", label: "United States" },
+  { id: "uk", label: "United Kingdom" },
+  { id: "ng", label: "Nigeria" },
+  { id: "row", label: "Rest of world" },
+];
+
+/** The shares a mix is read from: the four regions, with whatever else the caller stores beside them. */
+export type TerritoryShareInput = {
+  [K in keyof typeof TERRITORY_MULTIPLIERS]?: string | number;
+} & {
+  on?: boolean;
+};
+
+export function territoryShares(shares: TerritoryShareInput): number {
+  return TERRITORY_ROWS.reduce((n, row) => n + Math.max(0, Number(shares[row.id]) || 0), 0);
+}
+
+export function territoryBlend(shares: TerritoryShareInput): number {
+  const total = TERRITORY_ROWS.reduce((n, row) => n + Math.max(0, Number(shares[row.id]) || 0), 0);
+  if (total <= 0) return 1;
+  const weighted = TERRITORY_ROWS.reduce(
+    (n, row) => n + Math.max(0, Number(shares[row.id]) || 0) * TERRITORY_MULTIPLIERS[row.id],
+    0,
+  );
+  return weighted / total;
+}
+
+/**
  * A typed count is kept as plain digits, so the maths never has to read a comma, and shown with its thousands
  * separated, so 1250000 reads as 1,250,000. Grouping is done on the string rather than through Number, so a long
  * paste keeps every digit instead of rounding.

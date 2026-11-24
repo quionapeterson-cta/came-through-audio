@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BreakevenChartView } from "@/components/LabCharts";
+import { readLabJson, writeLabJson } from "@/lib/financial-lab-scenario";
 import {
   PRODUCT_PRESETS,
   breakevenChart,
@@ -45,20 +46,59 @@ const STATE_COPY = {
   profit: "Pure profit",
 } as const;
 
+type Run = {
+  product: ProductKind | "";
+  quantity: string;
+  unitCost: string;
+  price: string;
+  unitsSold: number;
+};
+
+/** The run as it was last typed for this song, cleaned: a missing or unreadable field opens empty, never guessed. */
+function savedRun(key: string | undefined): Run | null {
+  if (!key) return null;
+  const raw = readLabJson<Partial<Run>>(key);
+  if (!raw || typeof raw !== "object") return null;
+  const text = (v: unknown) => (typeof v === "string" ? v : "");
+  const sold = Number(raw.unitsSold);
+  return {
+    product: typeof raw.product === "string" ? raw.product : "",
+    quantity: text(raw.quantity),
+    unitCost: text(raw.unitCost),
+    price: text(raw.price),
+    unitsSold: Number.isFinite(sold) && sold >= 0 ? Math.round(sold) : 0,
+  };
+}
+
 export function LabMerchCalculator({
   onMarginChange,
+  storageKey,
 }: {
   /** Reports the live price and unit cost so the Lab's recoupment tool can price a shirt recovery. */
   onMarginChange?: (margin: { price: number; cost: number }) => void;
+  /** Where this song's run is kept, so a refresh brings back the invoice instead of an empty panel. */
+  storageKey?: string;
 } = {}) {
   // The panel opens empty: every figure here is the artist's own invoice, and a product chip fills a typical estimate
-  // they can replace rather than one already sitting there as if it were theirs (founder, 2026-11-24).
-  const [product, setProduct] = useState<ProductKind | "">("");
-  const [quantity, setQuantity] = useState("");
-  const [unitCost, setUnitCost] = useState("");
-  const [price, setPrice] = useState("");
-  const [unitsSold, setUnitsSold] = useState(0);
+  // they can replace rather than one already sitting there as if it were theirs (founder, 2026-11-24). What they typed
+  // for this song comes back from the browser's own storage.
+  const [restored] = useState(() => savedRun(storageKey));
+  const [product, setProduct] = useState<ProductKind | "">(restored?.product ?? "");
+  const [quantity, setQuantity] = useState(restored?.quantity ?? "");
+  const [unitCost, setUnitCost] = useState(restored?.unitCost ?? "");
+  const [price, setPrice] = useState(restored?.price ?? "");
+  const [unitsSold, setUnitsSold] = useState(restored?.unitsSold ?? 0);
   const [entry, setEntry] = useState("");
+
+  // Every edit is written back for this song, so the next visit starts from the same run.
+  useEffect(() => {
+    if (!storageKey) return;
+    const timer = window.setTimeout(
+      () => writeLabJson(storageKey, { product, quantity, unitCost, price, unitsSold }),
+      350,
+    );
+    return () => window.clearTimeout(timer);
+  }, [storageKey, product, quantity, unitCost, price, unitsSold]);
 
   const run = Math.max(0, Math.round(Number(quantity) || 0));
   const cost = Math.max(0, Number(unitCost) || 0);
@@ -248,7 +288,10 @@ export function LabMerchCalculator({
             <h3 className="mt-1 text-lg font-extrabold">How much will you sell?</h3>
           </div>
           {/* Without a price the state is a placeholder, so the chip never claims the costs came back. */}
-          <span className="fl-chip" data-state={math.breakevenUnits === null ? undefined : math.state}>
+          <span
+            className="fl-chip"
+            data-state={math.breakevenUnits === null ? undefined : math.state}
+          >
             {math.breakevenUnits === null ? "Set a price" : STATE_COPY[math.state]}
           </span>
         </div>
@@ -258,11 +301,11 @@ export function LabMerchCalculator({
             <button
               key={milestone.id}
               type="button"
-                                className="fl-pill fl-milestone disabled:cursor-not-allowed disabled:opacity-50"
-                  data-on={milestone.on}
-                  aria-pressed={milestone.on}
-                  disabled={run === 0}
-                  onClick={milestone.run}
+              className="fl-pill fl-milestone disabled:cursor-not-allowed disabled:opacity-50"
+              data-on={milestone.on}
+              aria-pressed={milestone.on}
+              disabled={run === 0}
+              onClick={milestone.run}
             >
               <strong>{milestone.label}</strong>
               <span>{milestone.note}</span>

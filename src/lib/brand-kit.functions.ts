@@ -227,7 +227,7 @@ export const getMyBrand = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z
       .object({
-        use: z.enum(["splits", "contracts", "lyrics", "catalog"]),
+        use: z.enum(["splits", "contracts", "lyrics", "catalog", "lab"]),
         kitId: z.string().uuid().nullish(),
       })
       .parse(d),

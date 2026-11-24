@@ -2,6 +2,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type FocusEvent as ReactFocusEvent,
@@ -15,8 +16,10 @@ import {
   CircleDollarSign,
   Copy,
   Disc3,
+  Download,
   ExternalLink,
   Gauge,
+  Globe,
   Headphones,
   MonitorPlay,
   Moon,
@@ -29,10 +32,12 @@ import {
   Shirt,
   Sparkles,
   Sun,
+  Trash2,
   TrendingUp,
   Wallet,
   Waves,
   Youtube,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -51,19 +56,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { loadOnboarding } from "@/lib/artist-profile";
-import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { listTracks, saveBlob, type CatalogTrack } from "@/lib/catalog";
 import { COUNTRIES, countryByCode } from "@/lib/repertoires";
 import {
   MASTER_PORTION,
   PLATFORMS,
   PRO_SCALES,
   RATE_SOURCES,
+  TERRITORY_ROWS,
   convertBetween,
   countDigits,
   estimateEarnings,
   groupCount,
   rateFromTotals,
+  rateWarning,
   songShareRows,
+  territoryBlend,
+  territoryShares,
   yourSongShare,
   type ProScale,
 } from "@/lib/royalty-calc";
@@ -72,10 +81,27 @@ import {
   contextForTrack,
   copyForAgency,
   fullReport,
+  projectionCsv,
   taxSavings,
   breakEvenStreams,
   type CopyContext,
 } from "@/lib/financial-lab-copy";
+import {
+  emptyTerritoryMix,
+  labStorageKey,
+  readLabJson,
+  readLabStore,
+  removeScenario,
+  restoredNumbers,
+  saveScenario,
+  writeLabJson,
+  writeLabStore,
+  withCurrent,
+  type LabNumbers,
+  type LabScenario,
+  type LabTerritoryMix,
+} from "@/lib/financial-lab-scenario";
+import { payoutTimeline } from "@/lib/financial-lab-payout";
 import { cn } from "@/lib/utils";
 
 const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -211,6 +237,15 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
   // No shirt margin until the merch calculator reports one: a preset margin here would price the recoupment panel's
   // shirts tile with a run nobody made (founder, 2026-11-24).
   const [merchMargin, setMerchMargin] = useState({ price: 0, cost: 0 });
+  // The budget target is kept with the open song too, so a refresh or another tab never empties it.
+  const budgetKey = labStorageKey(userId, songId, "budget");
+  useEffect(() => {
+    setBudgetCap(readLabJson<string>(budgetKey) ?? "");
+  }, [budgetKey]);
+  function changeBudget(value: string) {
+    setBudgetCap(value);
+    writeLabJson(budgetKey, value);
+  }
   const theme = useLabTheme();
   const song = tracks.find((t) => t.id === songId);
   const rows = useMemo(() => (song ? songShareRows(song.metadata) : []), [song]);
@@ -331,11 +366,17 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
                 bedazzle={bedazzle}
                 budgetCap={budgetCap}
                 merchMargin={merchMargin}
+                onBudgetCap={changeBudget}
               />
             </div>
           )}
-          {item.id === "budget" && <LabBudgetPlanner target={budgetCap} onTarget={setBudgetCap} />}
-          {item.id === "merch" && <LabMerchCalculator onMarginChange={setMerchMargin} />}
+          {item.id === "budget" && <LabBudgetPlanner target={budgetCap} onTarget={changeBudget} />}
+          {item.id === "merch" && (
+            <LabMerchCalculator
+              onMarginChange={setMerchMargin}
+              storageKey={labStorageKey(userId, songId, "merch")}
+            />
+          )}
         </div>
       ))}
       <p className="fl-footnote">
@@ -697,6 +738,7 @@ function Earnings({
   bedazzle,
   budgetCap,
   merchMargin,
+  onBudgetCap,
 }: {
   tracks: CatalogTrack[];
   song: CatalogTrack | undefined;
@@ -705,38 +747,85 @@ function Earnings({
   bedazzle: boolean;
   budgetCap: string;
   merchMargin: { price: number; cost: number };
+  onBudgetCap: (value: string) => void;
 }) {
-  // The Lab opens on no streams entered: a pre-filled count would put a projection on screen that isn't the member's
-  // own (founder, 2026-11-24).
-  const [streams, setStreams] = useState<Record<string, string>>({ spotify: "0" });
+  // Everything typed here lives in one store, saved against the open song: the Lab still opens on no streams entered (a
+  // pre-filled count would put a projection on screen that isn't the member's own, founder 2026-11-24), and a refresh,
+  // a tab switch or another song brings back exactly what belongs to that song.
+  const storeKey = labStorageKey(userId, songId, "royalty");
+  const [nums, setNums] = useState<LabNumbers>(() => readLabStore(storeKey).current);
+  const [scenarios, setScenarios] = useState<LabScenario[]>(() => readLabStore(storeKey).scenarios);
+  const [scenarioName, setScenarioName] = useState("");
   // The member's own statement totals for the platform in view: pasting a payout and its streams gives their real
   // average, which they can apply over the published default.
   const [own, setOwn] = useState({ paid: "", streams: "" });
-  const [rates, setRates] = useState<Record<string, string>>(() =>
-    Object.fromEntries(PLATFORMS.map((p) => [p.id, String(p.rate)])),
-  );
-  const [master, setMaster] = useState("100");
-  const [songShare, setSongShare] = useState("100");
-  const [radio, setRadio] = useState({ plays: "0", perPlay: "0" });
   const [pulse, setPulse] = useState(0);
   const [platform, setPlatform] = useState(PLATFORMS[0]!.id);
+  const loadedKey = useRef("");
+  const streams = nums.streams;
+  const rates = nums.rates;
+  const radio = nums.radio;
 
+  const patch = (next: Partial<LabNumbers>) => setNums((current) => ({ ...current, ...next }));
+  const setStreams = (update: (current: Record<string, string>) => Record<string, string>) =>
+    setNums((current) => ({ ...current, streams: update(current.streams) }));
+  const setRates = (
+    next: Record<string, string> | ((current: Record<string, string>) => Record<string, string>),
+  ) =>
+    setNums((current) => ({
+      ...current,
+      rates: typeof next === "function" ? next(current.rates) : next,
+    }));
+  const setRadio = (next: { plays: string; perPlay: string }) =>
+    setNums((current) => ({ ...current, radio: next }));
+
+  // The open song's own numbers when it has any, otherwise the catalog's shares. A saved setup is never overwritten by
+  // the catalog defaults just because the panel mounted again, and no song's numbers are written into another's key.
   useEffect(() => {
+    const saved = readLabStore(storeKey);
+    setScenarios(saved.scenarios);
     const t = tracks.find((x) => x.id === songId);
-    if (!t) return;
-    const ob = loadOnboarding(userId);
-    const names = [ob?.legalName, ob?.stageName].filter((x): x is string => !!x?.trim());
-    setMaster(t.metadata.masterShare || "100");
-    setSongShare(String(Math.round(yourSongShare(songShareRows(t.metadata), names) * 100) / 100));
-  }, [songId, tracks, userId]);
+    if (saved.savedAt || !t) {
+      setNums(saved.current);
+    } else {
+      const ob = loadOnboarding(userId);
+      const names = [ob?.legalName, ob?.stageName].filter((x): x is string => !!x?.trim());
+      setNums({
+        ...saved.current,
+        master: t.metadata.masterShare || "100",
+        songShare: String(Math.round(yourSongShare(songShareRows(t.metadata), names) * 100) / 100),
+      });
+    }
+    loadedKey.current = storeKey;
+  }, [storeKey, songId, tracks, userId]);
+
+  // Autosave, debounced so a long stream count isn't written on every keystroke. Only the song that has finished
+  // loading may write, so a song switch can never save one song's numbers under another's name.
+  useEffect(() => {
+    if (loadedKey.current !== storeKey) return;
+    const timer = window.setTimeout(() => {
+      if (loadedKey.current !== storeKey) return;
+      writeLabStore(storeKey, withCurrent(readLabStore(storeKey), nums));
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [storeKey, nums]);
 
   const num = (r: Record<string, string>) =>
     Object.fromEntries(Object.entries(r).map(([k, v]) => [k, Number(v) || 0]));
+  // A listener mix, where one is on, prices that platform on the blend instead of its flat rate. Off by default, so
+  // every estimate is exactly what it was before the control existed.
+  const pricedRates = Object.fromEntries(
+    PLATFORMS.map((p) => {
+      const mix = nums.territories[p.id];
+      const base = Number(rates[p.id]) || 0;
+      return [p.id, mix?.on ? base * territoryBlend(mix) : base];
+    }),
+  );
   const r = estimateEarnings({
     streams: num(streams),
-    rates: num(rates),
-    masterShare: Number(master) || 0,
-    songShare: Number(songShare) || 0,
+    rates: pricedRates,
+    masterShare: Number(nums.master) || 0,
+    songShare: Number(nums.songShare) || 0,
     radioPlays: Number(radio.plays) || 0,
     perPlay: Number(radio.perPlay) || 0,
   });
@@ -754,6 +843,12 @@ function Earnings({
   // A rate the member changed — by hand or with their own statement — can go back to the one the platform opened on,
   // so nobody has to remember the published figure.
   const rateChanged = (Number(rates[selected.id]) || 0) !== selected.rate;
+  const selectedMix = nums.territories[selected.id] ?? emptyTerritoryMix();
+  const mixTotal = territoryShares(selectedMix);
+  // A guard, never a block: a rate outside the published range, or ten times the published average, gets a sentence.
+  const warning = rateWarning(selected.id, Number(rates[selected.id]) || 0);
+  const distributor = Math.min(100, Math.max(0, Number(nums.distributor) || 0));
+  const net = r.yours * (1 - distributor / 100);
 
   function useOwnAverage() {
     if (ownRate === null) return;
@@ -767,6 +862,44 @@ function Earnings({
     setPulse((p) => p + 1);
     toast.success(`${selected.name} is back on ${rateMoney(selected.rate)} a stream.`);
   }
+
+  function setMix(next: Partial<LabTerritoryMix>) {
+    setNums((current) => ({
+      ...current,
+      territories: {
+        ...current.territories,
+        [selected.id]: {
+          ...(current.territories[selected.id] ?? emptyTerritoryMix()),
+          ...next,
+        },
+      },
+    }));
+  }
+
+  // Scenarios: the numbers on screen, named and filed against this song. Storage is the browser's, so nothing leaves
+  // the device until a saved-scenario table is decided.
+  function saveThisSetup(name: string) {
+    const store = saveScenario(readLabStore(storeKey), name, { ...nums, budgetCap }, r.yours);
+    writeLabStore(storeKey, store);
+    setScenarios(store.scenarios);
+    setScenarioName("");
+    toast.success(`Scenario “${name.trim()}” saved.`);
+  }
+
+  function restoreThisScenario(scenario: LabScenario) {
+    const back = restoredNumbers(scenario);
+    setNums({ ...back, budgetCap });
+    onBudgetCap(back.budgetCap);
+    setScenarios(readLabStore(storeKey).scenarios);
+    setPulse((p) => p + 1);
+    toast.success(`“${scenario.name}” is back on screen.`);
+  }
+
+  function deleteThisScenario(id: string) {
+    const store = removeScenario(readLabStore(storeKey), id);
+    writeLabStore(storeKey, store);
+    setScenarios(store.scenarios);
+  }
   const selectedSource = selected.source ? RATE_SOURCES[selected.source] : undefined;
   const enteredCount = PLATFORMS.filter((p) => Number(streams[p.id]) > 0).length;
   const enteredLabel =
@@ -779,8 +912,17 @@ function Earnings({
         earnings: {
           total: r.yours,
           radio: r.radio,
-          masterShare: Number(master) || 0,
-          songShare: Number(songShare) || 0,
+          masterShare: Number(nums.master) || 0,
+          songShare: Number(nums.songShare) || 0,
+          ...(distributor ? { distributor, net } : {}),
+          ...(selectedMix.on
+            ? {
+                territories: TERRITORY_ROWS.map((row) => ({
+                  label: row.label,
+                  share: Number(selectedMix[row.id]) || 0,
+                })),
+              }
+            : {}),
           platforms: PLATFORMS.map((p) => {
             const row = r.platforms.find((x) => x.id === p.id)!;
             return {
@@ -793,12 +935,22 @@ function Earnings({
           }),
         },
       }),
-    [song, r, master, songShare, streams, rates],
+    [song, r, nums, streams, rates, net, distributor, selectedMix],
   );
+
+  function downloadProjection() {
+    const csv = projectionCsv(copyContext);
+    saveBlob(
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      `${song?.title || "financial-lab"} projection.csv`,
+    );
+    toast.success("Projection downloaded.");
+  }
 
   // One cut, read by the readout, the pipeline and the recoupment targets, so the three can never disagree.
   const streamCut =
-    MASTER_PORTION * (Number(master) || 0) + (1 - MASTER_PORTION) * (Number(songShare) || 0);
+    MASTER_PORTION * (Number(nums.master) || 0) +
+    (1 - MASTER_PORTION) * (Number(nums.songShare) || 0);
   const streamPool = r.platforms.reduce((n, p) => n + p.total, 0);
   const streamCount = Object.values(streams).reduce((n, v) => n + (Number(v) || 0), 0);
 
@@ -824,8 +976,64 @@ function Earnings({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="fl-chip">STEP 1–4</span>
+          <span className="fl-chip">STEP 1–5</span>
           <span className="fl-chip">{song ? song.title : "MANUAL SHARES"}</span>
+        </div>
+      </div>
+
+      <div className="fl-scenario">
+        <div className="fl-scenario-head">
+          <span className="fl-scenario-title">
+            <Repeat className="h-3.5 w-3.5" aria-hidden="true" /> Scenarios
+          </span>
+          <span className="fl-platform-note !mt-0">
+            Saved with this song in this browser, autosaved as you type. Nothing leaves the device.
+          </span>
+        </div>
+        {scenarios.length > 0 && (
+          <div className="fl-scenario-chips">
+            {scenarios.map((s) => (
+              <span key={s.id} className="fl-scenario-chip">
+                <button
+                  type="button"
+                  className="fl-scenario-load"
+                  onClick={() => restoreThisScenario(s)}
+                  title={`Restore “${s.name}”`}
+                >
+                  {s.name} · {money(s.total)}
+                </button>
+                <button
+                  type="button"
+                  className="fl-scenario-del"
+                  aria-label={`Delete “${s.name}”`}
+                  onClick={() => deleteThisScenario(s.id)}
+                >
+                  <Trash2 className="h-3 w-3" aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="fl-scenario-save">
+          <Input
+            id="fl-scenario-name"
+            className="fl-input"
+            placeholder="Name this setup — Album cycle"
+            maxLength={40}
+            value={scenarioName}
+            onChange={(e) => setScenarioName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && scenarioName.trim()) saveThisSetup(scenarioName);
+            }}
+          />
+          <button
+            type="button"
+            className="fl-ghost-btn disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!scenarioName.trim()}
+            onClick={() => saveThisSetup(scenarioName)}
+          >
+            Save this setup
+          </button>
         </div>
       </div>
 
@@ -847,8 +1055,8 @@ function Earnings({
             type="number"
             min={0}
             max={100}
-            value={master}
-            onChange={(e) => setMaster(e.target.value)}
+            value={nums.master}
+            onChange={(e) => patch({ master: e.target.value })}
             className="fl-input fl-mono"
           />
         </div>
@@ -859,8 +1067,8 @@ function Earnings({
             type="number"
             min={0}
             max={100}
-            value={songShare}
-            onChange={(e) => setSongShare(e.target.value)}
+            value={nums.songShare}
+            onChange={(e) => patch({ songShare: e.target.value })}
             className="fl-input fl-mono"
           />
         </div>
@@ -914,7 +1122,7 @@ function Earnings({
             />
           </div>
           <div className="fl-field">
-            <Label htmlFor="earn-rate">Per stream ($)</Label>
+            <Label htmlFor="earn-rate">Rate ($)</Label>
             <Input
               id="earn-rate"
               type="number"
@@ -926,7 +1134,7 @@ function Earnings({
             />
           </div>
           <div className="fl-field">
-            <Label htmlFor="earn-estimate">Your estimate</Label>
+            <Label htmlFor="earn-estimate">Estimate</Label>
             <output id="earn-estimate" className="fl-estimate">
               {money(selectedRow.yours)}
             </output>
@@ -962,6 +1170,28 @@ function Earnings({
         <p className="fl-platform-note">
           {enteredLabel} Switching platforms keeps every number you type.
         </p>
+        {warning && (
+          <div className="fl-guard" role="status">
+            <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{warning.message}</span>
+            {warning.fix ? (
+              <button
+                type="button"
+                className="fl-guard-fix"
+                onClick={() => {
+                  setRates({ ...rates, [selected.id]: String(warning.fix) });
+                  setPulse((p) => p + 1);
+                }}
+              >
+                Use {rateMoney(warning.fix)}
+              </button>
+            ) : null}
+          </div>
+        )}
+        <p className="fl-receipt">
+          {shownStreams || "0"} streams × {rateMoney(Number(pricedRates[selected.id]) || 0)} ={" "}
+          {money(selectedRow.total)} pool · your {pct(streamCut)} cut = {money(selectedRow.yours)}
+        </p>
 
         <div className="fl-ownavg">
           <div className="fl-ownavg-head">
@@ -969,7 +1199,7 @@ function Earnings({
           </div>
           <div className="fl-platform-grid">
             <div className="fl-field">
-              <Label htmlFor="earn-own-paid">Total paid ($)</Label>
+              <Label htmlFor="earn-own-paid">Paid ($)</Label>
               <Input
                 id="earn-own-paid"
                 type="text"
@@ -999,7 +1229,7 @@ function Earnings({
               />
             </div>
             <div className="fl-field">
-              <Label htmlFor="earn-own-average">Your average</Label>
+              <Label htmlFor="earn-own-average">Average</Label>
               <output id="earn-own-average" className="fl-estimate">
                 {ownRate === null ? "—" : rateMoney(ownRate)}
               </output>
@@ -1019,6 +1249,51 @@ function Earnings({
               the published rate above for this platform only.
             </span>
           </div>
+        </div>
+
+        <div className="fl-territory">
+          <label className="fl-territory-head">
+            <span className="fl-territory-title">
+              <Globe className="h-3.5 w-3.5" aria-hidden="true" /> Listener mix for {selected.name}
+            </span>
+            <Switch
+              checked={selectedMix.on}
+              onCheckedChange={(on) => setMix({ on })}
+              aria-label={`Price ${selected.name} on a listener mix`}
+            />
+          </label>
+          {selectedMix.on && (
+            <>
+              <div className="fl-territory-grid">
+                {TERRITORY_ROWS.map((row) => (
+                  <div className="fl-field" key={row.id}>
+                    <Label htmlFor={`mix-${row.id}`}>{row.label}</Label>
+                    <Input
+                      id={`mix-${row.id}`}
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="fl-input fl-mono h-8 w-full text-right"
+                      value={selectedMix[row.id] ?? ""}
+                      placeholder="0"
+                      onChange={(e) =>
+                        setMix({ [row.id]: e.target.value } as Partial<LabTerritoryMix>)
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="fl-platform-note">
+                {rateMoney((Number(rates[selected.id]) || 0) * territoryBlend(selectedMix))} a
+                stream on this mix
+                {mixTotal === 100
+                  ? ""
+                  : ` (your shares add to ${pct(mixTotal)}, so the blend uses their proportions)`}
+                . The multipliers behind it are a planning assumption, not a published rate — your
+                distributor statement is the real answer.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -1060,7 +1335,7 @@ function Earnings({
             />
           </div>
           <div className="fl-field">
-            <Label htmlFor="earn-radio-estimate">Your estimate</Label>
+            <Label htmlFor="earn-radio-estimate">Estimate</Label>
             <output id="earn-radio-estimate" className="fl-estimate">
               {money(r.radio)}
             </output>
@@ -1073,11 +1348,79 @@ function Earnings({
         </p>
       </div>
 
+      <div className="fl-platform-block fl-distributor">
+        <div className="fl-step-label">
+          <span className="fl-step-num">4</span> Take the distributor&apos;s cut
+        </div>
+        <div className="fl-platform-grid">
+          <div className="fl-field">
+            <Label htmlFor="earn-distributor">Cut (%)</Label>
+            <Input
+              id="earn-distributor"
+              type="number"
+              min={0}
+              max={100}
+              step="0.1"
+              className="fl-input fl-mono h-8 w-full text-right"
+              value={nums.distributor}
+              onChange={(e) => patch({ distributor: e.target.value })}
+            />
+          </div>
+          <div className="fl-field">
+            <Label htmlFor="earn-gross">Before the cut</Label>
+            <output id="earn-gross" className="fl-estimate">
+              {money(r.yours)}
+            </output>
+          </div>
+          <div className="fl-field">
+            <Label htmlFor="earn-net">You keep</Label>
+            <output id="earn-net" className="fl-estimate">
+              {money(net)}
+            </output>
+          </div>
+        </div>
+        <div className="fl-quick-pills fl-dist-presets">
+          {[0, 9, 15].map((v) => (
+            <button
+              key={v}
+              type="button"
+              className="fl-pill"
+              data-on={distributor === v}
+              aria-pressed={distributor === v}
+              onClick={() => patch({ distributor: String(v) })}
+            >
+              {v}%
+            </button>
+          ))}
+        </div>
+        <p className="fl-platform-note">
+          0% leaves every estimate exactly as it is. RouteNote Free keeps 15%, CD Baby 9%; DistroKid
+          charges a flat fee, so 0%. A label takes its share before this.
+        </p>
+        <PayoutTimeline
+          pool={streamPool}
+          masterShare={Number(nums.master) || 0}
+          songShare={Number(nums.songShare) || 0}
+          distributor={distributor}
+          radio={r.radio}
+          audiomack={r.platforms.find((x) => x.id === "audiomack")?.yours ?? 0}
+        />
+      </div>
+
       <div className="mt-4">
         <div className="fl-step-label">
-          <span className="fl-step-num">4</span> Copy the breakdown for your notes
+          <span className="fl-step-num">5</span> Copy or download the breakdown
         </div>
         <CopyDeck context={copyContext} />
+        <div className="fl-export-row">
+          <button type="button" className="fl-ghost-btn" onClick={downloadProjection}>
+            <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download projection (CSV)
+          </button>
+          <span className="fl-platform-note !mt-0">
+            One row per platform, then radio and the total. Opens in Excel, Numbers or Google
+            Sheets.
+          </span>
+        </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
@@ -1088,22 +1431,67 @@ function Earnings({
       <RoyaltyPipelinePanel
         song={song}
         pool={streamPool}
-        masterShare={Number(master) || 0}
-        songShare={Number(songShare) || 0}
+        masterShare={Number(nums.master) || 0}
+        songShare={Number(nums.songShare) || 0}
         streams={streamCount}
       />
 
       <RecoupmentPanel
         target={budgetCap}
-        earned={r.yours}
+        earned={net}
         streamCut={streamCut}
         merchProfit={merchMargin.price - merchMargin.cost}
         spotifyRate={Number(rates["spotify"]) || 0}
         appleRate={Number(rates["apple"]) || 0}
       />
 
-      <TotalDock total={r.yours} context={copyContext} pulse={pulse} bedazzle={bedazzle} />
+      <TotalDock
+        total={r.yours}
+        net={net}
+        distributor={distributor}
+        context={copyContext}
+        pulse={pulse}
+        bedazzle={bedazzle}
+      />
     </section>
+  );
+}
+
+function PayoutTimeline({
+  pool,
+  masterShare,
+  songShare,
+  distributor,
+  radio,
+  audiomack,
+}: {
+  pool: number;
+  masterShare: number;
+  songShare: number;
+  distributor: number;
+  radio: number;
+  audiomack: number;
+}) {
+  const entries = payoutTimeline({ pool, masterShare, songShare, distributor, radio, audiomack });
+  return (
+    <div className="fl-timeline" aria-label="When the money lands">
+      <div className="fl-timeline-head">
+        <span className="fl-step-label !mt-0">When it lands</span>
+        <span className="fl-platform-note !mt-0">
+          The earliest normal payout for a month of streams, not a promise.
+        </span>
+      </div>
+      <div className="fl-timeline-grid">
+        {entries.map((entry) => (
+          <div className="fl-timeline-card" key={entry.id}>
+            <span className="fl-timeline-when">{entry.when}</span>
+            <strong className="fl-timeline-label">{entry.label}</strong>
+            <span className="fl-timeline-amount">{money(entry.amount)}</span>
+            <span className="fl-platform-note !mt-0">{entry.note}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1462,11 +1850,15 @@ function CopyButton({
 
 function TotalDock({
   total,
+  net,
+  distributor,
   context,
   pulse,
   bedazzle,
 }: {
   total: number;
+  net: number;
+  distributor: number;
   context: CopyContext;
   pulse: number;
   bedazzle: boolean;
@@ -1492,6 +1884,11 @@ function TotalDock({
           <TrendingUp className="h-3.5 w-3.5" /> Your projected total
         </div>
         <div className="fl-dock-total">{money(total)}</div>
+        {distributor > 0 && (
+          <p className="fl-dock-net">
+            After the {pct(distributor)} distributor cut: <strong>{money(net)}</strong>
+          </p>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <span className="hidden text-xs text-muted-foreground sm:block">

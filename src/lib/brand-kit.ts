@@ -181,8 +181,11 @@ export function logoTop(o: {
 /** What a PDF needs: the kit plus the logo as a data URL, so it can be drawn without another request. */
 export type PdfBrand = Omit<BrandKit, "logoPath"> & { logo: { dataUrl: string } | null };
 
-/** Where a Personal Branding kit may replace our header: the paperwork and the two catalog downloads. */
-export type BrandUse = "splits" | "contracts" | "lyrics" | "catalog";
+/**
+ * Where a Personal Branding kit may replace our header: the paperwork, the two catalog downloads and the Financial Lab's
+ * budget sheet (founder, 2026-11-24: a Lab PDF carries the kit a member has, and nothing changes for anyone without one).
+ */
+export type BrandUse = "splits" | "contracts" | "lyrics" | "catalog" | "lab";
 
 /** New kits start in Arial, a neutral font that fits any brand (founder, 2026-10-27); Poppins is ours. */
 export const DEFAULT_KIT_FONT = "Arial";
@@ -405,7 +408,7 @@ export function usableKits<T extends KitLinkLike>(
 /** Where their brand kit shows: everywhere with Catalog Management or the add-on (any plan). */
 export function brandAccess(tier: Tier, addOnUntil: Date | null): Record<BrandUse, boolean> {
   const on = hasTier(tier, "management") || !!addOnUntil;
-  return { contracts: on, splits: on, lyrics: on, catalog: on };
+  return { contracts: on, splits: on, lyrics: on, catalog: on, lab: on };
 }
 
 /** A kit is worth drawing once it has a name or a logo; otherwise the Came Through Audio header stays. */

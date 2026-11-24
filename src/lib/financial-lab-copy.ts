@@ -42,6 +42,12 @@ export type EarningsSnapshot = {
   masterShare: number;
   songShare: number;
   platforms: { name: string; streams: number; rate: number; total: number; yours: number }[];
+  /** The distributor's cut in percent; 0 leaves the report exactly as it was. */
+  distributor?: number;
+  /** What reaches the member after that cut. */
+  net?: number;
+  /** The listener mix a platform was priced on, when one is on. */
+  territories?: { label: string; share: number }[];
 };
 
 export type CopyContext = {
@@ -224,6 +230,47 @@ export function copyForAgency(agency: CopyAgency, c: CopyContext): string {
   return lines.join("\n");
 }
 
+/** A field safe for a spreadsheet cell: quoted only when it has to be. */
+const cell = (v: string | number) => {
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+/**
+ * The projection as a CSV, for a manager, an accountant or a spreadsheet: one row per platform with the numbers the Lab
+ * already shows, then the radio line, the distributor cut and the total. Plain decimals for the rate, so a spreadsheet
+ * reads it as a number rather than text.
+ */
+export function projectionCsv(c: CopyContext): string {
+  const e = c.earnings;
+  const rows: string[] = [
+    ["Song", "Platform", "Streams", "Rate (USD)", "Pool (USD)", "Your estimate (USD)"]
+      .map(cell)
+      .join(","),
+  ];
+  if (!e) return [...rows, cell(c.title)].join("\n");
+  for (const p of e.platforms) {
+    rows.push(
+      [c.title, p.name, p.streams, p.rate, p.total.toFixed(2), p.yours.toFixed(2)]
+        .map(cell)
+        .join(","),
+    );
+  }
+  rows.push(
+    [c.title, "Radio / SiriusXM / live", "", "", "", e.radio.toFixed(2)].map(cell).join(","),
+  );
+  rows.push([c.title, "Projected total", "", "", "", e.total.toFixed(2)].map(cell).join(","));
+  if (e.distributor) {
+    rows.push([c.title, "Distributor cut", "", "", "", `${e.distributor}%`].map(cell).join(","));
+    rows.push([c.title, "You keep", "", "", "", (e.net ?? e.total).toFixed(2)].map(cell).join(","));
+  }
+  rows.push(
+    [c.title, "Master share", "", "", "", pct(e.masterShare)].map(cell).join(","),
+    [c.title, "Song share", "", "", "", pct(e.songShare)].map(cell).join(","),
+  );
+  return rows.join("\n");
+}
+
 export function fullReport(c: CopyContext): string {
   const lines = header("FULL ROYALTY REPORT", c);
   if (c.manual) lines.push(...manualLines(c));
@@ -259,6 +306,15 @@ export function fullReport(c: CopyContext): string {
     }
     lines.push(`Radio / SiriusXM / live | | | | ${money(c.earnings.radio)}`);
     lines.push("", `PROJECTED TOTAL: ${money(c.earnings.total)}`);
+    if (c.earnings.distributor) {
+      lines.push(
+        `Distributor cut: ${pct(c.earnings.distributor)}  |  You keep: ${money(c.earnings.net ?? c.earnings.total)}`,
+      );
+    }
+    if (c.earnings.territories?.length) {
+      lines.push("", "LISTENER MIX (planning assumption, not a published rate)");
+      for (const t of c.earnings.territories) lines.push(`${t.label}: ${pct(t.share)}`);
+    }
     lines.push("Estimates only. Platform rates vary by country, subscription tier and agreement.");
   } else {
     lines.push("No projected earnings snapshot was included.");

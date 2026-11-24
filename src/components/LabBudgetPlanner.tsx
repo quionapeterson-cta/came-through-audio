@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { AllocationDonut, SpentPairs, allocationTone } from "@/components/LabCharts";
 import { downloadBudgetPdf } from "@/lib/budget-pdf";
+import { myBrand } from "@/lib/brand-load";
 import {
   BUDGET_BLUEPRINTS,
   QUICK_PICKS,
@@ -126,13 +127,19 @@ export function LabBudgetPlanner({
   async function exportSheet() {
     setExporting(true);
     try {
-      await downloadBudgetPdf({
-        project: blueprint.name,
-        target: plan.target,
-        tip: blueprint.tip,
-        allocated: plan.lines,
-        rows: plan.rows,
-      });
+      // A member's own brand kit on the sheet when they have one they may print with (Catalog Management, or a paid
+      // kit); otherwise this returns null and the PDF keeps the Came Through Audio header.
+      const brand = await myBrand("lab");
+      await downloadBudgetPdf(
+        {
+          project: blueprint.name,
+          target: plan.target,
+          tip: blueprint.tip,
+          allocated: plan.lines,
+          rows: plan.rows,
+        },
+        brand,
+      );
       toast.success("Budget sheet downloaded.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't build the budget sheet.");

@@ -15,6 +15,7 @@ import {
   sectionTitle,
 } from "@/lib/brand-pdf";
 import { saveBlob } from "@/lib/catalog";
+import type { PdfBrand } from "@/lib/brand-kit";
 import {
   budgetProgress,
   expenseActual,
@@ -37,9 +38,12 @@ export type BudgetSheet = {
  * The Production Budget Planner's one-page sheet: the official header, the cap / spent / remaining strip, the itemized
  * allocation, and the live checklist with its Estimated or Paid state. `brandFooter` adds the made-on line, so the
  * sheet carries the same footer as every other download.
+ *
+ * With a Personal Branding kit (Catalog Management, or a paid kit) their header, colors and logo replace ours, exactly as
+ * on a split sheet or a catalog PDF; without one the page is unchanged.
  */
-export async function buildBudgetPdf(sheet: BudgetSheet) {
-  const pdf = await newBrandedPdf();
+export async function buildBudgetPdf(sheet: BudgetSheet, brand?: PdfBrand | null) {
+  const pdf = await newBrandedPdf(brand ?? undefined);
   const w = pdf.internal.pageSize.getWidth();
   const h = pdf.internal.pageSize.getHeight();
   const totals = budgetProgress(sheet.rows, sheet.target);
@@ -49,6 +53,7 @@ export async function buildBudgetPdf(sheet: BudgetSheet) {
     "Production Budget",
     sheet.project,
     `${money(sheet.target)} target  ·  ${headerDate()}`,
+    brand ?? undefined,
   );
 
   // Cap, spent, remaining: the same three numbers the live header shows on screen.
@@ -163,11 +168,11 @@ export async function buildBudgetPdf(sheet: BudgetSheet) {
     tipLines.forEach((line, index) => pdf.text(line, MARGIN + 7, y + 11 + index * 4.6));
   }
 
-  brandFooter(pdf);
+  brandFooter(pdf, brand ?? undefined);
   return pdf;
 }
 
-export async function downloadBudgetPdf(sheet: BudgetSheet) {
-  const pdf = await buildBudgetPdf(sheet);
+export async function downloadBudgetPdf(sheet: BudgetSheet, brand?: PdfBrand | null) {
+  const pdf = await buildBudgetPdf(sheet, brand);
   saveBlob(pdf.output("blob"), `${sheet.project} budget.pdf`);
 }
