@@ -83,7 +83,8 @@ export function LabMerchCalculator({
     setQuantity(String(preset.quantity));
     setUnitCost(String(preset.unitCost));
     setPrice(String(preset.price));
-    setUnitsSold(Math.round(preset.quantity / 2));
+    // The run starts unsold: a preset that also claims half of it sold is a made-up result, not an invoice.
+    setUnitsSold(0);
     setEntry("");
   }
 
