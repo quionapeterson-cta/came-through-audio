@@ -42,9 +42,10 @@ describe("the financial lab", () => {
       "pandora",
       "youtube",
       "soundcloud",
-      "audiomack",
     ])
       expect(byId[id]?.rate, id).toBeGreaterThan(0);
+    // Audiomack publishes only its 50% revenue share, no per-stream figure, so it stays at 0 rather than guessing.
+    expect(byId["audiomack"]?.rate).toBe(0);
     // TikTok and Meta pay per video use, not per stream, so a per-stream default would be the wrong unit.
     for (const id of ["tiktok", "meta"]) expect(byId[id]?.rate, id).toBe(0);
     for (const p of PLATFORMS) {

@@ -753,7 +753,7 @@ function Earnings({
           <div>
             <h3 className="text-xl font-extrabold tracking-tight">Projected Royalty Earnings</h3>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              Rates start at the published average for each platform, checked against the source
+              Rates start at the published average where there is one, checked against the source
               beside it, and stay editable. About {Math.round(MASTER_PORTION * 100)}% of a stream
               goes to the master and {Math.round((1 - MASTER_PORTION) * 100)}% to the song.
             </p>
