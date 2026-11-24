@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ExternalLink, Radio, ReceiptText, Shirt } from "lucide-react";
+import { ArrowUpRight, Check, ExternalLink, Radio, ReceiptText, Shirt } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { RecoupGauge } from "@/components/LabCharts";
 import type { CatalogTrack } from "@/lib/catalog";
@@ -607,6 +607,7 @@ export function RecoupmentPanel({
   spotifyRate,
   appleRate,
   onOpenMerch,
+  onOpenBudget,
 }: {
   target: string;
   /** The Lab's projected take for the streams and plays already entered, read as money back on the project. */
@@ -617,6 +618,8 @@ export function RecoupmentPanel({
   appleRate: number;
   /** Carries the member to the merch calculator when a shirt target needs a price it has not got yet. */
   onOpenMerch?: (() => void) | undefined;
+  /** Carries the member to the Budget Planner whose target spend is the prefill this cost starts from. */
+  onOpenBudget?: (() => void) | undefined;
 }) {
   const [value, setValue] = useState(target);
   // The Budget Planner's target spend is the prefill: change it there and every target here moves with it.
@@ -678,7 +681,20 @@ export function RecoupmentPanel({
             stream cut. No growth curve and no twelve-month promise.
           </p>
         </div>
-        <span className="fl-chip ml-auto">FROM YOUR BUDGET</span>
+        {/* The chip names where the cost comes from, so it is also the way to the field that sets it. */}
+        {onOpenBudget ? (
+          <button
+            type="button"
+            className="fl-chip fl-chip-jump ml-auto"
+            onClick={onOpenBudget}
+            title="Open the Budget Planner to set your target spend"
+          >
+            FROM YOUR BUDGET
+            <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="fl-chip ml-auto">FROM YOUR BUDGET</span>
+        )}
       </div>
 
       <div className="fl-step-label mt-3">

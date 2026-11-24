@@ -348,10 +348,17 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
                 budgetCap={budgetCap}
                 merchMargin={merchMargin}
                 onOpenMerch={() => openTab("merch", "fl-panel-merch")}
+                onOpenBudget={() => openTab("budget", "fl-panel-budget")}
               />
             </div>
           )}
-          {item.id === "budget" && <LabBudgetPlanner target={budgetCap} onTarget={setBudgetCap} />}
+          {item.id === "budget" && (
+            <LabBudgetPlanner
+              target={budgetCap}
+              onTarget={setBudgetCap}
+              onOpenRecoupment={() => openTab("royalty", "fl-recoupment")}
+            />
+          )}
           {item.id === "merch" && (
             <LabMerchCalculator
               onMarginChange={setMerchMargin}
@@ -720,6 +727,7 @@ function Earnings({
   budgetCap,
   merchMargin,
   onOpenMerch,
+  onOpenBudget,
 }: {
   tracks: CatalogTrack[];
   song: CatalogTrack | undefined;
@@ -729,6 +737,7 @@ function Earnings({
   budgetCap: string;
   merchMargin: { price: number; cost: number };
   onOpenMerch?: () => void;
+  onOpenBudget?: () => void;
 }) {
   // The Lab opens on no streams entered: a pre-filled count would put a projection on screen that isn't the member's
   // own (founder, 2026-11-24).
@@ -1125,6 +1134,7 @@ function Earnings({
         spotifyRate={Number(rates["spotify"]) || 0}
         appleRate={Number(rates["apple"]) || 0}
         onOpenMerch={onOpenMerch}
+        onOpenBudget={onOpenBudget}
       />
 
       <TotalDock total={r.yours} context={copyContext} pulse={pulse} bedazzle={bedazzle} />

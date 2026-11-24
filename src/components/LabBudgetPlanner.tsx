@@ -1,5 +1,6 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import {
+  ArrowUpRight,
   Camera,
   Check,
   Clapperboard,
@@ -78,10 +79,13 @@ function openPlan(kind: ProjectKind, target: number, previous: ExpenseRow[] = []
 export function LabBudgetPlanner({
   target,
   onTarget,
+  onOpenRecoupment,
 }: {
   /** The target spend lives in the Lab so the recoupment tool can prefill from it. */
   target: string;
   onTarget: (value: string) => void;
+  /** Sends the member to the recoupment tool that reads this target spend. */
+  onOpenRecoupment?: (() => void) | undefined;
 }) {
   const [kind, setKind] = useState<ProjectKind>("music-video");
   // An unnamed target opens an empty plan rather than a $500 one: nothing here is priced until the artist says so.
@@ -155,6 +159,12 @@ export function LabBudgetPlanner({
                 Pick the project, name the spend and CTA allocates it line by line — then track
                 every item from estimated to paid.
               </p>
+              {onOpenRecoupment && (
+                <button type="button" className="fl-jump mt-2" onClick={onOpenRecoupment}>
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  Back to Recoupment
+                </button>
+              )}
             </div>
           </div>
           <span className="fl-chip">STEP 1–5</span>

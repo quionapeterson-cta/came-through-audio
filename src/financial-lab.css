@@ -3393,6 +3393,10 @@
   text-decoration-style: dotted;
   text-underline-offset: 0.2em;
   cursor: pointer;
+  /* Padded, with the same amount taken back in margin: the tap area clears 24px and no line moves. */
+  padding: 0.16rem 0.1rem;
+  margin: -0.16rem -0.1rem;
+  border-radius: 0.35rem;
 }
 .fl-jump:hover {
   text-decoration-style: solid;
@@ -3401,11 +3405,26 @@
   border-radius: 0.35rem;
   outline: 2px solid var(--fl-cobalt);
   outline-offset: 2px;
-}
-.dark .fl-jump {
+}.dark .fl-jump {
   color: #4d8cff;
 }
 .dark .fl-jump:focus-visible {
+  outline-color: #4d8cff;
+}
+/* The recoupment chip reads as a link without losing the chip shape it shipped with. */
+.fl-chip-jump {
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.fl-chip-jump:hover {
+  border-color: var(--fl-cobalt);
+  background: #e2eeff;
+}
+.fl-chip-jump:focus-visible {
+  outline: 2px solid var(--fl-cobalt);
+  outline-offset: 2px;
+}
+.dark .fl-chip-jump:focus-visible {
   outline-color: #4d8cff;
 }
 /* The tile's own type is small, so the link keeps its look but gains a real tap area. */
@@ -3416,13 +3435,15 @@
   border-radius: 0.45rem;
 }
 #fl-recoupment,
-#fl-panel-merch {
+#fl-panel-merch,
+#fl-panel-budget {
   scroll-margin-top: 6rem;
 }
 /* The pre-launch bar is fixed and wraps to several lines on a phone, so a jump clears its full height. */
 @media (max-width: 640px) {
   #fl-recoupment,
-  #fl-panel-merch {
+  #fl-panel-merch,
+  #fl-panel-budget {
     scroll-margin-top: 22rem;
   }
 }
