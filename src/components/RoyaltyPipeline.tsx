@@ -617,21 +617,21 @@ export function RecoupmentPanel({
       id: "spotify",
       name: "Spotify",
       note: `${unitMoney(spotifyRate)} per stream`,
-      units: targets.spotify,
+      units: cost > 0 ? targets.spotify : null,
       icon: Radio,
     },
     {
       id: "apple",
       name: "Apple Music",
       note: `${unitMoney(appleRate)} per stream`,
-      units: targets.apple,
+      units: cost > 0 ? targets.apple : null,
       icon: ReceiptText,
     },
     {
       id: "merch",
       name: "T-shirts",
       note: merchProfit > 0 ? `${money(merchProfit)} profit each` : "Set a merch price",
-      units: targets.merch,
+      units: cost > 0 ? targets.merch : null,
       icon: Shirt,
     },
   ];
@@ -663,7 +663,6 @@ export function RecoupmentPanel({
             inputMode="decimal"
             className="fl-input fl-mono"
             value={value}
-            placeholder="500"
             onChange={(event) => setValue(event.target.value)}
           />
         </div>
@@ -673,8 +672,9 @@ export function RecoupmentPanel({
         </div>
       </div>
       <p className="fl-hint">
-        Prefilled from the Budget Planner's target spend. Change the cost here and every target
-        below follows it.
+        {cost > 0
+          ? "Prefilled from the Budget Planner's target spend. Change the cost here and every target below follows it."
+          : "Name the cost here, or set a target spend in the Budget Planner and it fills in."}
       </p>
 
       <RecoupGauge progress={progress} spotifyRate={spotifyRate} />
@@ -699,9 +699,11 @@ export function RecoupmentPanel({
               </div>
               <div className="fl-recoup-unit">
                 {tile.units === null
-                  ? tile.id === "merch"
-                    ? "Add a selling price in the merch calculator"
-                    : "Set your stream shares above"
+                  ? cost <= 0
+                    ? "Add a project cost above"
+                    : tile.id === "merch"
+                      ? "Add a selling price in the merch calculator"
+                      : "Set your stream shares above"
                   : tile.id === "merch"
                     ? "shirts sold to recover the cost"
                     : "streams to break even"}

@@ -41,7 +41,8 @@ export function AllocationDonut({
   const circumference = 2 * Math.PI * radius;
   const filled = slices.some((slice) => slice.end > slice.start);
   return (
-    <div className="fl-donut-row">
+    <>
+      <div className="fl-donut-row">
       <svg
         className="fl-donut"
         viewBox="0 0 120 120"
@@ -87,7 +88,13 @@ export function AllocationDonut({
           ALLOCATED
         </text>
       </svg>
-    </div>
+      </div>
+      {!filled && (
+        <p className="fl-chart-empty">
+          No money allocated yet — name a target spend and generate the split.
+        </p>
+      )}
+    </>
   );
 }
 
@@ -99,7 +106,8 @@ export function SpentPairs({ groups }: { groups: CategorySpend[] }) {
   if (!groups.length)
     return (
       <p className="fl-chart-empty">
-        Add a budget line and its pair appears here — planned beside what has been paid.
+        Once a line has a planned amount, its pair appears here — planned beside what has been
+        paid.
       </p>
     );
   const scale = Math.max(1, ...groups.map((group) => Math.max(group.planned, group.spent)));

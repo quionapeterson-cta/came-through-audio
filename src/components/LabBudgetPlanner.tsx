@@ -84,7 +84,8 @@ export function LabBudgetPlanner({
   onTarget: (value: string) => void;
 }) {
   const [kind, setKind] = useState<ProjectKind>("music-video");
-  const [plan, setPlan] = useState<Plan>(() => openPlan("music-video", Number(target) || 500));
+  // An unnamed target opens an empty plan rather than a $500 one: nothing here is priced until the artist says so.
+  const [plan, setPlan] = useState<Plan>(() => openPlan("music-video", Number(target) || 0));
   const [active, setActive] = useState("");
   const [exporting, setExporting] = useState(false);
 
@@ -214,7 +215,6 @@ export function LabBudgetPlanner({
                 className="fl-input fl-mono"
                 value={target}
                 onChange={(event) => onTarget(event.target.value)}
-                placeholder="500"
               />
             </div>
           </div>
@@ -239,7 +239,9 @@ export function LabBudgetPlanner({
             <div className="fl-eyebrow flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-[0.2em]">
               <Sparkles className="h-3.5 w-3.5" /> CTA expert allocation
             </div>
-            <h3 className="mt-1 text-lg font-extrabold">Where {whole(plan.target)} should go</h3>
+            <h3 className="mt-1 text-lg font-extrabold">
+              Where {plan.target > 0 ? whole(plan.target) : "your budget"} should go
+            </h3>
           </div>
           <span className="fl-chip ml-auto">{blueprint.name}</span>
         </div>

@@ -192,7 +192,9 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
   const [bedazzle, setBedazzle] = useState(false);
   // Lifted here so the royalty tools can prefill from the other two: the Budget Planner's target spend and the merch
   // calculator's live price and cost. Neither tool writes the other's state; the parent only carries the numbers.
-  const [budgetCap, setBudgetCap] = useState("500");
+  // Empty until the artist names their own spend: a filled-in target pre-prices the recoupment tool with a project
+  // that isn't theirs (founder, 2026-11-24).
+  const [budgetCap, setBudgetCap] = useState("");
   const [merchMargin, setMerchMargin] = useState(() => {
     const preset = presetOf("tshirt");
     return { price: preset.price, cost: preset.unitCost };
@@ -678,7 +680,7 @@ function Earnings({
   );
   const [master, setMaster] = useState("100");
   const [songShare, setSongShare] = useState("100");
-  const [radio, setRadio] = useState({ plays: "0", perPlay: "0.10" });
+  const [radio, setRadio] = useState({ plays: "0", perPlay: "0" });
   const [pulse, setPulse] = useState(0);
   const [platform, setPlatform] = useState(PLATFORMS[0]!.id);
 
@@ -945,7 +947,8 @@ function Telemetry({
 }) {
   const [advanced, setAdvanced] = useState(true);
   const [log, setLog] = useState(false);
-  const [growth, setGrowth] = useState("5");
+  // No growth is assumed for them: the curve moves only by the rate they type.
+  const [growth, setGrowth] = useState("0");
   const gradientId = useId().replace(/:/g, "");
   const growthN = Number(growth) || 0;
   const points = Array.from({ length: 12 }, (_, i) => r.yours * Math.pow(1 + growthN / 100, i));
