@@ -933,6 +933,13 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
   .guide-card-actions .cta-followup {
     font-size: 11px;
   }
+  /*
+   * The contracts tabs are one grid of equal cells, so each pill starts its icon at the cell's own inset: the first
+   * column's icons stand in one line and the second column's in another (founder, 2026-11-24).
+   */
+  .contract-tabs > button {
+    justify-content: flex-start;
+  }
 }
 
 /* The strip's four controls share one height, so a row of them reads even whatever their labels are. */
