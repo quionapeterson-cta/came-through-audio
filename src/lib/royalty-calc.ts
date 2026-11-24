@@ -56,8 +56,8 @@ export function songShareRows(
  * Published average payouts per stream (USD, paid to all rights holders together), checked against each source in
  * 2026. No interactive service publishes a fixed per-stream rate: each pools its revenue and splits it by share of
  * streams, so these are the averages the cited pages report and every rate is editable. Audiomack publishes only its
- * 50% revenue share, so its default is the middle of the most-quoted estimate range and the member can replace it with
- * their own statement totals. A platform that pays per video use rather than per stream (TikTok, Instagram/Facebook)
+ * 50% revenue share, so its default sits inside the published estimate range and the member can replace it with their
+ * own statement totals. A platform that pays per video use rather than per stream (TikTok, Instagram/Facebook)
  * starts at 0, because a per-stream figure there would be the wrong unit. Real rates vary by country, tier and deal.
  */
 export const RATE_SOURCES = {
@@ -78,8 +78,8 @@ export const RATE_SOURCES = {
     url: "https://soundcloud.com/topic/category/which-music-streaming-service-pays-artists-the-most",
   },
   audiomack: {
-    label: "Audiomack monetization (2026)",
-    url: "https://creators.audiomack.com/monetization",
+    label: "Artist Payout estimate (2025)",
+    url: "https://artistpayout.com/streaming-royalty-calculator/audiomack",
   },
 } as const;
 export const PLATFORMS: {
@@ -127,7 +127,7 @@ export const PLATFORMS: {
     name: "Audiomack",
     rate: 0.004,
     source: "audiomack",
-    note: "Audiomack publishes only its 50% revenue share, no per-stream rate. Third-party estimates run about $0.001–$0.005; this opens on $0.004, the middle of the most-quoted range.",
+    note: "Audiomack publishes only its 50% revenue share, no per-stream rate. The cited estimate runs $0.0010–$0.0050; this opens on $0.004, inside that range.",
   },
   {
     id: "tiktok",
