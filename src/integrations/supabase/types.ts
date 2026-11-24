@@ -3644,6 +3644,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _confirmed_email: { Args: never; Returns: string }
+      _invite_email_ok: { Args: { _email: string }; Returns: boolean }
+      _may_probe: { Args: { _uid: string }; Returns: boolean }
+      _tier_at_least: {
+        Args: { _needed: string; _uid: string }
+        Returns: boolean
+      }
       accept_artist_seat: { Args: { _seat_id: string }; Returns: Json }
       answer_ipi_request: {
         Args: {
