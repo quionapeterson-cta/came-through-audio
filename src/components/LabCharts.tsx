@@ -105,6 +105,7 @@ export function AllocationDonut({
 export function SpentPairs({
   groups,
   scale: sharedScale,
+  showName = true,
 }: {
   groups: CategorySpend[];
   /**
@@ -112,6 +113,11 @@ export function SpentPairs({
    * whole plan, so the longest bar is the biggest number whichever card it sits under.
    */
   scale?: number | undefined;
+  /**
+   * Off when the card above already names the category: the pair then carries its status alone, and the name stays on
+   * the pair's own label for a screen reader instead of repeating what is already in the header (founder, 2026-11-24).
+   */
+  showName?: boolean;
 }) {
   if (!groups.length)
     return (
@@ -125,9 +131,16 @@ export function SpentPairs({
   return (
     <div className="fl-pair-list">
       {groups.map((group) => (
-        <div key={group.id} className="fl-pair" data-over={group.over > 0}>
+        <div
+          key={group.id}
+          className="fl-pair"
+          data-over={group.over > 0}
+          data-noname={!showName}
+          role="group"
+          aria-label={`${group.label} — planned vs paid`}
+        >
           <div className="fl-pair-head">
-            <span className="fl-pair-name">{group.label}</span>
+            {showName ? <span className="fl-pair-name">{group.label}</span> : null}
             <span className="fl-pair-flag">
               {group.over > 0
                 ? `Over by ${money(group.over)}`

@@ -1695,12 +1695,24 @@
   text-transform: uppercase;
 }
 @media (max-width: 639px) {
+  /*
+   * A phone tile is narrow, so the row is tightened rather than reflowed: less padding, a tighter gap and a value that
+   * scales with the viewport, which keeps "$2,000.00" on one line beside its neighbours (founder, 2026-11-24).
+   */
+  .fl-budget-head {
+    gap: 0.3rem;
+  }
+  .fl-budget-stat {
+    padding: 0.45rem 0.5rem;
+  }
   /* "Remaining balance" needs two lines in a phone tile; reserving both keeps all three values on one baseline. */
   .fl-budget-stat span {
     display: flex;
     min-height: 2.3em;
     align-items: flex-end;
     line-height: 1.15;
+    font-size: 0.55rem;
+    letter-spacing: 0.05em;
   }
 }
 .fl-budget-stat strong {
@@ -1708,10 +1720,21 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.98rem;
   font-variant-numeric: tabular-nums;
+  /* A money value is one number: it may never break between its dollars and its cents. */
+  white-space: nowrap;
 }
 .fl-budget-stat[data-low="true"] strong {
   color: var(--fl-cobalt);
   text-shadow: 0 0 14px rgb(77 140 255 / 35%);
+}
+/*
+ * The value scales with a phone's width, so a three-column row still holds "$2,000.00" whole inside its tile. It sits
+ * after the base size on purpose: an earlier override loses to it (founder, 2026-11-24).
+ */
+@media (max-width: 639px) {
+  .fl-budget-stat strong {
+    font-size: clamp(0.72rem, 3.3vw, 0.98rem);
+  }
 }
 .dark .fl-budget-stat {
   border-color: rgb(255 255 255 / 10%);
@@ -3060,6 +3083,10 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.3rem;
+}
+/* Under its own card the category is already in the header, so the status leads the pair instead of trailing it. */
+.fl-pair[data-noname="true"] .fl-pair-head {
+  justify-content: flex-start;
 }
 .fl-pair-name {
   color: var(--fl-ink);

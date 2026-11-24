@@ -468,7 +468,9 @@ export function LabBudgetPlanner({
                 </li>
               ))}
             </ul>
-            {group.spend ? <SpentPairs groups={[group.spend]} scale={pairScale} /> : null}
+            {group.spend ? (
+              <SpentPairs groups={[group.spend]} scale={pairScale} showName={false} />
+            ) : null}
           </div>
         ))}
 

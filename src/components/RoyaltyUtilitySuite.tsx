@@ -558,7 +558,7 @@ function Converter({
 
       <div className="mt-3">
         <div className="fl-step-label">
-          <span className="fl-step-num">1</span> Choose a song above, or enter the share by hand
+          <span className="fl-step-num">1</span> Choose a song above, or enter your share by hand
         </div>
         <p className="fl-hint">
           Country and song sit at the top of this tab. A song brings its catalog splits; with no
