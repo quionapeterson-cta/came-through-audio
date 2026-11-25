@@ -1020,7 +1020,12 @@
 }
 
 /* Pinned to the bottom of the Earnings panel: it holds its place while the calculator scrolls and
-   settles at the panel's own end, instead of floating over the rest of the workspace. */
+   settles at the panel's own end, instead of floating over the rest of the workspace. Its rail begins
+   after the platform fields, so the bar starts floating where the numbers are entered rather than
+   covering the boxes that take them (founder, 2026-11-25). */
+.fl-dock-rail {
+  display: flow-root;
+}
 .fl-dock {
   position: sticky;
   bottom: 0;
@@ -1067,6 +1072,8 @@
 
 .fl-dock-total {
   margin-top: 0.05rem;
+  /* A money figure is one number: it may never break between its dollars and its cents. */
+  white-space: nowrap;
   color: var(--fl-cobalt);
   text-shadow: 0 0 16px rgb(77 140 255 / 45%);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -1115,6 +1122,17 @@
   /* Room at the panel's end, so its last rows always sit above the pinned bar rather than behind it. */
   .fl-earnings {
     padding-bottom: 1rem;
+  }
+}
+/* A projection in the billions is longer than the dock's own lane; it steps down rather than wrapping or
+   pushing the copy button off the bar. */
+.fl-dock-total-long {
+  font-size: 1.35rem;
+  letter-spacing: -0.06em;
+}
+@media (max-width: 639px) {
+  .fl-dock-total-long {
+    font-size: 1.02rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -3794,7 +3812,8 @@
   border-radius: 0.35rem;
   outline: 2px solid var(--fl-cobalt);
   outline-offset: 2px;
-}.dark .fl-jump {
+}
+.dark .fl-jump {
   color: #4d8cff;
 }
 .dark .fl-jump:focus-visible {
@@ -3816,7 +3835,9 @@
 /* The recoupment chip reads as a link without losing the chip shape it shipped with. */
 .fl-chip-jump {
   cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 .fl-chip-jump:hover {
   border-color: var(--fl-cobalt);

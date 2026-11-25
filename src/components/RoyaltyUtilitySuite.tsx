@@ -124,6 +124,16 @@ const rateMoney = (n: number) => `$${Number(n.toFixed(n >= 0.0001 ? 4 : 6))}`;
 const selectZero = (event: ReactFocusEvent<HTMLInputElement>) => {
   if (event.currentTarget.value === "0") event.currentTarget.select();
 };
+/**
+ * A money box keeps digits and at most one decimal point, so a second "." typed into a statement total can never turn
+ * the average into NaN and leave the button looking broken.
+ */
+const decimalText = (value: string) => {
+  const cleaned = value.replace(/[^0-9.]/g, "");
+  const dot = cleaned.indexOf(".");
+  if (dot === -1) return cleaned;
+  return `${cleaned.slice(0, dot + 1)}${cleaned.slice(dot + 1).replace(/\./g, "")}`;
+};
 const SCALES = Object.keys(PRO_SCALES) as ProScale[];
 
 /**
@@ -1238,7 +1248,7 @@ function Earnings({
                 className="fl-input fl-mono h-8 w-full text-right"
                 value={own.paid}
                 placeholder="0.00"
-                onChange={(e) => setOwn({ ...own, paid: e.target.value.replace(/[^0-9.]/g, "") })}
+                onChange={(e) => setOwn({ ...own, paid: decimalText(e.target.value) })}
               />
             </div>
             <div className="fl-field">
@@ -1327,229 +1337,236 @@ function Earnings({
         </div>
       </div>
 
-      <div className="fl-platform-block">
-        <h4 className="fl-step-label">
-          <span className="fl-step-num">3</span> Add radio, SiriusXM and live plays
-        </h4>
-        <div className="fl-platform-grid">
-          <div className="fl-field">
-            <Label htmlFor="earn-radio-plays">Plays</Label>
+      {/*
+        The projected total starts floating here, once the platform fields are behind it: this rail is the bar's
+        sticky containing block, so it can never cover the numbers being entered (founder, 2026-11-25).
+      */}
+      <div className="fl-dock-rail">
+        <div className="fl-platform-block">
+          <h4 className="fl-step-label">
+            <span className="fl-step-num">3</span> Add radio, SiriusXM and live plays
+          </h4>
+          <div className="fl-platform-grid">
+            <div className="fl-field">
+              <Label htmlFor="earn-radio-plays">Plays</Label>
+              <Input
+                id="earn-radio-plays"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                className={cn(
+                  "fl-input fl-mono fl-count h-8 w-full text-right",
+                  longCount(shownPlays),
+                )}
+                value={shownPlays}
+                placeholder="0"
+                onFocus={selectZero}
+                onChange={(e) => {
+                  setRadio({ ...radio, plays: countDigits(e.target.value) });
+                  setPulse((p) => p + 1);
+                }}
+              />
+            </div>
+            <div className="fl-field">
+              <Label htmlFor="earn-radio-rate">Per play ($)</Label>
+              <Input
+                id="earn-radio-rate"
+                type="number"
+                min={0}
+                step="0.01"
+                className="fl-input fl-mono h-8 w-full text-right"
+                value={radio.perPlay}
+                onChange={(e) => setRadio({ ...radio, perPlay: e.target.value })}
+              />
+            </div>
+            <div className="fl-field">
+              <Label htmlFor="earn-radio-estimate">Estimate</Label>
+              <output id="earn-radio-estimate" className="fl-estimate">
+                {money(r.radio)}
+              </output>
+            </div>
+          </div>
+          <p className="fl-platform-note">
+            Performance royalties: the song side only. Airplay pays through your PRO&apos;s blanket
+            licences, so there is no public per-play rate to prefill; digital radio&apos;s statutory
+            per-play rates sit in the Royalty Pipeline below.
+          </p>
+        </div>
+
+        <div className="fl-platform-block fl-distributor">
+          <div className="fl-step-label">
+            <span className="fl-step-num">4</span> Take the distributor&apos;s cut
+          </div>
+          <div className="fl-platform-grid">
+            <div className="fl-field">
+              <Label htmlFor="earn-distributor">Cut (%)</Label>
+              <Input
+                id="earn-distributor"
+                type="number"
+                min={0}
+                max={100}
+                step="0.1"
+                className="fl-input fl-mono h-8 w-full text-right"
+                value={nums.distributor}
+                onChange={(e) => patch({ distributor: e.target.value })}
+              />
+            </div>
+            <div className="fl-field">
+              <Label htmlFor="earn-gross">Before the cut</Label>
+              <output id="earn-gross" className="fl-estimate">
+                {money(r.yours)}
+              </output>
+            </div>
+            <div className="fl-field">
+              <Label htmlFor="earn-net">You keep</Label>
+              <output id="earn-net" className="fl-estimate">
+                {money(net)}
+              </output>
+            </div>
+          </div>
+          <div className="fl-quick-pills fl-dist-presets">
+            {[0, 9, 15].map((v) => (
+              <button
+                key={v}
+                type="button"
+                className="fl-pill"
+                data-on={distributor === v}
+                aria-pressed={distributor === v}
+                onClick={() => patch({ distributor: String(v) })}
+              >
+                {v}%
+              </button>
+            ))}
+          </div>
+          <p className="fl-platform-note">
+            0% leaves every estimate exactly as it is. RouteNote Free keeps 15%, CD Baby 9%;
+            DistroKid charges a flat fee, so 0%. A label takes its share before this.
+          </p>
+          <PayoutTimeline
+            pool={streamPool}
+            masterShare={Number(nums.master) || 0}
+            songShare={Number(nums.songShare) || 0}
+            distributor={distributor}
+            radio={r.radio}
+            audiomack={r.platforms.find((x) => x.id === "audiomack")?.yours ?? 0}
+          />
+        </div>
+
+        <div className="mt-4">
+          <div className="fl-step-label">
+            <span className="fl-step-num">5</span> Copy or download the breakdown
+          </div>
+          <CopyDeck context={copyContext} />
+          <div className="fl-export-row">
+            <button type="button" className="fl-ghost-btn" onClick={downloadProjection}>
+              <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download projection (CSV)
+            </button>
+            <span className="fl-platform-note !mt-0">
+              One row per platform, then radio and the total. Opens in Excel, Numbers or Google
+              Sheets.
+            </span>
+          </div>
+        </div>
+
+        {/* Scenarios sit after the last step: the sheet is added up by then, so this is where a member saves the
+          setup or loads another one (founder, 2026-11-25). */}
+        <div className="fl-scenario">
+          <div className="fl-scenario-head">
+            <span className="fl-scenario-title">
+              <Repeat className="h-3.5 w-3.5" aria-hidden="true" /> Scenarios
+            </span>
+            <span className="fl-platform-note !mt-0">
+              Saved with this song in this browser, autosaved as you type. Nothing leaves the
+              device.
+            </span>
+          </div>
+          {scenarios.length > 0 && (
+            <div className="fl-scenario-chips">
+              {scenarios.map((s) => (
+                <span key={s.id} className="fl-scenario-chip">
+                  <button
+                    type="button"
+                    className="fl-scenario-load"
+                    onClick={() => restoreThisScenario(s)}
+                    title={`Restore “${s.name}”`}
+                  >
+                    {s.name} · {money(s.total)}
+                  </button>
+                  <button
+                    type="button"
+                    className="fl-scenario-del"
+                    aria-label={`Delete “${s.name}”`}
+                    onClick={() => deleteThisScenario(s.id)}
+                  >
+                    <Trash2 className="h-3 w-3" aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="fl-scenario-save">
             <Input
-              id="earn-radio-plays"
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              className={cn(
-                "fl-input fl-mono fl-count h-8 w-full text-right",
-                longCount(shownPlays),
-              )}
-              value={shownPlays}
-              placeholder="0"
-              onFocus={selectZero}
-              onChange={(e) => {
-                setRadio({ ...radio, plays: countDigits(e.target.value) });
-                setPulse((p) => p + 1);
+              id="fl-scenario-name"
+              className="fl-input"
+              placeholder="Name this setup — Album cycle"
+              maxLength={40}
+              value={scenarioName}
+              onChange={(e) => setScenarioName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && scenarioName.trim()) saveThisSetup(scenarioName);
               }}
             />
-          </div>
-          <div className="fl-field">
-            <Label htmlFor="earn-radio-rate">Per play ($)</Label>
-            <Input
-              id="earn-radio-rate"
-              type="number"
-              min={0}
-              step="0.01"
-              className="fl-input fl-mono h-8 w-full text-right"
-              value={radio.perPlay}
-              onChange={(e) => setRadio({ ...radio, perPlay: e.target.value })}
-            />
-          </div>
-          <div className="fl-field">
-            <Label htmlFor="earn-radio-estimate">Estimate</Label>
-            <output id="earn-radio-estimate" className="fl-estimate">
-              {money(r.radio)}
-            </output>
-          </div>
-        </div>
-        <p className="fl-platform-note">
-          Performance royalties: the song side only. Airplay pays through your PRO&apos;s blanket
-          licences, so there is no public per-play rate to prefill; digital radio&apos;s statutory
-          per-play rates sit in the Royalty Pipeline below.
-        </p>
-      </div>
-
-      <div className="fl-platform-block fl-distributor">
-        <div className="fl-step-label">
-          <span className="fl-step-num">4</span> Take the distributor&apos;s cut
-        </div>
-        <div className="fl-platform-grid">
-          <div className="fl-field">
-            <Label htmlFor="earn-distributor">Cut (%)</Label>
-            <Input
-              id="earn-distributor"
-              type="number"
-              min={0}
-              max={100}
-              step="0.1"
-              className="fl-input fl-mono h-8 w-full text-right"
-              value={nums.distributor}
-              onChange={(e) => patch({ distributor: e.target.value })}
-            />
-          </div>
-          <div className="fl-field">
-            <Label htmlFor="earn-gross">Before the cut</Label>
-            <output id="earn-gross" className="fl-estimate">
-              {money(r.yours)}
-            </output>
-          </div>
-          <div className="fl-field">
-            <Label htmlFor="earn-net">You keep</Label>
-            <output id="earn-net" className="fl-estimate">
-              {money(net)}
-            </output>
-          </div>
-        </div>
-        <div className="fl-quick-pills fl-dist-presets">
-          {[0, 9, 15].map((v) => (
             <button
-              key={v}
               type="button"
-              className="fl-pill"
-              data-on={distributor === v}
-              aria-pressed={distributor === v}
-              onClick={() => patch({ distributor: String(v) })}
+              className="fl-ghost-btn disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!scenarioName.trim()}
+              onClick={() => saveThisSetup(scenarioName)}
             >
-              {v}%
+              Save this setup
             </button>
-          ))}
+          </div>
         </div>
-        <p className="fl-platform-note">
-          0% leaves every estimate exactly as it is. RouteNote Free keeps 15%, CD Baby 9%; DistroKid
-          charges a flat fee, so 0%. A label takes its share before this.
-        </p>
-        <PayoutTimeline
+
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
+          <Telemetry r={r} streams={streams} rates={rates} />
+          <MiniDrawers
+            taxSheet={taxSheet}
+            onTaxSheet={onTaxSheet}
+            budgetKey={budgetPlanKey}
+            songTitle={song?.title}
+            breakKey={labStorageKey(userId, songId, "breakeven")}
+          />
+        </div>
+
+        <RoyaltyPipelinePanel
+          song={song}
           pool={streamPool}
           masterShare={Number(nums.master) || 0}
           songShare={Number(nums.songShare) || 0}
+          streams={streamCount}
+        />
+
+        <RecoupmentPanel
+          target={budgetCap}
+          earned={net}
+          streamCut={streamCut}
+          merchProfit={merchMargin.price - merchMargin.cost}
+          spotifyRate={Number(rates["spotify"]) || 0}
+          appleRate={Number(rates["apple"]) || 0}
+          onOpenMerch={onOpenMerch}
+          onOpenBudget={onOpenBudget}
+          taxRate={taxRateValue}
+        />
+
+        <TotalDock
+          total={r.yours}
+          net={net}
           distributor={distributor}
-          radio={r.radio}
-          audiomack={r.platforms.find((x) => x.id === "audiomack")?.yours ?? 0}
+          context={copyContext}
+          pulse={pulse}
+          bedazzle={bedazzle}
         />
       </div>
-
-      <div className="mt-4">
-        <div className="fl-step-label">
-          <span className="fl-step-num">5</span> Copy or download the breakdown
-        </div>
-        <CopyDeck context={copyContext} />
-        <div className="fl-export-row">
-          <button type="button" className="fl-ghost-btn" onClick={downloadProjection}>
-            <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download projection (CSV)
-          </button>
-          <span className="fl-platform-note !mt-0">
-            One row per platform, then radio and the total. Opens in Excel, Numbers or Google
-            Sheets.
-          </span>
-        </div>
-      </div>
-
-      {/* Scenarios sit after the last step: the sheet is added up by then, so this is where a member saves the
-          setup or loads another one (founder, 2026-11-25). */}
-      <div className="fl-scenario">
-        <div className="fl-scenario-head">
-          <span className="fl-scenario-title">
-            <Repeat className="h-3.5 w-3.5" aria-hidden="true" /> Scenarios
-          </span>
-          <span className="fl-platform-note !mt-0">
-            Saved with this song in this browser, autosaved as you type. Nothing leaves the device.
-          </span>
-        </div>
-        {scenarios.length > 0 && (
-          <div className="fl-scenario-chips">
-            {scenarios.map((s) => (
-              <span key={s.id} className="fl-scenario-chip">
-                <button
-                  type="button"
-                  className="fl-scenario-load"
-                  onClick={() => restoreThisScenario(s)}
-                  title={`Restore “${s.name}”`}
-                >
-                  {s.name} · {money(s.total)}
-                </button>
-                <button
-                  type="button"
-                  className="fl-scenario-del"
-                  aria-label={`Delete “${s.name}”`}
-                  onClick={() => deleteThisScenario(s.id)}
-                >
-                  <Trash2 className="h-3 w-3" aria-hidden="true" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="fl-scenario-save">
-          <Input
-            id="fl-scenario-name"
-            className="fl-input"
-            placeholder="Name this setup — Album cycle"
-            maxLength={40}
-            value={scenarioName}
-            onChange={(e) => setScenarioName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && scenarioName.trim()) saveThisSetup(scenarioName);
-            }}
-          />
-          <button
-            type="button"
-            className="fl-ghost-btn disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!scenarioName.trim()}
-            onClick={() => saveThisSetup(scenarioName)}
-          >
-            Save this setup
-          </button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
-        <Telemetry r={r} streams={streams} rates={rates} />
-        <MiniDrawers
-          taxSheet={taxSheet}
-          onTaxSheet={onTaxSheet}
-          budgetKey={budgetPlanKey}
-          songTitle={song?.title}
-          breakKey={labStorageKey(userId, songId, "breakeven")}
-        />
-      </div>
-
-      <RoyaltyPipelinePanel
-        song={song}
-        pool={streamPool}
-        masterShare={Number(nums.master) || 0}
-        songShare={Number(nums.songShare) || 0}
-        streams={streamCount}
-      />
-
-      <RecoupmentPanel
-        target={budgetCap}
-        earned={net}
-        streamCut={streamCut}
-        merchProfit={merchMargin.price - merchMargin.cost}
-        spotifyRate={Number(rates["spotify"]) || 0}
-        appleRate={Number(rates["apple"]) || 0}
-        onOpenMerch={onOpenMerch}
-        onOpenBudget={onOpenBudget}
-        taxRate={taxRateValue}
-      />
-
-      <TotalDock
-        total={r.yours}
-        net={net}
-        distributor={distributor}
-        context={copyContext}
-        pulse={pulse}
-        bedazzle={bedazzle}
-      />
     </section>
   );
 }
@@ -1958,6 +1975,8 @@ function TotalDock({
   pulse: number;
   bedazzle: boolean;
 }) {
+  // A long projection (billions and up) steps down instead of running into the copy button or breaking mid-number.
+  const totalText = money(total);
   return (
     <div className={cn("fl-dock", bedazzle && "fl-dock-bedazzle")} data-pulse={pulse}>
       {bedazzle &&
@@ -1978,7 +1997,9 @@ function TotalDock({
         <div className="fl-dock-label flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.2em]">
           <TrendingUp className="h-3.5 w-3.5" /> Your projected total
         </div>
-        <div className="fl-dock-total">{money(total)}</div>
+        <div className={cn("fl-dock-total", totalText.length > 14 && "fl-dock-total-long")}>
+          {totalText}
+        </div>
         {distributor > 0 && (
           <p className="fl-dock-net">
             After the {pct(distributor)} distributor cut: <strong>{money(net)}</strong>
