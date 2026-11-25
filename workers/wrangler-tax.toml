@@ -8,10 +8,11 @@
 #   1. Deploy from the repo root:   npx wrangler deploy -c workers/wrangler-tax.toml
 #   2. Put the printed URL in the app as VITE_CTA_TAX_TABLES_URL (Cloudflare → Settings → Variables, or .env for
 #      local dev). Without it the Lab uses the tables bundled in src/lib/tax-brackets.ts, so nothing goes down.
-#   3. Optional, for adding a year without redeploying:
-#        npx wrangler kv namespace create TAX_TABLES -c workers/wrangler-tax.toml
-#      paste the printed id into the [[kv_namespaces]] block below, deploy again, then set TAX_ADMIN_TOKEN as a
-#      secret (wrangler secret put TAX_ADMIN_TOKEN -c workers/wrangler-tax.toml).
+#   3. Adding a year without redeploying works like this (set up 2026-11-25): the TAX_TABLES namespace below is bound and
+#      the January 1 cron in [triggers] is on, so PUT a complete table to /tax/<year> instead of shipping a build.
+#      Set TAX_ADMIN_TOKEN as a secret to switch that write path on (wrangler secret put TAX_ADMIN_TOKEN -c
+#      workers/wrangler-tax.toml, or Workers → cta-tax-tables → Settings → Variables and Secrets). Until then the Worker
+#      is read-only and serves the years bundled in src/lib/tax-brackets.ts.
 #
 # Check it without a browser:
 #   curl -s https://cta-tax-tables.<your-subdomain>.workers.dev/tax | head -c 400
@@ -29,8 +30,9 @@ enabled = true
 [triggers]
 crons = ["0 7 1 1 *"]
 
-# Optional live updates. Uncomment after creating the namespace (step 3 above); without it the Worker is read-only
-# and serves the years bundled in src/lib/tax-brackets.ts.
-# [[kv_namespaces]]
-# binding = "TAX_TABLES"
-# id = "REPLACE_WITH_KV_NAMESPACE_ID"
+# Live updates (founder, 2026-11-25): the namespace created for this Worker, so a new tax year is stored rather than
+# rebuilt. Until TAX_ADMIN_TOKEN is set as a secret the Worker is read-only and serves the years bundled in
+# src/lib/tax-brackets.ts.
+[[kv_namespaces]]
+binding = "TAX_TABLES"
+id = "26f02a6780734d5daeb0cb41636e542f"

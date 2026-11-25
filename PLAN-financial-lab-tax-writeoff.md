@@ -273,8 +273,20 @@ Financial Lab reads the Worker's tables instead of only the bundled copy. Verifi
 the page cached years 2026 and 2027 from the Worker (the `cta.lab.taxTables.v1` store filled at 14:28), and a fetch from
 the preview origin returned the same brackets, because `allowedOrigin` accepts `*.style.dev`.
 
-Two steps are still the founder's, and neither changes what a member sees today. The API deploy does not carry the
-config's cron trigger, so the January 1 `scheduled` check has no trigger until `npx wrangler deploy -c
-workers/wrangler-tax.toml` runs once (same code, same name). And no `TAX_TABLES` KV namespace is bound, so a new year
-still needs a redeploy: create the namespace, paste its id into the `[[kv_namespaces]]` block in
-`workers/wrangler-tax.toml`, deploy again, and set `TAX_ADMIN_TOKEN` as a secret.
+### The namespace and the trigger are on
+
+Added the same day, so a tax year can arrive without touching the app. The `TAX_TABLES` KV namespace (`26f02a67…542f`,
+titled `cta-tax-tables-TAX_TABLES`) is created and bound to the Worker — version 2 (`1b3e5fab…`), serving 100% of
+traffic as deployment `013a4aa9…` — and its id now sits in `[[kv_namespaces]]` in `workers/wrangler-tax.toml`, so a
+wrangler deploy from the repo keeps the binding rather than dropping it. The January 1 trigger is set on the account's
+Cron Triggers as `0 7 1 1 *` (07:00 UTC on 1 January), the same expression as `[triggers]` in that config.
+
+Checked live after the binding went on: `GET /` and `GET /tax` still answer 200 with `holds: [2026, 2027]`,
+`newestYear: 2027`, `needsUpdate: false` and two tables; `GET /tax/2027` returns the Rev. Proc. 2026-35 table; a foreign
+`Origin` is still a 403; and `PUT /tax/2029` answers 403 "no TAX_ADMIN_TOKEN, so it is read-only". The namespace is empty,
+which is correct — a stored year wins over the bundled copy, and nothing is stored until one is sent.
+
+One step is still the founder's: `TAX_ADMIN_TOKEN` has to be set as a secret on the Worker (Workers & Pages →
+cta-tax-tables → Settings → Variables and Secrets → Secret, or `npx wrangler secret put TAX_ADMIN_TOKEN -c
+workers/wrangler-tax.toml`) before `PUT /tax/<year>` accepts a new year. The value stays with the founder; it never
+belongs in the repo, an app variable or a member's browser.
