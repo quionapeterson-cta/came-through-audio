@@ -144,16 +144,53 @@ describe("packet downloads", () => {
     };
     const csv = packetSheetCsv([withRadio], untallied);
     expect(csv).toContain("Radio / SiriusXM / live");
-    expect(csv).toMatch(/Distributor's cut,,,,,=\(F\d+-F\d+\)\*\$B\$\d+\/100/);
+    expect(csv).toMatch(/Distributor's cut,,,,,,=\(G\d+-G\d+\)\*\$B\$\d+\/100/);
 
     const wb = await packetWorkbook([withRadio], untallied);
     const projection = wb.getWorksheet("Projection")!;
     expect(projection.getCell("A22").value).toBe("Radio / SiriusXM / live");
-    expect(projection.getCell("F22").value).toBe(10);
-    expect(projection.getCell("F23").value).toMatchObject({ formula: "SUM(F10:F22)" });
-    expect(projection.getCell("F24").value).toMatchObject({
-      formula: "(F23-F22)*$B$7/100",
+    expect(projection.getCell("G22").value).toBe(10);
+    expect(projection.getCell("G23").value).toMatchObject({ formula: "SUM(G10:G22)" });
+    expect(projection.getCell("G24").value).toMatchObject({
+      formula: "(G23-G22)*$B$7/100",
     });
+  });
+
+  it("prices each platform row with its own blended split", async () => {
+    const splitSong = (id: string, master: string, spotify: string, apple: string): PacketSong => ({
+      ...song(),
+      id,
+      title: id,
+      numbers: {
+        ...emptyLabNumbers(),
+        streams: { spotify, apple },
+        rates: { spotify: "0.01", apple: "0.01" },
+        master,
+      },
+    });
+    // The songs have different platform mixes and splits: a single 80% average would price both rows at 8.
+    const songs = [splitSong("a", "100", "1000", "0"), splitSong("b", "50", "0", "1000")];
+    const untallied = {
+      label: meta.label,
+      year: meta.year,
+      madeAt: meta.madeAt,
+      brand: meta.brand,
+    };
+    const lines = packetSheetCsv(songs, untallied).split(/\r?\n/);
+    const projectionLines = lines.slice(lines.indexOf("ROYALTY PROJECTION") + 1);
+    expect(projectionLines.find((line) => line.startsWith("Spotify,"))).toMatch(
+      /,100,=E\d+\*F\d+\/100$/,
+    );
+    expect(projectionLines.find((line) => line.startsWith("Apple Music,"))).toMatch(
+      /,60,=E\d+\*F\d+\/100$/,
+    );
+
+    const wb = await packetWorkbook(songs, untallied);
+    const projection = wb.getWorksheet("Projection")!;
+    expect(projection.getCell("F10").value).toBe(100);
+    expect(projection.getCell("G10").value).toMatchObject({ formula: "E10*F10/100" });
+    expect(projection.getCell("F11").value).toBe(60);
+    expect(projection.getCell("G11").value).toMatchObject({ formula: "E11*F11/100" });
   });
 
   it("writes an Excel packet with a sheet per section and cross-sheet formulas", async () => {
@@ -173,8 +210,10 @@ describe("packet downloads", () => {
     });
     expect(projection.getCell("E10").value).toMatchObject({ formula: "C10*D10" });
     expect(projection.getCell("E9").value).toBe("Platform pays (USD)");
-    expect(projection.getCell("F9").value).toBe("Your share (USD)");
-    expect(projection.getCell("F10").value).toMatchObject({ formula: "E10*$B$6/100" });
+    expect(projection.getCell("F9").value).toBe("Share before distributor (%)");
+    expect(projection.getCell("G9").value).toBe("Your share (USD)");
+    expect(projection.getCell("F10").value).toBe(100);
+    expect(projection.getCell("G10").value).toMatchObject({ formula: "E10*F10/100" });
     expect(wb.calcProperties.fullCalcOnLoad).toBe(true);
   });
 });

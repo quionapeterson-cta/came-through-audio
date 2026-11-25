@@ -50,12 +50,13 @@ function packetData(songs: PacketSong[], meta: PacketSheetMeta) {
   const tax = packetTax(songs, meta.year, meta.tables, madeAt);
   const totals = packetTotals(songs, tax, meta.tally);
   const saved = packetPlatforms(songs);
+  const projected = packetPlatforms(songs, meta.tally);
   const cuts = packetScopeCuts(songs);
   // The scope's blended distributor cut, derived from the same before/after shares the projection uses.
   const distPct =
     cuts.before > 0 ? Math.max(0, Math.min(100, 100 - (cuts.after / cuts.before) * 100)) : 0;
   const budget = packetBudgetTotals(songs);
-  return { madeAt, tax, totals, saved, cuts, distPct, budget };
+  return { madeAt, tax, totals, saved, projected, cuts, distPct, budget };
 }
 
 const rateOf = (saved: ReturnType<typeof packetPlatforms>, id: string) =>
@@ -179,8 +180,7 @@ export function packetSheetCsv(songs: PacketSong[], meta: PacketSheetMeta): stri
   push();
 
   push(["ROYALTY PROJECTION"]);
-  push(["Your share before distributor (%)", data.cuts.before * 100]);
-  const beforeRow = rows.length;
+  push(["Average share before distributor (%)", data.cuts.before * 100]);
   push(["Distributor cut (%)", moneyNumber(data.distPct)]);
   const distRow = rows.length;
   push([
@@ -189,13 +189,15 @@ export function packetSheetCsv(songs: PacketSong[], meta: PacketSheetMeta): stri
     "Streams",
     "Rate (USD)",
     "Platform pays (USD)",
+    "Share before distributor (%)",
     "Your share (USD)",
   ]);
   const projectionFirst = rows.length + 1;
   PLATFORMS.forEach((platform) => {
     const index = PLATFORMS.indexOf(platform);
     const saved = data.saved.find((row) => row.id === platform.id)?.streams ?? 0;
-    const rate = rateOf(data.saved, platform.id);
+    const projected = data.projected.find((row) => row.id === platform.id);
+    const rate = projected?.rate || rateOf(data.saved, platform.id);
     const row = rows.length + 1;
     push([
       platform.name,
@@ -203,12 +205,13 @@ export function packetSheetCsv(songs: PacketSong[], meta: PacketSheetMeta): stri
       `=IF(COUNT(C${tallyFirst + index})=0,B${row},C${tallyFirst + index})`,
       rate,
       `=C${row}*D${row}`,
-      `=E${row}*$B$${beforeRow}/100`,
+      projected?.sharePct ?? 0,
+      `=E${row}*F${row}/100`,
     ]);
   });
   let radioRow = 0;
   if (radio > 0) {
-    radioRow = push(["Radio / SiriusXM / live", "", "", "", "", moneyNumber(radio)]);
+    radioRow = push(["Radio / SiriusXM / live", "", "", "", "", "", moneyNumber(radio)]);
   }
   const projectionLast = rows.length;
   push([
@@ -217,16 +220,17 @@ export function packetSheetCsv(songs: PacketSong[], meta: PacketSheetMeta): stri
     `=SUM(C${projectionFirst}:C${projectionLast})`,
     "",
     `=SUM(E${projectionFirst}:E${projectionLast})`,
-    `=SUM(F${projectionFirst}:F${projectionLast})`,
+    "",
+    `=SUM(G${projectionFirst}:G${projectionLast})`,
   ]);
   const shareTotalRow = rows.length;
-  const cutBase = radioRow ? `(F${shareTotalRow}-F${radioRow})` : `F${shareTotalRow}`;
-  push(["Distributor's cut", "", "", "", "", `=${cutBase}*$B$${distRow}/100`]);
+  const cutBase = radioRow ? `(G${shareTotalRow}-G${radioRow})` : `G${shareTotalRow}`;
+  push(["Distributor's cut", "", "", "", "", "", `=${cutBase}*$B$${distRow}/100`]);
   const cutRow = rows.length;
-  push(["You keep after distributor", "", "", "", "", `=F${shareTotalRow}-F${cutRow}`]);
+  push(["You keep after distributor", "", "", "", "", "", `=G${shareTotalRow}-G${cutRow}`]);
   push();
   push([
-    "Platform pays = streams × rate, before your share. Your share = platform pays × your master/song cut; the distributor cut comes after.",
+    "Platform pays = streams × rate, before your share. Each row's share % is that platform's exact blended master/song share; the average above is for reference. The distributor cut comes after your share.",
   ]);
   push();
 
@@ -475,9 +479,9 @@ export async function packetWorkbook(songs: PacketSong[], meta: PacketSheetMeta)
 
   // ---- Projection
   const projection = wb.addWorksheet("Projection", { views: [{ state: "frozen", ySplit: 8 }] });
-  widths(projection, [30, 15, 15, 14, 16, 18]);
-  band(projection, "Royalty Projection", `${meta.label}  ·  tax year ${meta.year}`, "F");
-  projection.getCell("A6").value = "Your share before distributor (%)";
+  widths(projection, [30, 15, 15, 14, 16, 15, 18]);
+  band(projection, "Royalty Projection", `${meta.label}  ·  tax year ${meta.year}`, "G");
+  projection.getCell("A6").value = "Average share before distributor (%)";
   projection.getCell("A6").font = { bold: true };
   projection.getCell("B6").value = data.cuts.before * 100;
   projection.getCell("B6").numFmt = "0.00";
@@ -486,7 +490,7 @@ export async function packetWorkbook(songs: PacketSong[], meta: PacketSheetMeta)
   projection.getCell("B7").value = data.distPct;
   projection.getCell("B7").numFmt = "0.00";
   projection.getCell("A8").value =
-    "Edit a tally on the Tally sheet; platform pays and your share here follow.";
+    "Edit a tally on the Tally sheet; platform pays and your share here follow. Each row's share % is that platform's exact blended share.";
   projection.getCell("A8").font = { size: 9, italic: true, color: { argb: "FF525252" } };
   tableHead(projection, 9, [
     "Platform",
@@ -494,12 +498,14 @@ export async function packetWorkbook(songs: PacketSong[], meta: PacketSheetMeta)
     "Streams",
     "Rate (USD)",
     "Platform pays (USD)",
+    "Share before distributor (%)",
     "Your share (USD)",
   ]);
   PLATFORMS.forEach((platform, i) => {
     const row = 10 + i;
     const saved = data.saved.find((item) => item.id === platform.id)?.streams ?? 0;
-    const rate = rateOf(data.saved, platform.id);
+    const projected = data.projected.find((item) => item.id === platform.id);
+    const rate = projected?.rate || rateOf(data.saved, platform.id);
     projection.getCell(`A${row}`).value = platform.name;
     projection.getCell(`B${row}`).value = saved || "";
     projection.getCell(`B${row}`).numFmt = "#,##0";
@@ -511,16 +517,18 @@ export async function packetWorkbook(songs: PacketSong[], meta: PacketSheetMeta)
     projection.getCell(`D${row}`).numFmt = RATE;
     projection.getCell(`E${row}`).value = { formula: `C${row}*D${row}` };
     projection.getCell(`E${row}`).numFmt = MONEY;
-    projection.getCell(`F${row}`).value = { formula: `E${row}*$B$6/100` };
-    projection.getCell(`F${row}`).numFmt = MONEY;
+    projection.getCell(`F${row}`).value = projected?.sharePct ?? 0;
+    projection.getCell(`F${row}`).numFmt = "0.00";
+    projection.getCell(`G${row}`).value = { formula: `E${row}*F${row}/100` };
+    projection.getCell(`G${row}`).numFmt = MONEY;
   });
   const projectionLast = 10 + PLATFORMS.length - 1;
   const radio = songs.reduce((sum, song) => sum + packetRoyalty(song).radio, 0);
   const radioRow = radio > 0 ? projectionLast + 1 : 0;
   if (radioRow) {
     projection.getCell(`A${radioRow}`).value = "Radio / SiriusXM / live";
-    projection.getCell(`F${radioRow}`).value = radio;
-    projection.getCell(`F${radioRow}`).numFmt = MONEY;
+    projection.getCell(`G${radioRow}`).value = radio;
+    projection.getCell(`G${radioRow}`).numFmt = MONEY;
   }
   const projectionTotal = projectionLast + (radioRow ? 2 : 1);
   const projectionLastValue = radioRow || projectionLast;
@@ -534,27 +542,27 @@ export async function packetWorkbook(songs: PacketSong[], meta: PacketSheetMeta)
     formula: `SUM(E10:E${projectionLastValue})`,
   };
   projection.getCell(`E${projectionTotal}`).numFmt = MONEY;
-  projection.getCell(`F${projectionTotal}`).value = {
-    formula: `SUM(F10:F${projectionLastValue})`,
+  projection.getCell(`G${projectionTotal}`).value = {
+    formula: `SUM(G10:G${projectionLastValue})`,
   };
-  projection.getCell(`F${projectionTotal}`).numFmt = MONEY;
-  projection.getCell(`F${projectionTotal}`).font = {
+  projection.getCell(`G${projectionTotal}`).numFmt = MONEY;
+  projection.getCell(`G${projectionTotal}`).font = {
     bold: true,
     color: { argb: argb(brand.accent) },
   };
   const cutRow = projectionTotal + 1;
   projection.getCell(`A${cutRow}`).value = "Distributor's cut";
-  const cutBase = radioRow ? `(F${projectionTotal}-F${radioRow})` : `F${projectionTotal}`;
-  projection.getCell(`F${cutRow}`).value = { formula: `${cutBase}*$B$7/100` };
-  projection.getCell(`F${cutRow}`).numFmt = MONEY;
+  const cutBase = radioRow ? `(G${projectionTotal}-G${radioRow})` : `G${projectionTotal}`;
+  projection.getCell(`G${cutRow}`).value = { formula: `${cutBase}*$B$7/100` };
+  projection.getCell(`G${cutRow}`).numFmt = MONEY;
   const keepRow = cutRow + 1;
   projection.getCell(`A${keepRow}`).value = "You keep after distributor";
   projection.getCell(`A${keepRow}`).font = { bold: true };
-  projection.getCell(`F${keepRow}`).value = { formula: `F${projectionTotal}-F${cutRow}` };
-  projection.getCell(`F${keepRow}`).numFmt = MONEY;
-  projection.getCell(`F${keepRow}`).font = { bold: true, color: { argb: argb(brand.accent) } };
+  projection.getCell(`G${keepRow}`).value = { formula: `G${projectionTotal}-G${cutRow}` };
+  projection.getCell(`G${keepRow}`).numFmt = MONEY;
+  projection.getCell(`G${keepRow}`).font = { bold: true, color: { argb: argb(brand.accent) } };
   projection.getCell(`A${keepRow + 2}`).value =
-    "Platform pays = streams × rate, before your share. Your share = platform pays × your master/song cut; the distributor cut comes after.";
+    "Platform pays = streams × rate, before your share. Each row's share % is that platform's exact blended master/song share. The distributor cut comes after your share.";
   projection.getCell(`A${keepRow + 2}`).font = {
     size: 9,
     italic: true,

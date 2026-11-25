@@ -114,6 +114,8 @@ export type PacketPlatformLine = {
   pool: number;
   /** The member's part of the pool, after the master/song shares and before the distributor's cut. */
   yoursBefore: number;
+  /** The exact share of this row's pool before the distributor; mixed song splits can make this differ by row. */
+  sharePct: number;
   /** The member's estimate after the master/song shares and the distributor's cut. */
   yours: number;
 };
@@ -175,6 +177,7 @@ export function packetRoyalty(song: PacketSong): PacketRoyalty {
         rate: rates[line.id] ?? platform?.rate ?? 0,
         pool: line.total,
         yoursBefore: line.yours,
+        sharePct: line.total > 0 ? (line.yours / line.total) * 100 : 0,
         yours: line.yours * (1 - distributor / 100),
       };
     }),
@@ -257,6 +260,7 @@ export function packetPlatforms(
         rate: 0,
         pool: 0,
         yoursBefore: 0,
+        sharePct: 0,
         yours: 0,
       },
     ]),
@@ -274,6 +278,7 @@ export function packetPlatforms(
   const saved = [...rows.values()].map((row) => ({
     ...row,
     rate: row.streams > 0 ? row.pool / row.streams : 0,
+    sharePct: row.pool > 0 ? (row.yoursBefore / row.pool) * 100 : 0,
   }));
   if (!packetTallyUsed(tally)) return saved;
   // A typed total replaces that platform's saved streams; the scope's own share and blended rate still price it.
@@ -291,6 +296,7 @@ export function packetPlatforms(
       rate,
       pool,
       yoursBefore: pool * cuts.before,
+      sharePct: cuts.before * 100,
       yours: pool * cuts.after,
     };
   });
