@@ -283,8 +283,10 @@ Cron Triggers as `0 7 1 1 *` (07:00 UTC on 1 January), the same expression as `[
 
 Checked live after the binding went on: `GET /` and `GET /tax` still answer 200 with `holds: [2026, 2027]`,
 `newestYear: 2027`, `needsUpdate: false` and two tables; `GET /tax/2027` returns the Rev. Proc. 2026-35 table; a foreign
-`Origin` is still a 403; and `PUT /tax/2029` answers 403 "no TAX_ADMIN_TOKEN, so it is read-only". The namespace is empty,
-which is correct — a stored year wins over the bundled copy, and nothing is stored until one is sent.
+`Origin` is still a 403; and a write with the Worker's own token is accepted — `PUT /tax/2026` answered 200
+`{"saved":2026,…}`, while a half-written body for 2029 answered 400 "That is not a complete bracket table for that
+year." The namespace holds that 2026 copy and its `years` index; the copy matches the bundled table figure for figure,
+so nothing the estimator shows has changed.
 
 One step is still the founder's: `TAX_ADMIN_TOKEN` has to be set as a secret on the Worker (Workers & Pages →
 cta-tax-tables → Settings → Variables and Secrets → Secret, or `npx wrangler secret put TAX_ADMIN_TOKEN -c
