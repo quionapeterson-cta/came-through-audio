@@ -935,8 +935,11 @@ function Workspace() {
 
             {/* Same row on every tab: the artist name centered, the tab's own badge capsule pinned top right
               (founder, 2026-10-25: back to the card, not the round medal; 2026-11-21: the capsule walks this tab's
-              badges). Fixed side columns and height keep it in the same spot on every tab. */}
-            <div className="mt-8 grid items-center gap-4 sm:min-h-24 sm:grid-cols-[14rem_minmax(0,1fr)_14rem]">
+              badges). Fixed side columns and height keep it in the same spot on every tab. The side columns are wide
+              enough for the capsule's disc, label and Studio button together (21rem); below 1280px the capsule takes
+              the row under the name instead, because a squeezed column left its label 45px wide and every word broke
+              one letter per line. */}
+            <div className="mt-8 grid items-center gap-4 sm:min-h-24 sm:grid-cols-[14rem_minmax(0,1fr)_14rem] xl:grid-cols-[21rem_minmax(0,1fr)_21rem]">
               <div className="hidden sm:block" />
               <div className="min-w-0">
                 <h1 className="flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
@@ -958,7 +961,11 @@ function Workspace() {
                   <WorkspaceReminderHeaderActions />
                 </div>
               </div>
-              <PrestigeBadgeCapsule userId={user.id} tab={TAB_BADGES[tab] ?? "catalog"} />
+              <PrestigeBadgeCapsule
+                userId={user.id}
+                tab={TAB_BADGES[tab] ?? "catalog"}
+                className="col-span-full justify-self-center xl:col-span-1"
+              />
             </div>
             {/* Full-width, directly under the artist-name header; it stays until opened, snoozed or completed. */}
             <WorkspaceReminderStrip />
