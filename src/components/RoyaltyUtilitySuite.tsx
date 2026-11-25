@@ -293,7 +293,10 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
 
   useEffect(() => {
     if (!anchor) return;
-    document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const target = document.getElementById(anchor);
+    // A link that lands on a drawer opens it, so the tax worksheet arrives with its steps in view.
+    if (target instanceof HTMLDetailsElement) target.open = true;
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
     // The clicked link lives in the panel that just went hidden, so focus moves to the tab that is now open.
     document.getElementById(`fl-tab-${tab}`)?.focus({ preventScroll: true });
     setAnchor(null);
@@ -419,6 +422,7 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
               target={budgetCap}
               onTarget={changeBudget}
               onOpenRecoupment={() => openTab("royalty", "fl-recoupment")}
+              onOpenTax={() => openTab("royalty", "fl-tax-drawer")}
               storageKey={planKey}
               taxRate={taxSheetRate(taxSheet)}
             />
@@ -1535,6 +1539,7 @@ function Earnings({
             budgetKey={budgetPlanKey}
             songTitle={song?.title}
             breakKey={labStorageKey(userId, songId, "breakeven")}
+            onOpenBudget={onOpenBudget}
           />
         </div>
 
@@ -1793,6 +1798,7 @@ function MiniDrawers({
   budgetKey,
   songTitle,
   breakKey,
+  onOpenBudget,
 }: {
   taxSheet: TaxSheet;
   onTaxSheet: (next: TaxSheet | ((current: TaxSheet) => TaxSheet)) => void;
@@ -1801,6 +1807,8 @@ function MiniDrawers({
   songTitle?: string | undefined;
   /** Where this song's break-even numbers are kept. */
   breakKey?: string | undefined;
+  /** Takes the member to the Budget Planner when the worksheet has nothing paid to pull yet. */
+  onOpenBudget?: (() => void) | undefined;
 }) {
   // Both drawers remember what the member typed for this song: keyed with the values, so a song switch can never
   // write one song's numbers under another's name.
@@ -1828,6 +1836,7 @@ function MiniDrawers({
         onChange={onTaxSheet}
         budgetKey={budgetKey}
         songTitle={songTitle}
+        onOpenBudget={onOpenBudget}
       />
       <details className="fl-drawer">
         <summary>

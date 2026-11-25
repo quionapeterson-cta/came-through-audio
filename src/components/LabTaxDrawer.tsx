@@ -1,4 +1,4 @@
-import { ChevronDown, Download, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Download, Plus, ReceiptText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -146,12 +146,15 @@ export function TaxDrawer({
   onChange,
   budgetKey,
   songTitle,
+  onOpenBudget,
 }: {
   sheet: TaxSheet;
   onChange: (next: TaxSheet | ((current: TaxSheet) => TaxSheet)) => void;
   /** Where this song's Budget Planner plan is kept, so its paid lines can be pulled across. */
   budgetKey?: string | undefined;
   songTitle?: string | undefined;
+  /** Takes the member to the Budget Planner when there is nothing paid to pull across yet. */
+  onOpenBudget?: (() => void) | undefined;
 }) {
   const { tables, live, checkedAt } = useTaxTables();
   const table = taxSheetTable(sheet, tables);
@@ -189,9 +192,17 @@ export function TaxDrawer({
     onChange((current) => ({ ...current, rows: [...current.rows, newTaxRow()] }));
   };
 
+  // Nothing paid in the budget yet means there is nothing to pull, so the button becomes the way to the budget.
+  const paidBudget = budgetKey ? paidPlanRows(readLabJson<unknown>(budgetKey)) : [];
+  const canPull = paidBudget.length > 0;
+
   function pull() {
     const rows = budgetKey ? paidPlanRows(readLabJson<unknown>(budgetKey)) : [];
     if (!rows.length) {
+      if (onOpenBudget) {
+        onOpenBudget();
+        return;
+      }
       toast.info(
         "No paid budget lines yet — tick a line as paid in the Budget Planner and it can come straight across.",
       );
@@ -375,9 +386,15 @@ export function TaxDrawer({
             >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add a line
             </button>
-            <button type="button" className="fl-ghost-btn" onClick={pull}>
-              Pull from my budget
-            </button>
+            {canPull || !onOpenBudget ? (
+              <button type="button" className="fl-ghost-btn" onClick={pull}>
+                Pull from my budget
+              </button>
+            ) : (
+              <button type="button" className="fl-ghost-btn" onClick={onOpenBudget}>
+                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /> Open the Budget Planner
+              </button>
+            )}
           </div>
           <p className="fl-hint !mt-0">
             Pulling uses the lines you ticked paid in the Budget Planner, at the cost you typed

@@ -126,6 +126,7 @@ export function LabBudgetPlanner({
   target,
   onTarget,
   onOpenRecoupment,
+  onOpenTax,
   storageKey,
   taxRate,
 }: {
@@ -134,6 +135,8 @@ export function LabBudgetPlanner({
   onTarget: (value: string) => void;
   /** Sends the member to the recoupment tool that reads this target spend. */
   onOpenRecoupment?: (() => void) | undefined;
+  /** Sends the member to the tax worksheet that pulls these paid lines across. */
+  onOpenTax?: (() => void) | undefined;
   /** Where this song's plan is kept, so a refresh brings back the lines that were ticked paid. */
   storageKey?: string | undefined;
   /** The rate in the tax worksheet, shown as an after-tax estimate beside what has been paid. */
@@ -274,11 +277,21 @@ export function LabBudgetPlanner({
                 Pick the project, name the spend and CTA allocates it line by line — then track
                 every item from estimated to paid.
               </p>
-              {onOpenRecoupment && (
-                <button type="button" className="fl-jump mt-2" onClick={onOpenRecoupment}>
-                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  Back to Recoupment
-                </button>
+              {(onOpenRecoupment || onOpenTax) && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  {onOpenRecoupment && (
+                    <button type="button" className="fl-jump" onClick={onOpenRecoupment}>
+                      <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                      Back to Recoupment
+                    </button>
+                  )}
+                  {onOpenTax && (
+                    <button type="button" className="fl-jump" onClick={onOpenTax}>
+                      <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                      Artist Tax Write-Off Estimator
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
