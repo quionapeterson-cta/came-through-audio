@@ -50,7 +50,8 @@ export function EagleStatusBadge({
         className={`relative h-full w-full object-contain ${status.locked ? "opacity-45 grayscale" : ""}`}
       />
       <span className="sr-only">
-        {status.locked ? `Locked: ${status.detail}` : `${status.label}. ${status.detail}`}
+        {/* The locked detail already opens with "Locked:", so prefixing it again read "Locked: Locked:". */}
+        {status.locked ? status.detail : `${status.label}. ${status.detail}`}
       </span>
     </span>
   );
