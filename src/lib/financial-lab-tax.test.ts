@@ -7,6 +7,10 @@ import {
   pullBudgetLines,
   sanitizeTaxSheet,
   taxCategoryOf,
+  taxSheetPlanningYear,
+  taxSheetRate,
+  taxSheetSelfEmploymentRate,
+  taxSheetTable,
   taxFilledRows,
   taxKeptRows,
   taxRowAmount,
@@ -27,7 +31,13 @@ const budgetRow = (over: Partial<ExpenseRow> = {}): ExpenseRow => ({
   ...over,
 });
 
-const sheetOf = (rows: TaxSheet["rows"], rate = "30"): TaxSheet => ({ year: "", rate, rows });
+const sheetOf = (rows: TaxSheet["rows"], rate = "30"): TaxSheet => ({
+  year: "",
+  rate,
+  status: "single",
+  selfEmployment: "none",
+  rows,
+});
 
 describe("the category list", () => {
   it("has one row per cost, each with a label and a plain-language hint", () => {
@@ -73,6 +83,43 @@ describe("the deductible total", () => {
     const sheet = sheetOf([{ ...newTaxRow("mix"), amount: "1000" }], "140");
     expect(taxSheetEstimate(sheet)).toBe(1000);
     expect(taxSheetEstimate({ ...sheet, rate: "-20" })).toBe(0);
+  });
+
+  it("prices the bracket the member picks from the year's chart", () => {
+    const sheet = { ...sheetOf([{ ...newTaxRow("mix"), amount: "1000" }], "22"), year: "2026" };
+    expect(taxSheetTable(sheet).year).toBe(2026);
+    expect(taxSheetEstimate(sheet)).toBeCloseTo(220, 6);
+  });
+
+  it("uses the year's own chart, and the current year when the year is blank", () => {
+    const sheet = { ...sheetOf([]), year: "2027" };
+    expect(taxSheetTable(sheet).year).toBe(2027);
+    expect(taxSheetTable(sheet).selfEmployment.cap).toBe(192300);
+    expect(taxSheetPlanningYear({ ...sheetOf([]), year: "" }, new Date("2027-03-01"))).toBe(2027);
+  });
+
+  it("adds self-employment tax at about 14.13% when the member asks for it", () => {
+    const sheet = {
+      ...sheetOf([{ ...newTaxRow("mix"), amount: "1000" }], "22"),
+      selfEmployment: "full" as const,
+    };
+    expect(taxSheetSelfEmploymentRate(sheet)).toBe(14.13);
+    expect(taxSheetRate(sheet)).toBeCloseTo(36.13, 6);
+    expect(taxSheetEstimate(sheet)).toBeCloseTo(361.3, 6);
+  });
+
+  it("uses only the Medicare part above the Social Security cap", () => {
+    const sheet = {
+      ...sheetOf([{ ...newTaxRow("mix"), amount: "1000" }], "22"),
+      selfEmployment: "medicare" as const,
+    };
+    expect(taxSheetSelfEmploymentRate(sheet)).toBe(2.68);
+    expect(taxSheetEstimate(sheet)).toBeCloseTo(246.8, 6);
+  });
+
+  it("counts income tax alone when self-employment is off", () => {
+    expect(taxSheetSelfEmploymentRate(sheetOf([]))).toBe(0);
+    expect(taxSheetRate(sheetOf([], "22"))).toBe(22);
   });
 
   it("counts filled lines and lines with paperwork noted", () => {
@@ -158,8 +205,29 @@ describe("pulling the paid budget lines", () => {
 
 describe("reading the worksheet back", () => {
   it("opens empty from nothing usable", () => {
-    expect(sanitizeTaxSheet(null)).toEqual({ year: "", rate: "", rows: [] });
-    expect(sanitizeTaxSheet("nonsense")).toEqual({ year: "", rate: "", rows: [] });
+    expect(sanitizeTaxSheet(null)).toEqual({
+      year: "",
+      rate: "",
+      status: "",
+      selfEmployment: "none",
+      rows: [],
+    });
+    expect(sanitizeTaxSheet("nonsense")).toEqual({
+      year: "",
+      rate: "",
+      status: "",
+      selfEmployment: "none",
+      rows: [],
+    });
+  });
+
+  it("remembers the filing status and the self-employment choice", () => {
+    const sheet = sanitizeTaxSheet({ status: "joint", selfEmployment: "full", rows: [] });
+    expect(sheet.status).toBe("joint");
+    expect(sheet.selfEmployment).toBe("full");
+    const odd = sanitizeTaxSheet({ status: "married-ish", selfEmployment: "maybe", rows: [] });
+    expect(odd.status).toBe("");
+    expect(odd.selfEmployment).toBe("none");
   });
 
   it("keeps what it knows and drops what it does not", () => {
@@ -195,6 +263,8 @@ describe("the downloaded worksheet", () => {
   const sheet: TaxSheet = {
     year: "2026",
     rate: "30",
+    status: "single",
+    selfEmployment: "none",
     rows: [
       { ...newTaxRow("mix"), label: "Mix, master", amount: "600", kept: true },
       { ...newTaxRow("merch"), label: 'Hoodie run "first"', amount: "400.50", kept: false },
@@ -223,8 +293,18 @@ describe("the downloaded worksheet", () => {
     expect(csv).toContain("your tax professional's call");
   });
 
+  it("adds the self-employment line and the combined rate when it is counted", () => {
+    const csv = taxWorksheetCsv({ ...sheet, selfEmployment: "full" });
+    expect(csv).toContain("Filing status: Single filer");
+    expect(csv).toContain("Self-employment tax at 14.13%,,141.37,");
+    expect(csv).toContain("Estimated tax savings at 30% + 14.13% self-employment,,441.52,");
+  });
+
   it("shows a dash for a rate and a year it was not given", () => {
-    const csv = taxWorksheetCsv({ year: "", rate: "", rows: [] }, { song: "" });
+    const csv = taxWorksheetCsv(
+      { year: "", rate: "", status: "", selfEmployment: "none", rows: [] },
+      { song: "" },
+    );
     expect(csv).toContain("Song: —");
     expect(csv).toContain("Rate used: —");
     expect(csv).toContain("Total deductible,,0.00,");

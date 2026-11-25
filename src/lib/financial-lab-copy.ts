@@ -55,11 +55,14 @@ export type EarningsSnapshot = {
  * end with the deductible total and the estimate at the member's own rate — the same figures the drawer shows.
  */
 export type TaxSnapshot = {
-  /** The member's own marginal rate in percent. */
+  /** The member's own marginal rate in percent — the bracket they picked. */
   rate: number;
   deductible: number;
+  /** The whole estimate, self-employment tax included when the member counted it. */
   savings: number;
   year?: string;
+  /** The self-employment part of the estimate, or nothing when it is not counted. */
+  seRate?: number;
 };
 
 export type CopyContext = {
@@ -257,14 +260,15 @@ const cell = (v: string | number) => {
  */
 function taxCsvRows(c: CopyContext): string[] {
   if (!c.tax || c.tax.deductible <= 0) return [];
+  const label = c.tax.seRate
+    ? `Estimated tax savings at ${c.tax.rate}% + ${c.tax.seRate}% self-employment`
+    : `Estimated tax savings at ${c.tax.rate}%`;
   const rows = [
     "",
     [c.title, "Deductible expenses (tax worksheet)", "", "", "", c.tax.deductible.toFixed(2)]
       .map(cell)
       .join(","),
-    [c.title, `Estimated tax savings at ${c.tax.rate}%`, "", "", "", c.tax.savings.toFixed(2)]
-      .map(cell)
-      .join(","),
+    [c.title, label, "", "", "", c.tax.savings.toFixed(2)].map(cell).join(","),
   ];
   if (c.tax.year)
     rows.push([c.title, `Tax year ${c.tax.year}`, "", "", "", ""].map(cell).join(","));

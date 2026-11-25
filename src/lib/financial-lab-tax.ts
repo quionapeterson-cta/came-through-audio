@@ -1,5 +1,14 @@
 import { taxSavings } from "@/lib/financial-lab-copy";
 import { expenseActual, type ExpenseRow } from "@/lib/financial-lab-budgets";
+import {
+  currentTaxYear,
+  filingStatusLabel,
+  selfEmploymentEffectiveRate,
+  selfEmploymentMedicareRate,
+  taxTableFor,
+  type FilingStatus,
+  type TaxYearTable,
+} from "@/lib/tax-brackets";
 
 /**
  * The artist tax write-off worksheet: a line per cost, each one chosen from a list of typical music-business
@@ -163,11 +172,47 @@ export type TaxRow = {
   sourceId?: string;
 };
 
+/**
+ * Whether the estimate also counts the self-employment tax a business cost saves. "full" is 15.3% on 92.35% of net
+ * earnings while the Social Security part still applies (about 14.13%); "medicare" is above the Social Security cap,
+ * where only the 2.9% Medicare part is left (about 2.68%); "none" is a member who is not self-employed.
+ */
+export type SelfEmploymentChoice = "none" | "full" | "medicare";
+
+export const SELF_EMPLOYMENT_CHOICES: {
+  id: SelfEmploymentChoice;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    id: "none",
+    label: "Not self-employed",
+    hint: "The estimate counts federal income tax only.",
+  },
+  {
+    id: "full",
+    label: "Yes — count self-employment tax (~14.13%)",
+    hint: "1099, freelance or Schedule C income under the Social Security cap. 15.3% of net earnings is Social Security and Medicare, and it applies to 92.35% of net earnings — about 14.13% of each deductible dollar.",
+  },
+  {
+    id: "medicare",
+    label: "Yes, but I'm over the Social Security cap (~2.68%)",
+    hint: "Net self-employment earnings above the Social Security cap only carry the 2.9% Medicare part, about 2.68% of each deductible dollar.",
+  },
+];
+
+export const selfEmploymentOf = (id: string | undefined): SelfEmploymentChoice =>
+  SELF_EMPLOYMENT_CHOICES.find((choice) => choice.id === id)?.id ?? "none";
+
 export type TaxSheet = {
-  /** Optional planning year, as typed. */
+  /** Optional planning year, as typed. Blank plans on the current calendar year. */
   year: string;
-  /** The member's own marginal rate in percent. Never one of ours. */
+  /** The member's marginal rate in percent, set by the bracket they pick. Never one of ours. */
   rate: string;
+  /** The filing status whose ranges the rate was picked from. Blank until the member picks one. */
+  status: FilingStatus | "";
+  /** Whether the estimate adds the self-employment tax a write-off saves. */
+  selfEmployment: SelfEmploymentChoice;
   rows: TaxRow[];
 };
 
@@ -181,7 +226,7 @@ export function newTaxRow(category: TaxCategoryId | "" = ""): TaxRow {
 }
 
 export function emptyTaxSheet(): TaxSheet {
-  return { year: "", rate: "", rows: [] };
+  return { year: "", rate: "", status: "", selfEmployment: "none", rows: [] };
 }
 
 /** What one line adds to the deductible total: a typed amount, or nothing at all. */
@@ -205,9 +250,47 @@ export const taxFilledRows = (rows: TaxRow[]): number =>
 export const taxKeptRows = (rows: TaxRow[]): number =>
   rows.filter((row) => row.kept && taxRowAmount(row) > 0).length;
 
-/** The estimate: the member's deductible total at the member's own rate, held to a real percentage. */
-export const taxSheetEstimate = (sheet: TaxSheet): number =>
-  taxSavings(taxSheetTotal(sheet), Math.min(100, Math.max(0, Number(sheet.rate) || 0)));
+/** The year the sheet is planning: the one typed, or the calendar year when it is left blank. */
+export const taxSheetPlanningYear = (sheet: TaxSheet, now: Date = new Date()): number =>
+  Number(sheet.year) || currentTaxYear(now);
+
+/** The bracket table the sheet's year is priced with, from the tables on hand. */
+export const taxSheetTable = (
+  sheet: TaxSheet,
+  tables?: TaxYearTable[],
+  now: Date = new Date(),
+): TaxYearTable => taxTableFor(taxSheetPlanningYear(sheet, now), tables);
+
+/** The income-tax part of the estimate, held to a real percentage. */
+export const taxSheetIncomeRate = (sheet: TaxSheet): number =>
+  Math.min(100, Math.max(0, Number(sheet.rate) || 0));
+
+/** What the self-employment part adds, or nothing when the member is not counting it. */
+export const taxSheetSelfEmploymentRate = (
+  sheet: TaxSheet,
+  tables?: TaxYearTable[],
+  now: Date = new Date(),
+): number => {
+  if (sheet.selfEmployment === "none") return 0;
+  const terms = taxSheetTable(sheet, tables, now).selfEmployment;
+  return sheet.selfEmployment === "full"
+    ? selfEmploymentEffectiveRate(terms)
+    : selfEmploymentMedicareRate(terms);
+};
+
+/** The rate the whole estimate is worked at: the bracket's rate plus the self-employment part. */
+export const taxSheetRate = (
+  sheet: TaxSheet,
+  tables?: TaxYearTable[],
+  now: Date = new Date(),
+): number => taxSheetIncomeRate(sheet) + taxSheetSelfEmploymentRate(sheet, tables, now);
+
+/** The estimate: the member's deductible total at the member's own rate, plus self-employment tax if they asked. */
+export const taxSheetEstimate = (
+  sheet: TaxSheet,
+  tables?: TaxYearTable[],
+  now: Date = new Date(),
+): number => taxSavings(taxSheetTotal(sheet), taxSheetRate(sheet, tables, now));
 
 /**
  * Which worksheet category a published budget line belongs to. A custom budget row has no entry, so it lands on
@@ -323,6 +406,12 @@ const rateIn = (value: unknown): string => {
   return String(Math.min(100, Math.max(0, Math.round(n * 100) / 100)));
 };
 
+/** A filing status read back from storage: only the three the table has, anything else opens blank. */
+const filingStatusIn = (value: unknown): FilingStatus | "" => {
+  const status = text(value, 20);
+  return status === "single" || status === "joint" || status === "household" ? status : "";
+};
+
 /**
  * Everything read back from storage goes through here: unknown categories fall back to the blank dropdown, a
  * half-written row is dropped, and the list is capped so a corrupted value cannot fill the drawer.
@@ -350,9 +439,14 @@ export function sanitizeTaxSheet(raw: unknown): TaxSheet {
       ...(sourceId ? { sourceId } : {}),
     });
   }
+  const status = filingStatusIn(o["status"]);
+  const selfEmployment =
+    o["selfEmployment"] === true ? "full" : selfEmploymentOf(text(o["selfEmployment"], 20));
   return {
     year: text(o["year"], 12).replace(/\D/g, "").slice(0, 4),
     rate: rateIn(o["rate"]),
+    status,
+    selfEmployment,
     rows,
   };
 }
@@ -372,20 +466,24 @@ const DISCLAIMER =
  */
 export function taxWorksheetCsv(
   sheet: TaxSheet,
-  meta: { song?: string | undefined; madeAt?: Date } = {},
+  meta: { song?: string | undefined; madeAt?: Date; tables?: TaxYearTable[] } = {},
 ): string {
   const madeAt = meta.madeAt ?? new Date();
   const total = taxSheetTotal(sheet);
-  const rate = Number(sheet.rate) || 0;
-  const savings = taxSavings(total, sheet.rate);
+  const rate = taxSheetIncomeRate(sheet);
+  const seRate = taxSheetSelfEmploymentRate(sheet, meta.tables, madeAt);
+  const table = taxSheetTable(sheet, meta.tables, madeAt);
+  const savings = taxSheetEstimate(sheet, meta.tables, madeAt);
   const lines: string[] = [
     "CAME THROUGH AUDIO — TAX WRITE-OFF WORKSHEET",
     "The Financial Lab · a planning worksheet, not a tax return",
     "=".repeat(52),
     `Song: ${meta.song?.trim() || "—"}`,
     `Tax year: ${sheet.year || "—"}`,
+    `Brackets: ${table.year} federal, ${table.source}`,
+    ...(sheet.status ? [`Filing status: ${filingStatusLabel(sheet.status)}`] : []),
     `Prepared: ${madeAt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`,
-    `Rate used: ${rate > 0 ? `${rate}%` : "—"}`,
+    `Rate used: ${rate > 0 ? `${rate}%` : "—"}${seRate > 0 ? ` + ${seRate}% self-employment` : ""}`,
     "",
     ["Category", "What it was", "Amount (USD)", "Paperwork kept"].map(cell).join(","),
   ];
@@ -404,8 +502,20 @@ export function taxWorksheetCsv(
     );
   }
   lines.push(["Total deductible", "", total.toFixed(2), ""].map(cell).join(","));
+  if (seRate > 0) {
+    lines.push(
+      [`Self-employment tax at ${seRate}%`, "", taxSavings(total, seRate).toFixed(2), ""]
+        .map(cell)
+        .join(","),
+    );
+  }
   lines.push(
-    [`Estimated tax savings${rate > 0 ? ` at ${rate}%` : ""}`, "", savings.toFixed(2), ""]
+    [
+      `Estimated tax savings${rate > 0 ? ` at ${rate}%` : ""}${seRate > 0 ? ` + ${seRate}% self-employment` : ""}`,
+      "",
+      savings.toFixed(2),
+      "",
+    ]
       .map(cell)
       .join(","),
   );

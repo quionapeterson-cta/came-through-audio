@@ -87,7 +87,14 @@ import {
   breakEvenStreams,
   type CopyContext,
 } from "@/lib/financial-lab-copy";
-import { taxSheetEstimate, taxSheetTotal, type TaxSheet } from "@/lib/financial-lab-tax";
+import {
+  taxSheetEstimate,
+  taxSheetIncomeRate,
+  taxSheetRate,
+  taxSheetSelfEmploymentRate,
+  taxSheetTotal,
+  type TaxSheet,
+} from "@/lib/financial-lab-tax";
 import {
   emptyTerritoryMix,
   labStorageKey,
@@ -403,7 +410,7 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
               onTarget={changeBudget}
               onOpenRecoupment={() => openTab("royalty", "fl-recoupment")}
               storageKey={planKey}
-              taxRate={Number(taxSheet.rate) || 0}
+              taxRate={taxSheetRate(taxSheet)}
             />
           )}
           {item.id === "merch" && (
@@ -899,7 +906,10 @@ function Earnings({
   // The worksheet's own figures, read once here so the CSV, the drawer and the recoupment line can never disagree.
   const taxTotal = taxSheetTotal(taxSheet);
   const taxEstimate = taxSheetEstimate(taxSheet);
-  const taxRateValue = Math.min(100, Math.max(0, Number(taxSheet.rate) || 0));
+  const taxIncomeRate = taxSheetIncomeRate(taxSheet);
+  const taxSeRate = taxSheetSelfEmploymentRate(taxSheet);
+  // What a cost is worth after tax: the bracket's own rate plus self-employment tax when it is counted.
+  const taxRateValue = taxSheetRate(taxSheet);
 
   function useOwnAverage() {
     if (ownRate === null) return;
@@ -988,9 +998,10 @@ function Earnings({
         ...(taxTotal > 0
           ? {
               tax: {
-                rate: taxRateValue,
+                rate: taxIncomeRate,
                 deductible: taxTotal,
                 savings: taxEstimate,
+                ...(taxSeRate ? { seRate: taxSeRate } : {}),
                 ...(taxSheet.year ? { year: taxSheet.year } : {}),
               },
             }
@@ -1007,7 +1018,8 @@ function Earnings({
       selectedMix,
       taxTotal,
       taxEstimate,
-      taxRateValue,
+      taxIncomeRate,
+      taxSeRate,
       taxSheet.year,
     ],
   );

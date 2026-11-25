@@ -168,3 +168,61 @@ stay in the undecided pile.
 
 Storage keys (all `cta.lab.v1.<userId>.<songId>.<part>`): `tax` for the worksheet, `budgetPlan` for the
 planner's plan, `breakeven` for the release break-even check.
+
+## The rate dropdown, self-employment tax and a table that rolls over (founder, 2026-11-25)
+
+The rate was a number box the member typed from memory. The founder's words: _"make the marginal rate a drop down
+for 2026 so users can pick their range based on their income"_, _"another option for them to choose self employment
+tax"_, _"give instructions with steps just like the rest of the financial lab"_, and _"let's make this automatically
+updates itself every year. Can a cloudflare worker do this."_
+
+### What it does now
+
+- **The rate is picked, not typed.** Step 1 sets the tax year and the filing status; step 2 lists that status's seven
+  income ranges from the year's chart (`22% · $50,401 – $105,700`). Picking a row sets the marginal rate. A rate saved
+  on an older sheet that is not in the chart stays selectable as its own option, so nothing is silently dropped.
+- **Four numbered steps**, the same `fl-step-label` pattern as the Budget Planner and the royalty panel: year and
+  filing status → income range → the costs → self-employment tax. Every control and hint that was there before is
+  still there, inside its step.
+- **Self-employment tax is a choice.** `Not self-employed` (income tax only), `~14.13%` (15.3% of net earnings on
+  92.35% of them, while the Social Security part applies) or `~2.68%` (above the Social Security cap, where only the
+  2.9% Medicare part is left). The estimate, the results block and the CSV all show the two parts separately and then
+  the total, so the arithmetic is checkable.
+- **The chart is data, keyed by year** (`src/lib/tax-brackets.ts`). 2026 is the table the founder supplied; 2027 is
+  the IRS's own published table (Rev. Proc. 2026-35, released 2026-11-05, with the 2027 Social Security wage base of
+  $192,300). A blank tax year plans on the calendar year, so the drawer moves to 2027 by itself on January 1 with
+  nothing scheduled and nothing retyped. The source is printed beside the dropdowns and in the CSV.
+- **The downloaded worksheet** gains `Brackets:`, `Filing status:`, a `Self-employment tax at 14.13%` line and the
+  combined rate on the savings line. The projection CSV labels the same figure `… + 14.13% self-employment`.
+- **The after-tax readers follow the same rate.** The Budget Planner and the Recoupment panel now use the bracket's
+  rate plus the self-employment part, so a cost's after-tax figure cannot disagree with the drawer.
+
+### The Cloudflare Worker
+
+A Worker can hold the table and a new tax year can reach every member without rebuilding the app, so
+`workers/cta-tax-tables.ts` (config `workers/wrangler-tax.toml`) does exactly that:
+
+| Piece | What it does |
+| --- | --- |
+| `GET /tax` | Every year it holds (`years`, `newestYear`), today's `activeYear`, `needsUpdate`, and the tables themselves |
+| `GET /tax/<year>` | One year's table, or 404 |
+| `PUT /tax/<year>` | Adds or corrects a year, `Authorization: Bearer $TAX_ADMIN_TOKEN`, stored in the optional `TAX_TABLES` KV namespace |
+| `scheduled` (Jan 1) | Re-reads the years held, records whether the calendar has moved past the newest table (KV `status`, and the log) |
+
+The app reads it only when `VITE_CTA_TAX_TABLES_URL` is set (`src/components/use-tax-tables.ts`), caches the answer
+for a day, and keeps the bundled table when the Worker is unset, offline, or answers with anything incomplete — a
+year is accepted only when all six thresholds for all three statuses are present and in order. Origin-locked with the
+same rule as the Help Desk Worker.
+
+**What it deliberately does not do: invent a year.** The thresholds move every year with the IRS's inflation
+adjustment, so the cron never extrapolates the next year from the last one; a year it has not been given is reported
+as `needsUpdate: true` and the drawer names the year it is actually using. Parsing the IRS PDF automatically was
+considered and refused for now: a wrong tax figure is worse than an eleven-month-old one, so the new year arrives as
+an approved table (a bundled entry, or one `PUT`), and 2027 is already in place.
+
+### Verified
+
+`bun run build`, `npx tsc --noEmit`, the full `vitest` suite (1470 tests, 49 of them on the tax worksheet and the
+chart) and `npx wrangler deploy --dry-run -c workers/wrangler-tax.toml` (bundles at 9.47 KiB). The Worker was not
+deployed from this workspace — there are no Cloudflare credentials here — so `VITE_CTA_TAX_TABLES_URL` is unset and
+the bundled tables are what the app uses today.
