@@ -64,9 +64,91 @@ Adding a category is data, not a new screen: one entry in `TAX_CATEGORIES` in
   would reuse the budget sheet's print layout and is worth doing only if the founder wants the same
   branded artifact for tax planning.
 
+## The year worksheet: what it would take (nothing built)
+
+The worksheet is keyed to the open song — `cta.lab.v1.<userId>.<songId>.tax` — because that is how the rest of the
+Lab is keyed. But a member's real question is annual: "what did I spend on music this year, and what is it worth?"
+Half a year's costs are not per song at all (a distributor fee, a laptop, a subscription, a rehearsal room), and a
+preparer does not want one file per song.
+
+Moving the worksheet to a year is a **keying change plus a project tag on each row**, not a rewrite: the row model,
+the drawer, both CSV writers and the after-tax readers stay. The work is in the decisions below, not in the code.
+
+### What changes
+
+| Piece | Change |
+| --- | --- |
+| `financial-lab-tax.ts` | Rows gain a project tag; the sheet gains a year identity; a key builder for the year; a reader for "which years exist"; per-project subtotals. Pulling must sync **within one project**, so pulling song B never removes song A's pulled lines. |
+| `use-tax-sheet.ts` | Keyed by member + year instead of member + song. Same write-on-change pattern. |
+| `RoyaltyUtilitySuite.tsx` | The hook moves out of the song-scoped block; the year becomes Lab state; the drawer no longer gets a song title for its heading. |
+| `LabTaxDrawer.tsx` | Year selector, a project column or sections, "pull this song's lines", an import from a per-song worksheet, and a copy pass. |
+| CSV writers | The worksheet CSV gets the year in its title and filename, a Project column and (if approved) per-project subtotals. `projectionCsv` needs the per-song-vs-year decision below. |
+| Budget Planner / Recoupment | **No code change** — they take a number. They would read the year's rate, which is more correct than a per-song rate. |
+
+### Storage implications
+
+- **A new key prefix, not a reinterpretation of the old one.** `cta.lab.v1` carries the song in the key, so a year
+  cannot reuse it without risking a song id that looks like a year (and `manual` is a real key today). A separate
+  prefix — proposed: `cta.lab.tax.v1.<userId>.<year>` — keeps every saved per-song worksheet readable and rewrites
+  nothing.
+- **Existing per-song worksheets do not move by themselves.** Three options: leave them and add an explicit
+  "bring this song's lines into 2026" (copies, does not move); a one-time migration with a confirm; or silent
+  aggregation. Silent aggregation is the one to refuse: a cost entered under two songs would double-count and the
+  member would never see it happen.
+- **One rate per year.** A marginal rate belongs to the year, not the song; storing it once also removes the current
+  oddity where two songs could disagree about the same member's rate.
+- **A conflict the per-song scheme was hiding.** Two browser tabs on two different songs would now write the same
+  key, so the last write wins. Nothing in the Lab syncs across tabs today; this change turns a non-issue into a
+  visible one. The honest answer is a stated limitation ("one tab at a time"), not a sync engine.
+- **Size is not the problem.** A busy year is a few KB against the browser's multi-megabyte quota. The row cap is:
+  **40 is too low for a year**; the exact ceiling (a proposal was 120, **undecided**) is a number the founder signs
+  off, or the cap stays and a long year overflows.
+- **Clearing and carrying over.** A year sheet needs "clear this year" and ideally "start from last year". Both are
+  new destructive actions and need confirmation copy; only per-row delete exists today.
+- **Sensitivity goes up.** A year worksheet is a fuller picture of someone's business than one song's costs. It stays
+  browser-local and per member. A saved table, cross-device access or a preparer share would be the open database
+  decision, not a link handed out.
+
+### Copy implications
+
+- **The scope has to be said out loud.** "Common costs artists track" becomes "costs you paid this tax year, across
+  every song"; the result labels become "This year's deductible total" / "Estimated tax savings"; the count line
+  gains the year.
+- **The tax year stops being an optional note and becomes the sheet's identity.** That carries a caveat we must not
+  assert: which year a cost belongs to is the preparer's call. "Counted in the year you paid it" would be a rule
+  claim — the copy says "the year you're planning", and the disclaimer stays as it is.
+- **The other two panels get simpler.** "Your 30% rate from the tax worksheet" is now unambiguously the year's rate.
+- **The downloaded worksheet changes title and filename** — `2026 tax worksheet.csv`, "TAX WRITE-OFF WORKSHEET —
+  2026", "Projects: 3 songs" instead of "Song:", and a Project column. The disclaimer sentence stays verbatim.
+- **The projection CSV is the real decision.** It is a per-song file and currently appends the worksheet's total. On a
+  year sheet that would repeat a year-wide figure on every song's file, and anyone joining the files would inflate
+  the total. The clean shape is this song's worksheet lines in the file, with "Year total (all songs)" beside it as
+  context — never a per-song amount that is really the year's.
+- **Pull and import copy gains scope**: "Pulls this song's paid budget lines into 2026 — switch songs and pull again
+  to add theirs"; the import says it copies lines and leaves the per-song worksheet where it is.
+- **Where the drawer lives is a copy question too.** It sits in the Royalty panel's aside, beside one song's
+  telemetry. A year-wide worksheet is readable there if it is labelled, but "money spent this year" arguably belongs
+  in the Budget Planner tab. That is a layout call for the founder.
+
+### Open decisions (all undecided)
+
+1. **Year on open** — default to the current year, or open on a "choose your tax year" step?
+2. **Existing per-song worksheets** — import button (proposed), confirm-and-migrate, or left out of the year view?
+3. **Where the year sheet lives** — the existing drawer with a year label, or its own place in the Budget Planner?
+4. **Project tag** — picked from the open song, free text, or a "No song" bucket plus a song picker?
+5. **Row cap and subtotals** — the ceiling for a year, and whether per-project subtotals print in the CSV.
+
+### Size
+
+Roughly the same as the round just shipped: one storage/model module with tests, the hook and Lab state change, a
+drawer rework (year selector, grouping, import, clear), two CSV writers and about fifteen to twenty tests — plus
+whichever layout decision (3) the founder makes. No backend work: the cross-device and preparer-sharing questions
+stay in the undecided pile.
+
 ## Undecided / for the founder
 
-- Whether the worksheet should also be available for a **member-level year** instead of per song.
+- **The year worksheet.** All five questions are open; see [The year worksheet](#the-year-worksheet-what-it-would-take-nothing-built)
+  below. Nothing there is built or promised, and the numbers in it (a row cap, a default year) are proposals, not decisions.
 - Whether a **professional review** of the category list and hints is wanted before it is described
   anywhere as tax guidance (it is not described that way today).
 - Whether the estimate belongs in the **full report copy** (the "Copy Breakdown" text) as well as the CSV.
