@@ -226,3 +226,32 @@ an approved table (a bundled entry, or one `PUT`), and 2027 is already in place.
 chart) and `npx wrangler deploy --dry-run -c workers/wrangler-tax.toml` (bundles at 9.47 KiB). The Worker was not
 deployed from this workspace — there are no Cloudflare credentials here — so `VITE_CTA_TAX_TABLES_URL` is unset and
 the bundled tables are what the app uses today.
+
+### The Worker is tested
+
+`src/lib/tax-tables-worker.ts` holds the rules and `workers/cta-tax-tables.ts` is a thin shell around them (the same
+split as the Help Desk Worker), which puts them inside the vitest include. `src/lib/tax-tables-worker.test.ts` covers
+19 cases: `GET /tax` and `/tax/<year>` with and without KV, a 404 for a year the Worker does not hold, a corrected
+year from KV winning over the bundled one, junk in KV ignored in favour of the bundled table, `PUT` with no token,
+the wrong token, no KV binding, a table missing a threshold and a mismatched year, the yearly check recording its
+status with and without KV, and CORS — the preflight answer, an allowed origin, a refused origin and no `Origin`
+header at all.
+
+Writing them found a real bug: the allowed methods were `GET, OPTIONS`, so a browser preflight refused the `PUT` that
+adds a year. `TAX_TABLES_CORS_METHODS` now reads `GET, PUT, OPTIONS`.
+
+### Seen on screen
+
+Signed in on a Free demo account, at 1440 and at 390: step 1 now stacks on a phone (side by side, "Married filing
+jointly" was cut off by the select's own arrow), and the self-employment choices were shortened to
+"Yes — self-employment tax (~14.13%)" and "Yes — Medicare part only (~2.68%)", which had been clipped at 390. No
+horizontal overflow at either width; the drawer measures 659px on a desktop and 358px on a phone, and the results row
+still reads `$2,540.75` deductible → `$558.97` income tax + `$68.09` self-employment → `$627.06` savings.
+
+A Free account sees the Lab's upgrade lock, which is correct, so the drawer itself was measured through the dev-only
+`/dev/tax` harness (`src/routes/dev.tax.tsx`) that renders the real component with a sample worksheet. No tier, role or
+payment state was granted to the demo account to get past the gate.
+
+The demo account is `demo.lab@camethroughaudio.com` on the Free plan; its password was given in the session that
+created it and is not recorded here. The project has "Confirm email" on, so the sign-up the account came from had to
+be confirmed before the log-in page would accept it — worth knowing when someone makes a test account next time.

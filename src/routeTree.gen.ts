@@ -34,6 +34,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ContractPartyIdRouteImport } from './routes/contract.$partyId'
 import { Route as DevFillRouteImport } from './routes/dev.fill'
 import { Route as DevSkyRouteImport } from './routes/dev.sky'
+import { Route as DevTaxRouteImport } from './routes/dev.tax'
 import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
 import { Route as InvitesStopRouteImport } from './routes/invites.stop'
 import { Route as IpiIdRouteImport } from './routes/ipi.$id'
@@ -178,6 +179,11 @@ const DevSkyRoute = DevSkyRouteImport.update({
   path: '/dev/sky',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevTaxRoute = DevTaxRouteImport.update({
+  id: '/dev/tax',
+  path: '/dev/tax',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocsSlugRoute = DocsSlugRouteImport.update({
   id: '/docs/$slug',
   path: '/docs/$slug',
@@ -302,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/dev/fill': typeof DevFillRoute
   '/dev/sky': typeof DevSkyRoute
+  '/dev/tax': typeof DevTaxRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
   '/ipi/$id': typeof IpiIdRoute
@@ -347,6 +354,7 @@ export interface FileRoutesByTo {
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/dev/fill': typeof DevFillRoute
   '/dev/sky': typeof DevSkyRoute
+  '/dev/tax': typeof DevTaxRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
   '/ipi/$id': typeof IpiIdRoute
@@ -393,6 +401,7 @@ export interface FileRoutesById {
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/dev/fill': typeof DevFillRoute
   '/dev/sky': typeof DevSkyRoute
+  '/dev/tax': typeof DevTaxRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
   '/ipi/$id': typeof IpiIdRoute
@@ -440,6 +449,7 @@ export interface FileRouteTypes {
     | '/contract/$partyId'
     | '/dev/fill'
     | '/dev/sky'
+    | '/dev/tax'
     | '/docs/$slug'
     | '/invites/stop'
     | '/ipi/$id'
@@ -485,6 +495,7 @@ export interface FileRouteTypes {
     | '/contract/$partyId'
     | '/dev/fill'
     | '/dev/sky'
+    | '/dev/tax'
     | '/docs/$slug'
     | '/invites/stop'
     | '/ipi/$id'
@@ -530,6 +541,7 @@ export interface FileRouteTypes {
     | '/contract/$partyId'
     | '/dev/fill'
     | '/dev/sky'
+    | '/dev/tax'
     | '/docs/$slug'
     | '/invites/stop'
     | '/ipi/$id'
@@ -576,6 +588,7 @@ export interface RootRouteChildren {
   ContractPartyIdRoute: typeof ContractPartyIdRoute
   DevFillRoute: typeof DevFillRoute
   DevSkyRoute: typeof DevSkyRoute
+  DevTaxRoute: typeof DevTaxRoute
   DocsSlugRoute: typeof DocsSlugRoute
   InvitesStopRoute: typeof InvitesStopRoute
   IpiIdRoute: typeof IpiIdRoute
@@ -773,6 +786,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevSkyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/tax': {
+      id: '/dev/tax'
+      path: '/dev/tax'
+      fullPath: '/dev/tax'
+      preLoaderRoute: typeof DevTaxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/docs/$slug': {
       id: '/docs/$slug'
       path: '/docs/$slug'
@@ -928,6 +948,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContractPartyIdRoute: ContractPartyIdRoute,
   DevFillRoute: DevFillRoute,
   DevSkyRoute: DevSkyRoute,
+  DevTaxRoute: DevTaxRoute,
   DocsSlugRoute: DocsSlugRoute,
   InvitesStopRoute: InvitesStopRoute,
   IpiIdRoute: IpiIdRoute,

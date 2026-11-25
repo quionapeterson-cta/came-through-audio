@@ -244,7 +244,8 @@ export function TaxDrawer({
           <div className="fl-step-label">
             <span className="fl-step-num">1</span> Set the tax year and how you file
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          {/* Stacked on a phone: side by side, "Married filing jointly" is clipped by the select's own arrow. */}
+          <div className="grid gap-2 sm:grid-cols-2">
             <div className="fl-field">
               <Label htmlFor="tax-year">Tax year</Label>
               <Input
@@ -384,7 +385,7 @@ export function TaxDrawer({
 
         <div className="space-y-1.5">
           <div className="fl-step-label">
-            <span className="fl-step-num">4</span> Choose whether to count self-employment tax
+            <span className="fl-step-num">4</span> Count self-employment tax
           </div>
           <div className="fl-field">
             <Label htmlFor="tax-self-employment">Self-employment tax</Label>

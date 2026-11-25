@@ -190,13 +190,14 @@ export const SELF_EMPLOYMENT_CHOICES: {
     hint: "The estimate counts federal income tax only.",
   },
   {
+    // Short enough to read whole in the drawer at 390px; the hint carries the arithmetic.
     id: "full",
-    label: "Yes — count self-employment tax (~14.13%)",
+    label: "Yes — self-employment tax (~14.13%)",
     hint: "1099, freelance or Schedule C income under the Social Security cap. 15.3% of net earnings is Social Security and Medicare, and it applies to 92.35% of net earnings — about 14.13% of each deductible dollar.",
   },
   {
     id: "medicare",
-    label: "Yes, but I'm over the Social Security cap (~2.68%)",
+    label: "Yes — Medicare part only (~2.68%)",
     hint: "Net self-employment earnings above the Social Security cap only carry the 2.9% Medicare part, about 2.68% of each deductible dollar.",
   },
 ];
