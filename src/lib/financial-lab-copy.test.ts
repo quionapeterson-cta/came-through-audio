@@ -79,7 +79,8 @@ describe("financial lab agency copy", () => {
     );
     expect(report).toContain("ASCAP (100%): 50% writer / 50% publisher");
     expect(report).toContain("Spotify | 100,000 | $0.0040 | $400.00 | $320.00");
-    expect(report).toContain("PROJECTED TOTAL: $400.00");
+    expect(report).toContain("YOUR SHARE TOTAL: $400.00");
+    expect(report).toContain("You keep after distributor: $400.00");
   });
 
   it("formats a hand-entered share in every scale", () => {

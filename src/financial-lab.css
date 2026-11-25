@@ -711,7 +711,7 @@
     grid-column: 1 / -1;
   }
   /* The distributor block carries a money result in the middle of its row, so a narrow block gives all three boxes
-     the full width: half a panel clipped "Before the cut" at the left. */
+     the full width: half a panel clipped "Your share before distributor" at the left. */
   .fl-distributor .fl-platform-grid {
     grid-template-columns: minmax(0, 1fr);
   }

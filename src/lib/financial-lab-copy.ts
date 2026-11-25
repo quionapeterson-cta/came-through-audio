@@ -293,7 +293,7 @@ export function projectionCsv(
     [`${name.name.toUpperCase()} — ROYALTY PROJECTION`].map(cell).join(","),
     [name.tagline].map(cell).join(","),
     "",
-    ["Song", "Platform", "Streams", "Rate (USD)", "Pool (USD)", "Your estimate (USD)"]
+    ["Song", "Platform", "Streams", "Rate (USD)", "Platform pays (USD)", "Your share (USD)"]
       .map(cell)
       .join(","),
   ];
@@ -308,10 +308,14 @@ export function projectionCsv(
   rows.push(
     [c.title, "Radio / SiriusXM / live", "", "", "", e.radio.toFixed(2)].map(cell).join(","),
   );
-  rows.push([c.title, "Projected total", "", "", "", e.total.toFixed(2)].map(cell).join(","));
+  rows.push([c.title, "Your share total", "", "", "", e.total.toFixed(2)].map(cell).join(","));
   if (e.distributor) {
     rows.push([c.title, "Distributor cut", "", "", "", `${e.distributor}%`].map(cell).join(","));
-    rows.push([c.title, "You keep", "", "", "", (e.net ?? e.total).toFixed(2)].map(cell).join(","));
+    rows.push(
+      [c.title, "You keep after distributor", "", "", "", (e.net ?? e.total).toFixed(2)]
+        .map(cell)
+        .join(","),
+    );
   }
   rows.push(
     [c.title, "Master share", "", "", "", pct(e.masterShare)].map(cell).join(","),
@@ -348,18 +352,20 @@ export function fullReport(c: CopyContext): string {
     lines.push(
       `Master share: ${pct(c.earnings.masterShare)}  |  Song share: ${pct(c.earnings.songShare)}`,
     );
-    lines.push("Platform | Streams | Rate | Pool | Your estimate");
+    lines.push("Platform | Streams | Rate | Platform pays | Your share");
     for (const p of c.earnings.platforms) {
       lines.push(
         `${p.name} | ${p.streams.toLocaleString("en-US")} | $${p.rate.toFixed(4)} | ${money(p.total)} | ${money(p.yours)}`,
       );
     }
     lines.push(`Radio / SiriusXM / live | | | | ${money(c.earnings.radio)}`);
-    lines.push("", `PROJECTED TOTAL: ${money(c.earnings.total)}`);
+    lines.push("", `YOUR SHARE TOTAL: ${money(c.earnings.total)}`);
     if (c.earnings.distributor) {
       lines.push(
-        `Distributor cut: ${pct(c.earnings.distributor)}  |  You keep: ${money(c.earnings.net ?? c.earnings.total)}`,
+        `Distributor's cut: ${pct(c.earnings.distributor)}  |  You keep after distributor: ${money(c.earnings.net ?? c.earnings.total)}`,
       );
+    } else {
+      lines.push(`You keep after distributor: ${money(c.earnings.total)}`);
     }
     if (c.earnings.territories?.length) {
       lines.push("", "LISTENER MIX (planning assumption, not a published rate)");

@@ -99,6 +99,9 @@ export async function budgetWorkbook(sheet: BudgetSheet, brand?: LabBrandSource)
   wb.creator = brandName.name;
   wb.company = brandName.name;
   wb.title = `${sheet.project} budget`;
+  // Excel recalculates every formula the moment the workbook opens, so a viewer that does not calculate on its own
+  // never leaves Spent, Remaining or the checklist total showing zero (founder, 2026-11-25).
+  wb.calcProperties.fullCalcOnLoad = true;
 
   const ws = wb.addWorksheet("Budget", {
     views: [{ state: "frozen", ySplit: HEADER_ROW }],

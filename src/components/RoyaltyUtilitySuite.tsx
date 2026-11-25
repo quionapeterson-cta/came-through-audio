@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { LabBudgetPlanner } from "@/components/LabBudgetPlanner";
+import { LabDownloadMenu, type LabDownloadFormat } from "@/components/LabDownloadMenu";
+import { LabPacketExport } from "@/components/LabPacketExport";
 import { LabMerchCalculator } from "@/components/LabMerchCalculator";
 import { TaxDrawer } from "@/components/LabTaxDrawer";
 import { useTaxSheet } from "@/components/use-tax-sheet";
@@ -59,7 +61,7 @@ import {
 } from "@/components/ui/select";
 import { loadOnboarding } from "@/lib/artist-profile";
 import { myBrand } from "@/lib/brand-load";
-import { listTracks, saveBlob, type CatalogTrack } from "@/lib/catalog";
+import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { COUNTRIES, countryByCode } from "@/lib/repertoires";
 import {
   MASTER_PORTION,
@@ -84,10 +86,11 @@ import {
   contextForTrack,
   copyForAgency,
   fullReport,
-  projectionCsv,
   breakEvenStreams,
   type CopyContext,
 } from "@/lib/financial-lab-copy";
+import { downloadProjectionSheetCsv, downloadProjectionXlsx } from "@/lib/projection-sheet";
+import { downloadProjectionPdf } from "@/lib/projection-pdf";
 import {
   taxSheetEstimate,
   taxSheetIncomeRate,
@@ -829,6 +832,7 @@ function Earnings({
   // average, which they can apply over the published default.
   const [own, setOwn] = useState({ paid: "", streams: "" });
   const [pulse, setPulse] = useState(0);
+  const [projectionBusy, setProjectionBusy] = useState(false);
   const [platform, setPlatform] = useState(PLATFORMS[0]!.id);
   const loadedKey = useRef("");
   const streams = nums.streams;
@@ -1039,14 +1043,34 @@ function Earnings({
     ],
   );
 
-  async function downloadProjection() {
-    const brand = await myBrand("lab");
-    const csv = projectionCsv(copyContext, brand);
-    saveBlob(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      `${song?.title || "financial-lab"} projection.csv`,
-    );
-    toast.success("Projection downloaded.");
+  async function downloadProjection(format: LabDownloadFormat) {
+    setProjectionBusy(true);
+    try {
+      // One brand for the whole menu: the member's kit when the server allows it on Lab downloads, ours otherwise.
+      const brand = await myBrand("lab");
+      if (format === "pdf") {
+        await downloadProjectionPdf(copyContext, brand);
+        toast.success(
+          "Fillable projection PDF downloaded — type streams and rates, and the totals recalculate in Adobe Acrobat or Reader.",
+        );
+        return;
+      }
+      if (format === "sheets") {
+        downloadProjectionSheetCsv(copyContext, brand);
+        toast.success(
+          "Google Sheet downloaded as a .csv — open sheets.new, then File → Import → Upload, and platform pays and your share recalculate.",
+        );
+        return;
+      }
+      await downloadProjectionXlsx(copyContext, brand);
+      toast.success(
+        "Excel sheet downloaded — type a stream count or a rate, and platform pays and your share recalculate.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't build the projection.");
+    } finally {
+      setProjectionBusy(false);
+    }
   }
 
   // One cut, read by the readout, the pipeline and the recoupment targets, so the three can never disagree.
@@ -1180,7 +1204,7 @@ function Earnings({
             />
           </div>
           <div className="fl-field">
-            <Label htmlFor="earn-estimate">Estimate</Label>
+            <Label htmlFor="earn-estimate">Your share</Label>
             <output id="earn-estimate" className="fl-estimate">
               {money(selectedRow.yours)}
             </output>
@@ -1236,7 +1260,12 @@ function Earnings({
         )}
         <p className="fl-receipt">
           {shownStreams || "0"} streams × {rateMoney(Number(pricedRates[selected.id]) || 0)} ={" "}
-          {money(selectedRow.total)} pool · your {pct(streamCut)} cut = {money(selectedRow.yours)}
+          {money(selectedRow.total)} platform pays (before your share) · your {pct(streamCut)} cut ={" "}
+          {money(selectedRow.yours)} your share
+        </p>
+        <p className="fl-platform-note">
+          Platform pays = streams × rate. It is the whole platform payout before your master and
+          song share; your share is your cut of it.
         </p>
 
         <div className="fl-ownavg">
@@ -1344,7 +1373,7 @@ function Earnings({
       </div>
 
       {/*
-        The projected total starts floating here, once the platform fields are behind it: this rail is the bar's
+        Your share total starts floating here, once the platform fields are behind it: this rail is the bar's
         sticky containing block, so it can never cover the numbers being entered (founder, 2026-11-25).
       */}
       <div className="fl-dock-rail">
@@ -1386,7 +1415,7 @@ function Earnings({
               />
             </div>
             <div className="fl-field">
-              <Label htmlFor="earn-radio-estimate">Estimate</Label>
+              <Label htmlFor="earn-radio-estimate">Radio share</Label>
               <output id="earn-radio-estimate" className="fl-estimate">
                 {money(r.radio)}
               </output>
@@ -1418,13 +1447,13 @@ function Earnings({
               />
             </div>
             <div className="fl-field">
-              <Label htmlFor="earn-gross">Before the cut</Label>
+              <Label htmlFor="earn-gross">Your share before distributor</Label>
               <output id="earn-gross" className="fl-estimate">
                 {money(r.yours)}
               </output>
             </div>
             <div className="fl-field">
-              <Label htmlFor="earn-net">You keep</Label>
+              <Label htmlFor="earn-net">You keep after distributor</Label>
               <output id="earn-net" className="fl-estimate">
                 {money(net)}
               </output>
@@ -1445,8 +1474,8 @@ function Earnings({
             ))}
           </div>
           <p className="fl-platform-note">
-            0% leaves every estimate exactly as it is. RouteNote Free keeps 15%, CD Baby 9%;
-            DistroKid charges a flat fee, so 0%. A label takes its share before this.
+            0% leaves your share exactly as it is. RouteNote Free keeps 15%, CD Baby 9%; DistroKid
+            charges a flat fee, so 0%. A label takes its share before this.
           </p>
           <PayoutTimeline
             pool={streamPool}
@@ -1464,18 +1493,23 @@ function Earnings({
           </div>
           <CopyDeck context={copyContext} />
           <div className="fl-export-row">
-            <button
-              type="button"
+            <LabDownloadMenu
+              label="Download projection"
               className="fl-ghost-btn"
-              onClick={() => void downloadProjection()}
-            >
-              <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download projection (CSV)
-            </button>
+              busy={projectionBusy}
+              onPick={(format) => void downloadProjection(format)}
+              hints={{
+                pdf: "Type streams and rates; platform pays, your share and totals recalculate in Adobe Acrobat or Reader",
+                sheets:
+                  "A .csv for Google Sheets with platform pays and your share as live formulas",
+                excel: "A .xlsx workbook that recalculates as you type a stream count or rate",
+              }}
+            />
             <span className="fl-platform-note !mt-0">
-              One row per platform, then radio and the total. Opens in Excel, Numbers or Google
-              Sheets.
+              One row per platform, then radio and the total — fillable PDF, Google Sheets or Excel.
             </span>
           </div>
+          <LabPacketExport tracks={tracks} userId={userId} songId={songId} />
         </div>
 
         {/* Scenarios sit after the last step: the sheet is added up by then, so this is where a member saves the
@@ -2006,7 +2040,7 @@ function TotalDock({
         ))}
       <div className="min-w-0">
         <div className="fl-dock-label flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.2em]">
-          <TrendingUp className="h-3.5 w-3.5" /> Your projected total
+          <TrendingUp className="h-3.5 w-3.5" /> Your share total
         </div>
         <div className={cn("fl-dock-total", totalText.length > 14 && "fl-dock-total-long")}>
           {totalText}

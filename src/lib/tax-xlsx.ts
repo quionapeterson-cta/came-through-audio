@@ -124,6 +124,9 @@ export async function taxWorkbook(sheet: TaxSheet, meta: TaxExportMeta = {}) {
   wb.creator = brand.name;
   wb.company = brand.name;
   wb.title = "Financial Lab tax worksheet";
+  // Excel recalculates every formula the moment the workbook opens, so a viewer that does not calculate on its own
+  // never leaves the deductible total or the estimate showing zero (founder, 2026-11-25).
+  wb.calcProperties.fullCalcOnLoad = true;
 
   const ws = wb.addWorksheet("Tax worksheet", {
     views: [{ state: "frozen", ySplit: HEADER_ROW }],
