@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { ArrowUpRight, ChevronDown, Download, Plus, ReceiptText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTaxTables } from "@/components/use-tax-tables";
-import { saveBlob } from "@/lib/catalog";
+import { myBrand } from "@/lib/brand-load";
 import { paidPlanRows } from "@/lib/financial-lab-budgets";
 import { readLabJson } from "@/lib/financial-lab-scenario";
 import {
@@ -24,7 +26,6 @@ import {
   taxSheetTable,
   taxSheetTotal,
   taxSheetYearGap,
-  taxWorksheetCsv,
   type SelfEmploymentChoice,
   type TaxCategoryId,
   type TaxRow,
@@ -38,6 +39,27 @@ import {
   usd,
   type FilingStatus,
 } from "@/lib/tax-brackets";
+import { downloadTaxPdf } from "@/lib/tax-pdf";
+import { downloadTaxSheetCsv, downloadTaxXlsx, type SheetFlavor } from "@/lib/tax-xlsx";
+
+/** The three ways to take the worksheet with you, the same menu the Production Budget Planner uses. */
+const FORMATS: { id: "pdf" | SheetFlavor; name: string; hint: string }[] = [
+  {
+    id: "pdf",
+    name: "Fillable PDF",
+    hint: "Type each amount and rate, and the totals recalculate in Adobe Acrobat or Reader",
+  },
+  {
+    id: "sheets",
+    name: "Google Sheet",
+    hint: "A .csv for Google Sheets with the deduction, taxes and estimate as live formulas",
+  },
+  {
+    id: "excel",
+    name: "Excel sheet",
+    hint: "A .xlsx worksheet that recalculates as you type an amount or change a rate",
+  },
+];
 
 const money = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
@@ -145,14 +167,12 @@ export function TaxDrawer({
   sheet,
   onChange,
   budgetKey,
-  songTitle,
   onOpenBudget,
 }: {
   sheet: TaxSheet;
   onChange: (next: TaxSheet | ((current: TaxSheet) => TaxSheet)) => void;
   /** Where this song's Budget Planner plan is kept, so its paid lines can be pulled across. */
   budgetKey?: string | undefined;
-  songTitle?: string | undefined;
   /** Takes the member to the Budget Planner when there is nothing paid to pull across yet. */
   onOpenBudget?: (() => void) | undefined;
 }) {
@@ -174,6 +194,8 @@ export function TaxDrawer({
   )!;
   // A rate saved before the table existed (or typed by hand on an older sheet) stays selectable, never silently dropped.
   const rateKnown = brackets.some((bracket) => bracket.rate === incomeRate);
+  const [exporting, setExporting] = useState(false);
+  const [formats, setFormats] = useState(false);
 
   const patch = (id: string, next: Partial<TaxRow>) =>
     onChange((current) => ({
@@ -222,20 +244,39 @@ export function TaxDrawer({
     );
   }
 
-  function download() {
+  async function exportSheet(format: "pdf" | SheetFlavor) {
     if (total <= 0) {
       toast.error("Add an amount to at least one line first.");
       return;
     }
-    saveBlob(
-      new Blob([taxWorksheetCsv(sheet, { song: songTitle, tables })], {
-        type: "text/csv;charset=utf-8",
-      }),
-      `${songTitle?.trim() || "financial-lab"} tax worksheet.csv`,
-    );
-    toast.success(
-      "Worksheet downloaded — an estimate to take to your tax professional, not a filing.",
-    );
+    setExporting(true);
+    try {
+      // The server decides whether the member's kit may print on Lab files; a null answer keeps our header.
+      const brand = await myBrand("lab");
+      const meta = { tables, brand };
+      if (format === "pdf") {
+        await downloadTaxPdf(sheet, meta);
+        toast.success(
+          "Fillable tax worksheet downloaded — type each amount, and the totals recalculate in Adobe Acrobat or Reader.",
+        );
+        return;
+      }
+      if (format === "sheets") {
+        downloadTaxSheetCsv(sheet, meta);
+        toast.success(
+          "Google Sheet downloaded as a .csv — open sheets.new, then File → Import → Upload, and the totals recalculate.",
+        );
+        return;
+      }
+      await downloadTaxXlsx(sheet, meta);
+      toast.success(
+        "Excel sheet downloaded — type an amount or change a rate, and Excel recalculates the whole estimate.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't build the tax worksheet.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -462,11 +503,47 @@ export function TaxDrawer({
           {seRate > 0 ? ` + ${seRate}% self-employment` : ""}.
         </p>
 
-        <button type="button" className="fl-ghost-btn" onClick={download}>
-          <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download worksheet (.csv)
-        </button>
+        <Popover open={formats} onOpenChange={setFormats}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="fl-ghost-btn"
+              disabled={exporting}
+              aria-haspopup="menu"
+              aria-expanded={formats}
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              {exporting ? "Building your worksheet…" : "Download worksheet"}
+              <ChevronDown className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" sideOffset={8} className="w-80 p-2">
+            <p className="px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              Choose a format
+            </p>
+            <div role="menu" aria-label="Tax worksheet formats">
+              {FORMATS.map((format) => (
+                <button
+                  key={format.id}
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full flex-col items-start gap-0.5 rounded-sm px-2 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-60"
+                  disabled={exporting}
+                  onClick={() => {
+                    setFormats(false);
+                    void exportSheet(format.id);
+                  }}
+                >
+                  <span className="font-semibold">{format.name}</span>
+                  <span className="text-xs text-muted-foreground">{format.hint}</span>
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
         <p className="fl-hint !mt-0">
-          Estimate only. Your tax professional decides what qualifies and your actual rate.
+          Estimate only. Your tax professional decides what qualifies and your actual rate. Every
+          file carries your brand kit when you have one.
         </p>
       </div>
     </details>

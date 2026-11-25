@@ -2,7 +2,6 @@ import { taxSavings } from "@/lib/financial-lab-copy";
 import { expenseActual, type ExpenseRow } from "@/lib/financial-lab-budgets";
 import {
   currentTaxYear,
-  filingStatusLabel,
   selfEmploymentEffectiveRate,
   selfEmploymentMedicareRate,
   taxTableFor,
@@ -469,77 +468,4 @@ export function sanitizeTaxSheet(raw: unknown): TaxSheet {
     selfEmployment,
     rows,
   };
-}
-
-/** A field safe for a spreadsheet cell: quoted only when it has to be. */
-const cell = (value: string | number) => {
-  const s = String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-
-const DISCLAIMER =
-  "Estimate only. Whether a cost qualifies where you file, how much of it, and the rate that applies are your tax professional's call. Nothing here is tax advice and nothing here is filed.";
-
-/**
- * The worksheet as a CSV for the member's own records or their preparer: every line with its amount and paperwork
- * note, the deductible total, the estimate at the rate they typed, and the disclaimer on the same sheet.
- */
-export function taxWorksheetCsv(
-  sheet: TaxSheet,
-  meta: { song?: string | undefined; madeAt?: Date; tables?: TaxYearTable[] } = {},
-): string {
-  const madeAt = meta.madeAt ?? new Date();
-  const total = taxSheetTotal(sheet);
-  const rate = taxSheetIncomeRate(sheet);
-  const seRate = taxSheetSelfEmploymentRate(sheet, meta.tables, madeAt);
-  const table = taxSheetTable(sheet, meta.tables, madeAt);
-  const gap = taxSheetYearGap(sheet, meta.tables, madeAt);
-  const savings = taxSheetEstimate(sheet, meta.tables, madeAt);
-  const lines: string[] = [
-    "CAME THROUGH AUDIO — TAX WRITE-OFF WORKSHEET",
-    "The Financial Lab · a planning worksheet, not a tax return",
-    "=".repeat(52),
-    `Song: ${meta.song?.trim() || "—"}`,
-    `Tax year: ${sheet.year || "—"}`,
-    `Brackets: ${table.year} federal, ${table.source}${gap ? ` (no ${gap.asked} table yet)` : ""}`,
-    ...(sheet.status ? [`Filing status: ${filingStatusLabel(sheet.status)}`] : []),
-    `Prepared: ${madeAt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`,
-    `Rate used: ${rate > 0 ? `${rate}%` : "—"}${seRate > 0 ? ` + ${seRate}% self-employment` : ""}`,
-    "",
-    ["Category", "What it was", "Amount (USD)", "Paperwork kept"].map(cell).join(","),
-  ];
-  for (const row of sheet.rows) {
-    const amount = taxRowAmount(row);
-    if (!amount) continue;
-    lines.push(
-      [
-        taxCategoryOf(row.category)?.label ?? "Not chosen yet",
-        row.label || "—",
-        amount.toFixed(2),
-        row.kept ? "Yes" : "No",
-      ]
-        .map(cell)
-        .join(","),
-    );
-  }
-  lines.push(["Total deductible", "", total.toFixed(2), ""].map(cell).join(","));
-  if (seRate > 0) {
-    lines.push(
-      [`Self-employment tax at ${seRate}%`, "", taxSavings(total, seRate).toFixed(2), ""]
-        .map(cell)
-        .join(","),
-    );
-  }
-  lines.push(
-    [
-      `Estimated tax savings${rate > 0 ? ` at ${rate}%` : ""}${seRate > 0 ? ` + ${seRate}% self-employment` : ""}`,
-      "",
-      savings.toFixed(2),
-      "",
-    ]
-      .map(cell)
-      .join(","),
-  );
-  lines.push("", DISCLAIMER);
-  return lines.join("\n");
 }

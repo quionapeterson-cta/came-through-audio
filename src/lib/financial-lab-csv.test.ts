@@ -16,11 +16,20 @@ const context = contextForTrack(undefined, {
 });
 
 describe("projectionCsv", () => {
-  it("writes a header, one row per platform and the net line", () => {
+  it("writes the CTA brand, a header, one row per platform and the net line", () => {
     const rows = projectionCsv(context).split("\n");
-    expect(rows[0]).toContain("Rate (USD)");
-    expect(rows[1]).toBe('No song selected,"Audiomack, Africa",128000,0.004,512.00,512.00');
+    expect(rows[0]).toContain("CAME THROUGH AUDIO — ROYALTY PROJECTION");
+    expect(rows[1]).toContain("Your First Stop Before Distribution");
+    expect(rows[3]).toContain("Rate (USD)");
+    expect(rows[4]).toBe('No song selected,"Audiomack, Africa",128000,0.004,512.00,512.00');
     expect(rows.some((r) => r.includes("You keep") && r.endsWith("435.20"))).toBe(true);
+  });
+
+  it("puts a member's own kit on the projection when one is passed", () => {
+    const csv = projectionCsv(context, { name: "Karma Came", tagline: "Independent artist" });
+    expect(csv).toContain("KARMA CAME — ROYALTY PROJECTION");
+    expect(csv).toContain("Independent artist");
+    expect(csv).not.toContain("CAME THROUGH AUDIO — ROYALTY PROJECTION");
   });
 
   it("quotes a name that carries a comma", () => {

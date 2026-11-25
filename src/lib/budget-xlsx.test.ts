@@ -88,7 +88,10 @@ function parseCsv(text: string): string[][] {
 }
 
 describe("Production Budget CSV (Google Sheets)", () => {
-  const cellRows = (sheet: Parameters<typeof budgetSheetCsv>[0]) => parseCsv(budgetSheetCsv(sheet));
+  const cellRows = (
+    sheet: Parameters<typeof budgetSheetCsv>[0],
+    brand?: Parameters<typeof budgetSheetCsv>[1],
+  ) => parseCsv(budgetSheetCsv(sheet, brand));
 
   it("carries the same live formulas the workbook does", () => {
     const sheet = plan();
@@ -134,6 +137,21 @@ describe("Production Budget CSV (Google Sheets)", () => {
     const sheet = plan();
     sheet.rows[1]!.item = "Camera, lens and tripod";
     expect(budgetSheetCsv(sheet)).toContain('"Camera, lens and tripod"');
+  });
+
+  it("carries the CTA brand by default and a member's kit when given one", async () => {
+    const cta = cellRows(plan());
+    expect(cta[0]![0]).toBe("Came Through Audio — Production Budget");
+    expect(cta[2]![0]).toBe("Your First Stop Before Distribution");
+
+    const brand = { name: "Karma Came", tagline: "Independent artist", colors: ["#2E073E"] };
+    const own = cellRows(plan(), brand);
+    expect(own[0]![0]).toBe("Karma Came — Production Budget");
+    expect(own[2]![0]).toBe("Independent artist");
+
+    const ws = (await budgetWorkbook(plan(), brand)).getWorksheet("Budget")!;
+    expect(ws.getCell("A1").value).toContain("Karma Came — Production Budget");
+    expect(ws.getCell("A3").value).toBe("Independent artist");
   });
 });
 

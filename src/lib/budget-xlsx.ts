@@ -1,5 +1,6 @@
 import type { BudgetSheet } from "@/lib/budget-pdf";
 import { saveBlob } from "@/lib/catalog";
+import { argb, inkOn, labBrand, type LabBrandSource } from "@/lib/financial-lab-brand";
 
 /**
  * The Production Budget Planner as a spreadsheet, for the two spreadsheet choices in the Lab's download menu (founder,
@@ -40,14 +41,16 @@ function csvCell(value: string | number | null | undefined) {
  * The same sheet as a CSV for Google Sheets, laid out in the workbook's own rows so a formula reads the same in either
  * file: the live figures in rows 4–6, the checklist from row 9, its total under the last line, then the allocation.
  */
-export function budgetSheetCsv(sheet: BudgetSheet): string {
+export function budgetSheetCsv(sheet: BudgetSheet, brand?: LabBrandSource): string {
   const rows: (string | number)[][] = [];
   const last = FIRST_ROW + Math.max(0, sheet.rows.length - 1);
   const totalRow = last + 1;
+  const name = labBrand(brand);
 
-  rows.push(["Production Budget"]);
+  // The brand sits in rows 1 and 3, so the live figures keep the row numbers their formulas already reference.
+  rows.push([`${name.name} — Production Budget`]);
   rows.push([`${sheet.project}  ·  ${today()}`]);
-  rows.push([]);
+  rows.push([name.tagline]);
   rows.push(["Budget cap", Number(sheet.target) || 0]);
   rows.push(["Spent so far", `=SUM(D${FIRST_ROW}:D${last})`]);
   rows.push(["Remaining", "=B4-B5"]);
@@ -89,10 +92,12 @@ export function budgetSheetCsv(sheet: BudgetSheet): string {
   return `${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;
 }
 
-export async function budgetWorkbook(sheet: BudgetSheet) {
+export async function budgetWorkbook(sheet: BudgetSheet, brand?: LabBrandSource) {
   const { default: ExcelJS } = await import("exceljs");
+  const brandName = labBrand(brand);
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Came Through Audio";
+  wb.creator = brandName.name;
+  wb.company = brandName.name;
   wb.title = `${sheet.project} budget`;
 
   const ws = wb.addWorksheet("Budget", {
@@ -110,12 +115,19 @@ export async function budgetWorkbook(sheet: BudgetSheet) {
   // Title and the plan it belongs to.
   ws.mergeCells("A1:E1");
   const title = ws.getCell("A1");
-  title.value = "Production Budget";
-  title.font = { bold: true, size: 18 };
+  title.value = `${brandName.name} — Production Budget`;
+  title.font = { bold: true, size: 18, color: { argb: inkOn(brandName.accent) } };
+  title.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(brandName.accent) } };
+  title.alignment = { vertical: "middle" };
+  ws.getRow(1).height = 28;
   ws.mergeCells("A2:E2");
   const subtitle = ws.getCell("A2");
   subtitle.value = `${sheet.project}  ·  ${today()}`;
   subtitle.font = { size: 11, color: { argb: "FF525252" } };
+  ws.mergeCells("A3:E3");
+  const tagline = ws.getCell("A3");
+  tagline.value = brandName.tagline;
+  tagline.font = { size: 10, bold: true, color: { argb: argb(brandName.accent) } };
 
   // The live figures. Spent and Remaining are formulas, so they follow the Actual column.
   const figures: [string, string | number, boolean][] = [
@@ -216,8 +228,8 @@ export async function budgetWorkbook(sheet: BudgetSheet) {
   return wb;
 }
 
-export async function downloadBudgetXlsx(sheet: BudgetSheet) {
-  const wb = await budgetWorkbook(sheet);
+export async function downloadBudgetXlsx(sheet: BudgetSheet, brand?: LabBrandSource) {
+  const wb = await budgetWorkbook(sheet, brand);
   const buffer = await wb.xlsx.writeBuffer();
   saveBlob(
     new Blob([buffer], {
@@ -228,9 +240,9 @@ export async function downloadBudgetXlsx(sheet: BudgetSheet) {
 }
 
 /** The Google Sheets choice: a plain `.csv`, which Sheets opens into a spreadsheet with its formulas intact. */
-export function downloadBudgetSheetCsv(sheet: BudgetSheet) {
+export function downloadBudgetSheetCsv(sheet: BudgetSheet, brand?: LabBrandSource) {
   saveBlob(
-    new Blob([budgetSheetCsv(sheet)], { type: "text/csv;charset=utf-8" }),
+    new Blob([budgetSheetCsv(sheet, brand)], { type: "text/csv;charset=utf-8" }),
     `${sheet.project} budget.csv`,
   );
 }

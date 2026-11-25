@@ -58,6 +58,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { loadOnboarding } from "@/lib/artist-profile";
+import { myBrand } from "@/lib/brand-load";
 import { listTracks, saveBlob, type CatalogTrack } from "@/lib/catalog";
 import { COUNTRIES, countryByCode } from "@/lib/repertoires";
 import {
@@ -1038,8 +1039,9 @@ function Earnings({
     ],
   );
 
-  function downloadProjection() {
-    const csv = projectionCsv(copyContext);
+  async function downloadProjection() {
+    const brand = await myBrand("lab");
+    const csv = projectionCsv(copyContext, brand);
     saveBlob(
       new Blob([csv], { type: "text/csv;charset=utf-8" }),
       `${song?.title || "financial-lab"} projection.csv`,
@@ -1462,7 +1464,11 @@ function Earnings({
           </div>
           <CopyDeck context={copyContext} />
           <div className="fl-export-row">
-            <button type="button" className="fl-ghost-btn" onClick={downloadProjection}>
+            <button
+              type="button"
+              className="fl-ghost-btn"
+              onClick={() => void downloadProjection()}
+            >
               <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download projection (CSV)
             </button>
             <span className="fl-platform-note !mt-0">
@@ -1537,7 +1543,6 @@ function Earnings({
             taxSheet={taxSheet}
             onTaxSheet={onTaxSheet}
             budgetKey={budgetPlanKey}
-            songTitle={song?.title}
             breakKey={labStorageKey(userId, songId, "breakeven")}
             onOpenBudget={onOpenBudget}
           />
@@ -1796,7 +1801,6 @@ function MiniDrawers({
   taxSheet,
   onTaxSheet,
   budgetKey,
-  songTitle,
   breakKey,
   onOpenBudget,
 }: {
@@ -1804,7 +1808,6 @@ function MiniDrawers({
   onTaxSheet: (next: TaxSheet | ((current: TaxSheet) => TaxSheet)) => void;
   /** Where this song's budget plan is kept, so the worksheet can pull its paid lines. */
   budgetKey?: string | undefined;
-  songTitle?: string | undefined;
   /** Where this song's break-even numbers are kept. */
   breakKey?: string | undefined;
   /** Takes the member to the Budget Planner when the worksheet has nothing paid to pull yet. */
@@ -1835,7 +1838,6 @@ function MiniDrawers({
         sheet={taxSheet}
         onChange={onTaxSheet}
         budgetKey={budgetKey}
-        songTitle={songTitle}
         onOpenBudget={onOpenBudget}
       />
       <details className="fl-drawer">

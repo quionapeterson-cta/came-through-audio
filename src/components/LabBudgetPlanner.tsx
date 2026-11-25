@@ -235,10 +235,9 @@ export function LabBudgetPlanner({
         allocated: plan.lines,
         rows: plan.rows,
       };
+      // One brand for the whole menu: the member's kit when the server allows it on Lab downloads, ours otherwise.
+      const brand = await myBrand("lab");
       if (format === "pdf") {
-        // A member's own brand kit on the sheet when they have one they may print with (Catalog Management, or a paid
-        // kit); otherwise this returns null and the PDF keeps the Came Through Audio header.
-        const brand = await myBrand("lab");
         await downloadBudgetPdf(sheet, brand);
         toast.success(
           "Fillable budget PDF downloaded — type what you actually paid, and the totals follow in Adobe Acrobat or Reader.",
@@ -246,13 +245,13 @@ export function LabBudgetPlanner({
         return;
       }
       if (format === "sheets") {
-        downloadBudgetSheetCsv(sheet);
+        downloadBudgetSheetCsv(sheet, brand);
         toast.success(
           "Google Sheet downloaded as a .csv — open sheets.new, then File → Import → Upload, and the totals recalculate.",
         );
         return;
       }
-      await downloadBudgetXlsx(sheet);
+      await downloadBudgetXlsx(sheet, brand);
       toast.success(
         "Excel sheet downloaded — type an Actual and Excel recalculates spent, remaining and the total.",
       );

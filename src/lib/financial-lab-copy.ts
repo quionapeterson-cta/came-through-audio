@@ -1,3 +1,5 @@
+import type { PdfBrand } from "@/lib/brand-kit";
+import { labBrand } from "@/lib/financial-lab-brand";
 import { creditName, performers, writerRole, type Metadata } from "@/lib/metadata";
 import { convertBetween, songShareRows, PRO_SCALES, type ProScale } from "@/lib/royalty-calc";
 
@@ -281,9 +283,16 @@ function taxCsvRows(c: CopyContext): string[] {
  * reads it as a number rather than text. The tax worksheet's block follows whenever the member has one, even before a
  * single stream has been entered.
  */
-export function projectionCsv(c: CopyContext): string {
+export function projectionCsv(
+  c: CopyContext,
+  brand?: Pick<PdfBrand, "name" | "tagline"> | null,
+): string {
   const e = c.earnings;
+  const name = labBrand(brand ?? null);
   const rows: string[] = [
+    [`${name.name.toUpperCase()} — ROYALTY PROJECTION`].map(cell).join(","),
+    [name.tagline].map(cell).join(","),
+    "",
     ["Song", "Platform", "Streams", "Rate (USD)", "Pool (USD)", "Your estimate (USD)"]
       .map(cell)
       .join(","),

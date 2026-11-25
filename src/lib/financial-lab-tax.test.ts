@@ -18,9 +18,9 @@ import {
   taxSheetEstimate,
   taxSheetTotal,
   taxSheetYearGap,
-  taxWorksheetCsv,
   type TaxSheet,
 } from "./financial-lab-tax";
+import { taxWorksheetCsv } from "./tax-xlsx";
 
 const budgetRow = (over: Partial<ExpenseRow> = {}): ExpenseRow => ({
   id: `b-${Math.random().toString(36).slice(2)}`,
@@ -289,62 +289,10 @@ describe("the year the worksheet asks for", () => {
   });
 
   it("prints the gap beside the brackets on the downloaded worksheet", () => {
-    const csv = taxWorksheetCsv({ ...sheetOf(rows), year: "2028" }, { song: "Midnight" });
+    const csv = taxWorksheetCsv({ ...sheetOf(rows), year: "2028" });
     expect(csv).toContain("Brackets: 2027 federal");
     expect(csv).toContain("(no 2028 table yet)");
-    const own = taxWorksheetCsv({ ...sheetOf(rows), year: "2027" }, { song: "Midnight" });
+    const own = taxWorksheetCsv({ ...sheetOf(rows), year: "2027" });
     expect(own).not.toContain("table yet");
-  });
-});
-
-describe("the downloaded worksheet", () => {
-  const sheet: TaxSheet = {
-    year: "2026",
-    rate: "30",
-    status: "single",
-    selfEmployment: "none",
-    rows: [
-      { ...newTaxRow("mix"), label: "Mix, master", amount: "600", kept: true },
-      { ...newTaxRow("merch"), label: 'Hoodie run "first"', amount: "400.50", kept: false },
-      { ...newTaxRow("travel"), amount: "", kept: false },
-    ],
-  };
-
-  it("lists every line with its amount and paperwork note, then the total", () => {
-    const csv = taxWorksheetCsv(sheet, { song: "Midnight", madeAt: new Date("2026-11-25") });
-    const lines = csv.split("\n");
-    expect(lines[0]).toContain("TAX WRITE-OFF WORKSHEET");
-    expect(csv).toContain("Midnight");
-    expect(csv).toContain("Tax year: 2026");
-    expect(csv).toContain("300");
-    expect(csv).toContain('"Mix, master",600.00,Yes');
-    // Quotes inside a label survive as a doubled quote, so the CSV still parses.
-    expect(csv).toContain('"Hoodie run ""first""",400.50,No');
-    expect(csv).toContain("Total deductible,,1000.50,");
-    expect(csv).toContain("Estimated tax savings at 30%,,300.15,");
-    expect(csv).not.toContain("Travel to sessions & gigs");
-  });
-
-  it("carries the estimate is not advice line on the same sheet", () => {
-    const csv = taxWorksheetCsv(sheet, { song: "Midnight" });
-    expect(csv).toContain("Nothing here is tax advice and nothing here is filed");
-    expect(csv).toContain("your tax professional's call");
-  });
-
-  it("adds the self-employment line and the combined rate when it is counted", () => {
-    const csv = taxWorksheetCsv({ ...sheet, selfEmployment: "full" });
-    expect(csv).toContain("Filing status: Single filer");
-    expect(csv).toContain("Self-employment tax at 14.13%,,141.37,");
-    expect(csv).toContain("Estimated tax savings at 30% + 14.13% self-employment,,441.52,");
-  });
-
-  it("shows a dash for a rate and a year it was not given", () => {
-    const csv = taxWorksheetCsv(
-      { year: "", rate: "", status: "", selfEmployment: "none", rows: [] },
-      { song: "" },
-    );
-    expect(csv).toContain("Song: —");
-    expect(csv).toContain("Rate used: —");
-    expect(csv).toContain("Total deductible,,0.00,");
   });
 });
