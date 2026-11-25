@@ -1010,62 +1010,6 @@ function Earnings({
         </div>
       </div>
 
-      <div className="fl-scenario">
-        <div className="fl-scenario-head">
-          <span className="fl-scenario-title">
-            <Repeat className="h-3.5 w-3.5" aria-hidden="true" /> Scenarios
-          </span>
-          <span className="fl-platform-note !mt-0">
-            Saved with this song in this browser, autosaved as you type. Nothing leaves the device.
-          </span>
-        </div>
-        {scenarios.length > 0 && (
-          <div className="fl-scenario-chips">
-            {scenarios.map((s) => (
-              <span key={s.id} className="fl-scenario-chip">
-                <button
-                  type="button"
-                  className="fl-scenario-load"
-                  onClick={() => restoreThisScenario(s)}
-                  title={`Restore “${s.name}”`}
-                >
-                  {s.name} · {money(s.total)}
-                </button>
-                <button
-                  type="button"
-                  className="fl-scenario-del"
-                  aria-label={`Delete “${s.name}”`}
-                  onClick={() => deleteThisScenario(s.id)}
-                >
-                  <Trash2 className="h-3 w-3" aria-hidden="true" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="fl-scenario-save">
-          <Input
-            id="fl-scenario-name"
-            className="fl-input"
-            placeholder="Name this setup — Album cycle"
-            maxLength={40}
-            value={scenarioName}
-            onChange={(e) => setScenarioName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && scenarioName.trim()) saveThisSetup(scenarioName);
-            }}
-          />
-          <button
-            type="button"
-            className="fl-ghost-btn disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!scenarioName.trim()}
-            onClick={() => saveThisSetup(scenarioName)}
-          >
-            Save this setup
-          </button>
-        </div>
-      </div>
-
       <div className="mt-3">
         <div className="fl-step-label">
           <span className="fl-step-num">1</span> Set your share of the master and the song
@@ -1449,6 +1393,64 @@ function Earnings({
             One row per platform, then radio and the total. Opens in Excel, Numbers or Google
             Sheets.
           </span>
+        </div>
+      </div>
+
+      {/* Scenarios sit after the last step: the sheet is added up by then, so this is where a member saves the
+          setup or loads another one (founder, 2026-11-25). */}
+      <div className="fl-scenario">
+        <div className="fl-scenario-head">
+          <span className="fl-scenario-title">
+            <Repeat className="h-3.5 w-3.5" aria-hidden="true" /> Scenarios
+          </span>
+          <span className="fl-platform-note !mt-0">
+            Saved with this song in this browser, autosaved as you type. Nothing leaves the device.
+          </span>
+        </div>
+        {scenarios.length > 0 && (
+          <div className="fl-scenario-chips">
+            {scenarios.map((s) => (
+              <span key={s.id} className="fl-scenario-chip">
+                <button
+                  type="button"
+                  className="fl-scenario-load"
+                  onClick={() => restoreThisScenario(s)}
+                  title={`Restore “${s.name}”`}
+                >
+                  {s.name} · {money(s.total)}
+                </button>
+                <button
+                  type="button"
+                  className="fl-scenario-del"
+                  aria-label={`Delete “${s.name}”`}
+                  onClick={() => deleteThisScenario(s.id)}
+                >
+                  <Trash2 className="h-3 w-3" aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="fl-scenario-save">
+          <Input
+            id="fl-scenario-name"
+            className="fl-input"
+            placeholder="Name this setup — Album cycle"
+            maxLength={40}
+            value={scenarioName}
+            onChange={(e) => setScenarioName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && scenarioName.trim()) saveThisSetup(scenarioName);
+            }}
+          />
+          <button
+            type="button"
+            className="fl-ghost-btn disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!scenarioName.trim()}
+            onClick={() => saveThisSetup(scenarioName)}
+          >
+            Save this setup
+          </button>
         </div>
       </div>
 
