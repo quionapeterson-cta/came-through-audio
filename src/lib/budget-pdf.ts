@@ -1,4 +1,5 @@
 import type { jsPDF as JsPDF } from "jspdf";
+import type { PDFDict, PDFRef } from "pdf-lib";
 import {
   accentOf,
   brandFooter,
@@ -34,14 +35,27 @@ export type BudgetSheet = {
   rows: ExpenseRow[];
 };
 
-/** One editable "Actual" box, in millimetres from the page's top-left corner, exactly where jsPDF drew it. */
-export type ActualBox = {
+/**
+ * One control in the fillable copy, in millimetres from the page's top-left corner, exactly where jsPDF drew (or would
+ * have drawn) it: a line's Actual cell, a Paid tick, or one of the totals that follows them.
+ */
+export type FormCell = {
+  /** The field's own name in the finished AcroForm. */
+  name: string;
+  kind: "text" | "check";
   page: number;
   left: number;
   top: number;
   width: number;
   height: number;
-  value: string;
+  value?: string;
+  checked?: boolean;
+  align?: "left" | "right";
+  size?: number;
+  /** Draws the cell's own frame, so the box the member sees is the field itself and not a printed rule. */
+  framed?: boolean;
+  /** Acrobat's calculation action: run whenever a field it reads changes. */
+  calculate?: string;
 };
 
 /** jsPDF works in mm from the top-left; a PDF form field is in points from the bottom-left. */
@@ -49,6 +63,8 @@ const MM_TO_PT = 72 / 25.4;
 /** The drawn box each fillable "Actual" field sits in. */
 const ACTUAL_H = 5.6;
 const ACTUAL_W = 25;
+/** The Paid tick box on each line of the fillable copy. */
+const TICK = 4;
 /** Rows start this far above the footer's rule, so a long sheet pages instead of running into it. */
 const ROW_LINE = 4.6;
 const CHECK_BOTTOM = (pageH: number) => pageH - 26;
@@ -60,16 +76,43 @@ const columnsOf = (w: number) => ({
 });
 
 /**
+ * The numbers the fillable copy works out for itself. Acrobat's JavaScript is an old engine, so this is plain ES5 with
+ * its own helpers repeated in each script: a calculation action runs on its own, in its own scope.
+ */
+const JS_NUMBER =
+  'function ctaNumber(v){var s=String(v),out="",i,ch;for(i=0;i<s.length;i++){ch=s.charAt(i);if((ch>="0"&&ch<="9")||ch==="."||ch==="-"){out+=ch;}}var n=parseFloat(out);return isNaN(n)?0:n;}';
+const JS_MONEY =
+  'function ctaMoney(n){var neg=n<0;if(neg){n=-n;}var p=n.toFixed(2).split("."),w=p[0],out="",c=0,i;for(i=w.length-1;i>=0;i--){out=w.charAt(i)+out;c++;if(c%3===0&&i>0){out=","+out;}}return (neg?"-$":"$")+out+"."+p[1];}';
+const JS_HELPERS = `${JS_NUMBER}\n${JS_MONEY}`;
+const JS_SUM = (lines: number) =>
+  `var ctaTotal=0,ctaI,ctaF;for(ctaI=1;ctaI<=${lines};ctaI++){ctaF=this.getField("actual-"+ctaI);if(ctaF){ctaTotal+=ctaNumber(ctaF.value);}}`;
+
+/** Spent so far: what every typed Actual adds up to. */
+export const spentScript = (lines: number) =>
+  `${JS_HELPERS}\n${JS_SUM(lines)}\nevent.value=ctaMoney(ctaTotal);`;
+
+/** Remaining: the cap the file was built with, less what the Actuals add up to. */
+export const remainingScript = (lines: number, cap: number) =>
+  `${JS_HELPERS}\n${JS_SUM(lines)}\nevent.value=ctaMoney(${Number(cap) || 0}-ctaTotal);`;
+
+/**
+ * The paid count: a line counts once it has an amount typed against it, exactly as the spreadsheets count it, or once
+ * its box is ticked — so typing is enough, and a member who prefers the box is counted the same way.
+ */
+export const paidCountScript = (lines: number) =>
+  `var ctaPaid=0,ctaI,ctaT,ctaA;for(ctaI=1;ctaI<=${lines};ctaI++){ctaT=this.getField("paid-"+ctaI);ctaA=this.getField("actual-"+ctaI);if((ctaT&&ctaT.value!=="Off")||(ctaA&&ctaA.value!=="")){ctaPaid++;}}event.value=ctaPaid+" of ${lines} paid";`;
+
+/**
  * The checklist's column labels and the rule under them. Returns where the first row's baseline goes — further down when
  * the row carries a form box, since that box is taller than a line of type and would otherwise cut the ACTUAL label.
  */
-function columnHeader(pdf: JsPDF, w: number, y: number, gap = 3.5) {
+function columnHeader(pdf: JsPDF, w: number, y: number, gap = 3.5, form = false) {
   const cols = columnsOf(w);
   const columns: [string, number, "left" | "right"][] = [
     ["Item", MARGIN, "left"],
     ["Budgeted", cols.budgeted, "right"],
     ["Actual", cols.actual, "right"],
-    ["Status", cols.status, "right"],
+    [form ? "Paid" : "Status", cols.status, "right"],
   ];
   for (const [name, x, align] of columns)
     font(pdf, "semibold", 7.5)
@@ -86,20 +129,25 @@ function columnHeader(pdf: JsPDF, w: number, y: number, gap = 3.5) {
  * The Production Budget Planner's sheet: the official header, the cap / spent / remaining strip, the itemized
  * allocation, the live checklist with its Estimated or Paid state and its totals, and the CTA tip.
  *
- * With `boxes` given, each checklist row's Actual is a drawn box instead of printed text, and its geometry is collected
- * for `buildFillableBudgetPdfBytes` to put a form field in — so the download can be typed into.
+ * With `cells` given the sheet is drawn as a form instead of a print: each line's Actual is a real input cell, its Paid
+ * a tick box, and the numbers that depend on them (spent, remaining, the checklist's actual total, the paid count) are
+ * fields Acrobat recalculates rather than figures frozen at download (founder, 2026-11-25). Their geometry is collected
+ * for `buildFillableBudgetPdfBytes` to lay the fields over.
  */
 function layout(
   pdf: JsPDF,
   sheet: BudgetSheet,
   brand: PdfBrand | null | undefined,
-  boxes?: ActualBox[],
+  cells?: FormCell[],
 ) {
   const w = pdf.internal.pageSize.getWidth();
   const h = pdf.internal.pageSize.getHeight();
   const cols = columnsOf(w);
   const totals = budgetProgress(sheet.rows, sheet.target);
   const bottom = CHECK_BOTTOM(h);
+  const form = !!cells;
+  const lines = sheet.rows.length;
+  const caps = Number(sheet.target) || 0;
 
   let y = brandHeader(
     pdf,
@@ -120,9 +168,27 @@ function layout(
     const x = MARGIN + index * (boxW + 4);
     pdf.setFillColor(...PANEL).roundedRect(x, y, boxW, 18, 2.5, 2.5, "F");
     label(pdf, name.toUpperCase(), x + 4, y + 6, MUTED, 7);
-    font(pdf, "bold", 13)
-      .setTextColor(...(value < 0 ? accentOf(pdf) : INK))
-      .text(money(value), x + 4, y + 14);
+    // The cap never moves once the sheet is made; spent and remaining do, so on the form they are cells that total up.
+    if (!cells || index === 0) {
+      font(pdf, "bold", 13)
+        .setTextColor(...(value < 0 ? accentOf(pdf) : INK))
+        .text(money(value), x + 4, y + 14);
+    } else {
+      cells.push({
+        name: index === 1 ? "spent" : "remaining",
+        kind: "text",
+        page: pdf.getNumberOfPages(),
+        left: x + 3.2,
+        top: y + 8,
+        width: boxW - 7,
+        height: 7.4,
+        align: "left",
+        size: 13,
+        // Nothing is printed here: a figure frozen at download would be wrong the moment one is typed in a viewer that
+        // does not calculate, so the cell is left for the calculation (or for the member) to fill.
+        ...(index === 1 ? { calculate: spentScript(lines) } : {}),
+      });
+    }
   });
   y += 26;
 
@@ -159,13 +225,14 @@ function layout(
 
   // The checklist. Every line prints; a sheet too long for one page continues on the next rather than dropping rows.
   y = sectionTitle(pdf, y, "Expense checklist");
-  y = columnHeader(pdf, w, y, boxes ? 9.5 : 3.5);
+  y = columnHeader(pdf, w, y, form ? 9.5 : 3.5, form);
 
   const rowH = 6.4;
+  let line = 0;
   for (const row of sheet.rows) {
     if (y + rowH > bottom) {
       pdf.addPage();
-      y = columnHeader(pdf, w, 26, boxes ? 9.5 : 3.5);
+      y = columnHeader(pdf, w, 26, form ? 9.5 : 3.5, form);
     }
     font(pdf, "regular", 9.5).setTextColor(...INK);
     // Stop the name short of the Budgeted column, so a long custom entry never prints over its own amount.
@@ -180,38 +247,55 @@ function layout(
 
     // A paid line with no typed cost reads as its budget, exactly as it does on screen; a blank line stays blank.
     const actual = row.actual.trim() || (row.paid ? String(expenseActual(row)) : "");
-    if (boxes) {
-      const left = cols.actual - ACTUAL_W;
-      const top = y - ACTUAL_H + 1.4;
-      pdf
-        .setFillColor(250, 251, 253)
-        .setDrawColor(...RULE)
-        .setLineWidth(0.2)
-        .roundedRect(left, top, ACTUAL_W, ACTUAL_H, 1, 1, "FD");
-      boxes.push({
+    line += 1;
+    if (cells) {
+      // The cell itself is the field — no printed rule underneath it, so the box the member clicks is the input.
+      cells.push({
+        name: `actual-${line}`,
+        kind: "text",
         page: pdf.getNumberOfPages(),
-        left,
-        top,
+        left: cols.actual - ACTUAL_W,
+        top: y - ACTUAL_H + 1.4,
         width: ACTUAL_W,
         height: ACTUAL_H,
         value: actual,
+        align: "right",
+        size: 9,
+        framed: true,
+      });
+      // The line's state is a tick the member works, not a word printed when the file was made: a line with an amount
+      // typed against it already counts as paid, and the tick is there for a member filling in a viewer that does not
+      // calculate.
+      const boxTop = y - 3.4;
+      pdf
+        .setDrawColor(...RULE)
+        .setLineWidth(0.3)
+        .rect(cols.status - TICK, boxTop, TICK, TICK);
+      cells.push({
+        name: `paid-${line}`,
+        kind: "check",
+        page: pdf.getNumberOfPages(),
+        left: cols.status - TICK,
+        top: boxTop,
+        width: TICK,
+        height: TICK,
+        checked: row.paid,
       });
     } else {
       font(pdf, "regular", 9.5)
         .setTextColor(...MUTED)
         .text(actual ? money(Number(actual) || 0) : "—", cols.actual, y, { align: "right" });
+      font(pdf, "semibold", 9)
+        .setTextColor(...(row.paid ? accentOf(pdf) : MUTED))
+        .text(row.paid ? "PAID" : "ESTIMATED", cols.status, y, { align: "right" });
     }
-
-    font(pdf, "semibold", 9)
-      .setTextColor(...(row.paid ? accentOf(pdf) : MUTED))
-      .text(row.paid ? "PAID" : "ESTIMATED", cols.status, y, { align: "right" });
     y += rowH;
   }
 
   // The checklist's own total: what the lines add up to, and what has actually been paid of it.
-  if (y + 10 > bottom) {
+  if (y + 12 > bottom) {
     pdf.addPage();
-    y = 28;
+    y = cells ? 36 : 28;
   }
   pdf
     .setDrawColor(...RULE)
@@ -224,13 +308,52 @@ function layout(
   font(pdf, "semibold", 9.5)
     .setTextColor(...accentOf(pdf))
     .text(money(totals.planned), cols.budgeted, y, { align: "right" });
-  font(pdf, "semibold", 9.5)
-    .setTextColor(...(totals.spent > totals.planned ? accentOf(pdf) : INK))
-    .text(money(totals.spent), cols.actual, y, { align: "right" });
-  font(pdf, "semibold", 8)
-    .setTextColor(...MUTED)
-    .text(`${totals.paidCount} of ${totals.total} paid`, cols.status, y, { align: "right" });
+  if (cells) {
+    // The actual total is a cell, not a frozen figure: Acrobat fills it from the Actuals above and keeps it current.
+    cells.push({
+      name: "actual-total",
+      kind: "text",
+      page: pdf.getNumberOfPages(),
+      left: cols.actual - ACTUAL_W,
+      top: y - 4.2,
+      width: ACTUAL_W,
+      height: 6,
+      align: "right",
+      size: 9.5,
+      framed: true,
+      calculate: spentScript(lines),
+    });
+    // Its box starts clear of the Actual total's: a field paints its own white background, so an overlap would eat
+    // the last of the total's figures.
+    cells.push({
+      name: "paid-count",
+      kind: "text",
+      page: pdf.getNumberOfPages(),
+      left: cols.actual + 2,
+      top: y - 4.2,
+      width: cols.status - cols.actual - 2,
+      height: 6,
+      align: "right",
+      size: 8,
+      calculate: paidCountScript(lines),
+    });
+  } else {
+    font(pdf, "semibold", 9.5)
+      .setTextColor(...(totals.spent > totals.planned ? accentOf(pdf) : INK))
+      .text(money(totals.spent), cols.actual, y, { align: "right" });
+    font(pdf, "semibold", 8)
+      .setTextColor(...MUTED)
+      .text(`${totals.paidCount} of ${totals.total} paid`, cols.status, y, { align: "right" });
+  }
   y += 8;
+
+  // The form's own note: where the sums happen, said in the file rather than only on the page that made it.
+  if (cells) {
+    font(pdf, "regular", 7.5)
+      .setTextColor(...MUTED)
+      .text("Actuals and ticks total themselves in Adobe Acrobat or Reader.", MARGIN, y - 2);
+    y += 3.5;
+  }
 
   // The tip, in a panel that holds every line it draws (it used to end above its own last baseline).
   const tipLines = sheet.tip
@@ -246,7 +369,7 @@ function layout(
     pdf.setFillColor(...accentOf(pdf)).rect(MARGIN, y, 1.6, tipH, "F");
     label(pdf, "CTA TIP", MARGIN + 7, y + 6, accentOf(pdf), 7.5);
     font(pdf, "regular", 9).setTextColor(...INK);
-    tipLines.forEach((line, index) => pdf.text(line, MARGIN + 7, y + 11 + index * ROW_LINE));
+    tipLines.forEach((text, index) => pdf.text(text, MARGIN + 7, y + 11 + index * ROW_LINE));
   }
 
   brandFooter(pdf, brand ?? undefined);
@@ -263,36 +386,66 @@ export async function buildBudgetPdf(sheet: BudgetSheet, brand?: PdfBrand | null
 }
 
 /**
- * The sheet as a form (founder, 2026-11-25): the Actual column becomes a real text field per line, prefilled with what
- * the planner already knows, so the member can type what was really paid into the PDF itself. jsPDF can't make fields,
- * so the finished page is reopened with pdf-lib and a borderless field is laid over each drawn box. A copy that loses
- * its fields is still a readable sheet, so the failure is logged, never shown as an error.
+ * The sheet as a form (founder, 2026-11-25): the Actual column is a real text field per line, the line's state is a tick
+ * box, and every figure that depends on them is a field Acrobat recalculates, so typing what was really paid never
+ * leaves the sheet saying ESTIMATED or showing the total it had at download. jsPDF can't make fields, so the finished
+ * pages are reopened with pdf-lib. A copy that loses its fields is still a readable sheet, so the failure is logged,
+ * never shown as an error.
  */
 export async function buildFillableBudgetPdfBytes(sheet: BudgetSheet, brand?: PdfBrand | null) {
   const pdf = await newBrandedPdf(brand ?? undefined);
-  const boxes: ActualBox[] = [];
-  layout(pdf, sheet, brand, boxes);
+  const cells: FormCell[] = [];
+  layout(pdf, sheet, brand, cells);
   const bytes = pdf.output("arraybuffer");
   try {
-    const { PDFDocument, TextAlignment } = await import("pdf-lib");
+    const { PDFDocument, PDFName, PDFString, StandardFonts, TextAlignment, rgb } =
+      await import("pdf-lib");
     const doc = await PDFDocument.load(bytes);
     const form = doc.getForm();
     const pages = doc.getPages();
     const pageH = pdf.internal.pageSize.getHeight();
-    boxes.forEach((box, index) => {
-      const page = pages[box.page - 1];
-      if (!page) return;
-      const field = form.createTextField(`actual-${index + 1}`);
+    const order: PDFRef[] = [];
+    const rule = rgb(RULE[0] / 255, RULE[1] / 255, RULE[2] / 255);
+    for (const cell of cells) {
+      const page = pages[cell.page - 1];
+      if (!page) continue;
+      const box = {
+        x: cell.left * MM_TO_PT,
+        y: (pageH - cell.top - cell.height) * MM_TO_PT,
+        width: cell.width * MM_TO_PT,
+        height: cell.height * MM_TO_PT,
+      };
+      if (cell.kind === "check") {
+        const field = form.createCheckBox(cell.name);
+        field.addToPage(page, { ...box, borderWidth: 0 });
+        if (cell.checked) field.check();
+        continue;
+      }
+      const field = form.createTextField(cell.name);
       field.addToPage(page, {
-        x: box.left * MM_TO_PT,
-        y: (pageH - box.top - box.height) * MM_TO_PT,
-        width: box.width * MM_TO_PT,
-        height: box.height * MM_TO_PT,
-        borderWidth: 0,
+        ...box,
+        borderWidth: cell.framed ? 0.6 : 0,
+        ...(cell.framed ? { borderColor: rule, backgroundColor: rgb(1, 1, 1) } : {}),
       });
-      field.setAlignment(TextAlignment.Right);
-      if (box.value) field.setText(box.value);
-    });
+      if (cell.size) field.setFontSize(cell.size);
+      field.setAlignment(cell.align === "right" ? TextAlignment.Right : TextAlignment.Left);
+      if (cell.value) field.setText(cell.value);
+      if (cell.calculate) {
+        const dict = (field.acroField as unknown as { dict: PDFDict }).dict;
+        dict.set(
+          PDFName.of("AA"),
+          doc.context.obj({
+            C: doc.context.obj({ S: "JavaScript", JS: PDFString.of(cell.calculate) }),
+          }),
+        );
+        order.push(field.ref);
+      }
+    }
+    // Acrobat recalculates in this order, so a total is worked out after the Actuals it reads.
+    if (order.length) form.acroForm.dict.set(PDFName.of("CO"), doc.context.obj(order));
+    // Every field gets a real appearance stream (founder, 2026-11-25): without one the boxes have no border and the
+    // prefilled Actuals show nowhere outside Acrobat, which is what made the old copy look like a printed rule.
+    form.updateFieldAppearances(await doc.embedFont(StandardFonts.Helvetica));
     return new Uint8Array(await doc.save());
   } catch (e) {
     console.warn("Budget PDF came out without its fillable actuals:", e);

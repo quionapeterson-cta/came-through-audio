@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AllocationDonut, SpentPairs, allocationTone } from "@/components/LabCharts";
 import { downloadBudgetPdf } from "@/lib/budget-pdf";
-import { downloadBudgetXlsx, type SheetFlavor } from "@/lib/budget-xlsx";
+import { downloadBudgetSheetCsv, downloadBudgetXlsx, type SheetFlavor } from "@/lib/budget-xlsx";
 import { myBrand } from "@/lib/brand-load";
 import {
   BUDGET_BLUEPRINTS,
@@ -50,9 +50,17 @@ const whole = (n: number) =>
  * (founder, 2026-11-25). A popover opens on click, so the menu is only there once the click is finished.
  */
 const FORMATS: { id: "pdf" | SheetFlavor; name: string; hint: string }[] = [
-  { id: "pdf", name: "Fillable PDF", hint: "Type what you paid straight into the Actual boxes" },
-  { id: "sheets", name: "Google Sheet", hint: "Opens in Google Sheets with live totals" },
-  { id: "excel", name: "Excel sheet", hint: "Formulas for spent, remaining and the total" },
+  {
+    id: "pdf",
+    name: "Fillable PDF",
+    hint: "Type what you paid into the Actual boxes, and tick each line as you pay it",
+  },
+  {
+    id: "sheets",
+    name: "Google Sheet",
+    hint: "A .csv for Google Sheets, with the totals as live formulas",
+  },
+  { id: "excel", name: "Excel sheet", hint: "A .xlsx workbook with the formulas built in" },
 ];
 
 const PROJECT_ICON: Record<ProjectKind, LucideIcon> = {
@@ -179,15 +187,20 @@ export function LabBudgetPlanner({
         const brand = await myBrand("lab");
         await downloadBudgetPdf(sheet, brand);
         toast.success(
-          "Fillable budget PDF downloaded — type what you actually paid in the Actual boxes.",
+          "Fillable budget PDF downloaded — type what you actually paid, and the totals follow in Adobe Acrobat or Reader.",
         );
         return;
       }
-      await downloadBudgetXlsx(sheet, format);
+      if (format === "sheets") {
+        downloadBudgetSheetCsv(sheet);
+        toast.success(
+          "Google Sheet downloaded as a .csv — open sheets.new, then File → Import → Upload, and the totals recalculate.",
+        );
+        return;
+      }
+      await downloadBudgetXlsx(sheet);
       toast.success(
-        format === "sheets"
-          ? "Budget sheet downloaded — in Google Sheets, File → Import → Upload, and the totals recalculate."
-          : "Budget sheet downloaded — type an Actual and Excel recalculates spent, remaining and the total.",
+        "Excel sheet downloaded — type an Actual and Excel recalculates spent, remaining and the total.",
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't build the budget sheet.");
@@ -526,7 +539,8 @@ export function LabBudgetPlanner({
           </div>
           <p className="fl-hint !mt-1">
             Take the sheet with you: a fillable PDF for directors, venues and collaborators, or a
-            spreadsheet whose totals recalculate as you type what you really paid.
+            spreadsheet whose totals recalculate as you type what you really paid — Google Sheets
+            opens the .csv, Excel the .xlsx.
           </p>
         </div>
         <Popover open={formats} onOpenChange={setFormats}>

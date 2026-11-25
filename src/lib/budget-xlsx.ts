@@ -2,12 +2,18 @@ import type { BudgetSheet } from "@/lib/budget-pdf";
 import { saveBlob } from "@/lib/catalog";
 
 /**
- * The Production Budget Planner as a workbook, for the two spreadsheet choices in the Lab's download menu (founder,
- * 2026-11-25). Every total is a live formula, so typing an Actual on a line recalculates Spent, Remaining, the
- * checklist's total and the paid count — the same numbers the planner shows on screen.
+ * The Production Budget Planner as a spreadsheet, for the two spreadsheet choices in the Lab's download menu (founder,
+ * 2026-11-25).
  *
- * Both choices write `.xlsx`: it is the one format Excel and Google Sheets both open with its formulas intact. The
- * flavour only changes what the file says about itself and how the download is announced — never the maths.
+ * The two choices are different files, not one file twice (founder, 2026-11-25):
+ * - **Excel** is a workbook (`.xlsx`), with the checklist and the allocation on their own sheets and every total a live
+ *   formula.
+ * - **Google Sheets** is a plain `.csv`, the format Sheets reads straight into a spreadsheet. It carries the same formulas
+ *   — typed as cell text beginning with `=` — so a line's Actual still drives Spent, Remaining and the checklist total,
+ *   but as text there is no styling, no frozen header and no second tab; the allocation follows underneath.
+ *
+ * Both recalculate as the member types. The formulas are the same arithmetic in both, so the two files can never
+ * disagree about what was paid.
  */
 export type SheetFlavor = "excel" | "sheets";
 
@@ -24,12 +30,70 @@ const HEADER_FILL = {
 const today = () =>
   new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-export async function budgetWorkbook(sheet: BudgetSheet, flavor: SheetFlavor = "excel") {
+/** One CSV cell: quoted only when it has to be, which is what keeps a formula's own commas inside one cell. */
+function csvCell(value: string | number | null | undefined) {
+  const text = value === null || value === undefined ? "" : String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/**
+ * The same sheet as a CSV for Google Sheets, laid out in the workbook's own rows so a formula reads the same in either
+ * file: the live figures in rows 4–6, the checklist from row 9, its total under the last line, then the allocation.
+ */
+export function budgetSheetCsv(sheet: BudgetSheet): string {
+  const rows: (string | number)[][] = [];
+  const last = FIRST_ROW + Math.max(0, sheet.rows.length - 1);
+  const totalRow = last + 1;
+
+  rows.push(["Production Budget"]);
+  rows.push([`${sheet.project}  ·  ${today()}`]);
+  rows.push([]);
+  rows.push(["Budget cap", Number(sheet.target) || 0]);
+  rows.push(["Spent so far", `=SUM(D${FIRST_ROW}:D${last})`]);
+  rows.push(["Remaining", "=B4-B5"]);
+  rows.push([]);
+  rows.push(["Item", "Category", "Budgeted", "Actual", "Status"]);
+
+  for (const row of sheet.rows) {
+    const typed = row.actual.trim();
+    // A typed actual is a number; a blank line stays blank, so its status reads Estimated.
+    const actual = typed ? Number(typed) || 0 : "";
+    rows.push([
+      row.item || row.category,
+      row.category,
+      Number(row.budget) || 0,
+      actual,
+      `=IF(D${rows.length + 1}="","ESTIMATED","PAID")`,
+    ]);
+  }
+
+  rows.push([
+    "Total",
+    "",
+    `=SUM(C${FIRST_ROW}:C${last})`,
+    `=SUM(D${FIRST_ROW}:D${last})`,
+    `=COUNTIF(E${FIRST_ROW}:E${last},"PAID")&" of "&COUNTA(A${FIRST_ROW}:A${last})&" paid"`,
+  ]);
+  if (rows.length !== totalRow) throw new Error("Budget CSV lost its row layout");
+
+  // Where the money goes: the plan's own split, with its total as a formula too.
+  rows.push([]);
+  rows.push(["Where the money goes"]);
+  rows.push(["Category", "Share", "Planned"]);
+  const planFirst = rows.length + 1;
+  for (const line of sheet.allocated)
+    rows.push([line.label, `${line.percent}%`, Number(line.budget) || 0]);
+  const planLast = planFirst + Math.max(0, sheet.allocated.length - 1);
+  rows.push(["Total planned", "", `=SUM(C${planFirst}:C${planLast})`]);
+
+  return `${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;
+}
+
+export async function budgetWorkbook(sheet: BudgetSheet) {
   const { default: ExcelJS } = await import("exceljs");
   const wb = new ExcelJS.Workbook();
   wb.creator = "Came Through Audio";
-  wb.title =
-    flavor === "sheets" ? `${sheet.project} budget for Google Sheets` : `${sheet.project} budget`;
+  wb.title = `${sheet.project} budget`;
 
   const ws = wb.addWorksheet("Budget", {
     views: [{ state: "frozen", ySplit: HEADER_ROW }],
@@ -152,13 +216,21 @@ export async function budgetWorkbook(sheet: BudgetSheet, flavor: SheetFlavor = "
   return wb;
 }
 
-export async function downloadBudgetXlsx(sheet: BudgetSheet, flavor: SheetFlavor) {
-  const wb = await budgetWorkbook(sheet, flavor);
+export async function downloadBudgetXlsx(sheet: BudgetSheet) {
+  const wb = await budgetWorkbook(sheet);
   const buffer = await wb.xlsx.writeBuffer();
   saveBlob(
     new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     }),
     `${sheet.project} budget.xlsx`,
+  );
+}
+
+/** The Google Sheets choice: a plain `.csv`, which Sheets opens into a spreadsheet with its formulas intact. */
+export function downloadBudgetSheetCsv(sheet: BudgetSheet) {
+  saveBlob(
+    new Blob([budgetSheetCsv(sheet)], { type: "text/csv;charset=utf-8" }),
+    `${sheet.project} budget.csv`,
   );
 }

@@ -2,52 +2,62 @@
 
 The Production Budget Planner's download button is a menu with three choices (founder, 2026-11-25):
 
-| Choice | File | What it can do |
+| Choice | File | What it is |
 | --- | --- | --- |
-| Fillable PDF | `«project» budget.pdf` | The one-page sheet with a text field over every line's **Actual**, so a member can type what was really paid into the PDF itself. |
-| Google Sheet | `«project» budget.xlsx` | Opens in Google Sheets (File → Import → Upload) with the totals as live formulas. |
-| Excel sheet | `«project» budget.xlsx` | Opens in Excel with the same live formulas. |
+| Fillable PDF | `«project» budget.pdf` | The sheet as a form: an Actual cell on every line, a Paid tick beside it, and the totals as fields that recalculate. |
+| Google Sheet | `«project» budget.csv` | A plain `.csv` Google Sheets reads straight into a spreadsheet, with the totals as live formulas. |
+| Excel sheet | `«project» budget.xlsx` | A styled workbook: frozen checklist header, both sheets, currency formats, the same formulas. |
 
-Both spreadsheet choices write `.xlsx` because it is the one format Excel and Google
-Sheets both open with formulas intact; there is no Google-Sheets-only file format to
-download. The choice changes what the file says about itself and what the toast tells the
-member to do, never the arithmetic.
+The two spreadsheet choices are **different files on purpose** (founder, 2026-11-25). Before this they both
+wrote the same `.xlsx`, so "Google Sheet" was a second download of the Excel file. Now:
 
-## What the PDF can and cannot calculate
+- **Excel** gets `.xlsx` — two worksheets, formatting, frozen header, currency number formats.
+- **Google Sheets** gets `.csv` — Google's own interchange format, so it lands in a real Google Sheet
+  (sheets.new → File → Import → Upload) instead of an Excel file that Sheets merely tolerates. Being plain
+  text it has no styling and no second tab; the allocation sits under the checklist with a blank line
+  between them. Its formulas are the same ones the workbook carries, written as cell text that starts with
+  `=`, so they evaluate on import (Sheets' "Convert text to numbers, dates, and formulas" box is ticked by
+  default).
 
-A PDF *can* hold real calculations, and it is worth saying exactly how, because it decides
-whether we ship it:
+A truly pre-filled Google Sheet in the member's own Drive would need their Google account connected to us;
+nothing here does that, and a download cannot write into someone's Drive on its own.
 
-- A text field alone stores a value; it does not compute anything.
-- AcroForm fields can carry **calculation actions** (`/AA` → `/C`, the classic
-  `AFSimple_Calculate("SUM", …)` script, or any JavaScript). Acrobat evaluates those and
-  redraws the dependent field whenever an input changes.
-- **Adobe Acrobat and Acrobat Reader run that JavaScript. Chrome's built-in viewer, Safari,
-  Firefox's pdf.js, macOS Preview and most phone viewers do not.** They show and accept the
-  field values but the total stays exactly as it was written when the file was made.
+## The fillable PDF: what changed and why
 
-So a PDF with PDF-side maths would be right for members on Acrobat and silently stale for
-everyone else — the worst kind of wrong on a document that tracks money. We have also no
-Acrobat in this environment to verify the actions behave, and an unverified calculation is
-not something to put in a budget sheet a member shows a director.
+The first fillable copy had two faults, both reported by the founder on 2026-11-25:
 
-What ships today, therefore:
+1. Typing an Actual left the line printed `ESTIMATED`, because that word was page content drawn at download.
+2. The checklist's total stayed exactly as it was at download, because it was page content too.
 
-- **Fillable PDF**: every checklist line has an editable **Actual** box, prefilled with the
-  number the planner already knows (a typed actual, or the budget for a paid line with no
-  typed cost). The **Total** row prints the budgeted total, the actual total and "n of m
-  paid" as they stood when the file was downloaded. Typing in the boxes does **not** move
-  that printed total, and the PDF does not change what the planner has in the browser.
-- **Spreadsheet**: typing an Actual recalculates everything, in Excel and in Sheets alike.
+Both are fixed by making the sheet a **form** rather than a print with boxes stuck on it:
 
-If PDF-side maths is wanted later, the path is clear and should be a founder decision:
+- **Actual** is a real text field on each line, and the field draws its own light cell and hairline frame,
+  so the box the member clicks *is* the input — there is no printed rule underneath it any more.
+- **Paid** is a tick box per line, ticked or not as the planner had it. It replaces the frozen
+  `ESTIMATED`/`PAID` word: the member works the tick, so it can never contradict what they typed.
+- **Spent so far**, **Remaining**, the checklist's **actual total** and the **paid count** are fields
+  carrying Acrobat calculation actions (`/AA` → `/C`, JavaScript) with a calculation order (`/CO`) set, so
+  typing an Actual, or ticking a box, recalculates all four.
+- Nothing on the form is pre-printed for a figure that depends on typing. Those cells start empty and are
+  filled by the calculation (or by hand, in a viewer that does not calculate), so a stale number can never
+  sit next to a freshly typed one.
+- One line in the form says where the sums happen: "Actuals and ticks total themselves in Adobe Acrobat or
+  Reader." The printed sheet (`buildBudgetPdf`) is unchanged and still prints every figure it always did.
 
-1. Add `/AA` calculate actions to the field set `buildFillableBudgetPdfBytes` already
-   creates (`actual-1…n`), with a read-only total field.
-2. Keep the spreadsheet as the option we point people to for real recalculation, because
-   the PDF's maths only exists inside Acrobat.
-3. Verify in Acrobat itself before it ships — the fallback where the total is stale must be
-   described in the file, not implied.
+### The limit, stated plainly
+
+A PDF **can** calculate, but only Acrobat and Acrobat Reader run the JavaScript:
+
+- **Adobe Acrobat / Reader** evaluate the actions and redraw the fields, so the totals follow the typing.
+- **Chrome's and Edge's built-in viewer (PDFium), Firefox (pdf.js), Safari/Preview (PDFKit) and most phone
+  viewers ignore form JavaScript.** They show and accept the field values, but a calculated field simply
+  stays empty. That is why nothing is pre-printed in those cells: an empty cell is incomplete, not wrong.
+- We have no Acrobat in this environment, so the actions are checked as far as structure and script syntax
+  go (`budget-xlsx.test.ts` parses every script) but not inside Acrobat itself. Nothing here claims they
+  were observed recalculating.
+
+For a total that recalculates in every app, the spreadsheet is the answer — that is what the other two
+choices are for.
 
 ## The workbook's formulas
 
@@ -64,7 +74,11 @@ Sheet **Budget** (`src/lib/budget-xlsx.ts`):
 
 Sheet **Where the money goes** carries the plan's split, with `=SUM(C2:C6)` as its total.
 
-Checked by recalculating the downloaded file with a spreadsheet engine: cap $1,000, one
-line paid $420.50 → spent $420.50, remaining $579.50, "1 of 5 paid"; typing `100` into the
-next line's Actual → spent $520.50, remaining $479.50, that line flips to `PAID`, and the
-count reads "2 of 5 paid".
+The **CSV** (`budgetSheetCsv`) uses the same rows, so the same formulas read the same cells: rows 4–6 are
+the live figures, row 8 the checklist header, row 9 the first line, and the checklist's total sits under
+the last line. Its formula cells are quoted only where CSV requires it (a formula containing a comma), and
+amounts are written as plain numbers — `420.5`, never `$420.50` — so Sheets reads them as numbers.
+
+Checked by recalculating the downloaded workbook with a spreadsheet engine: cap $1,000, one line paid
+$420.50 → spent $420.50, remaining $579.50, "1 of 5 paid"; typing `100` into the next line's Actual → spent
+$520.50, remaining $479.50, that line flips to `PAID`, and the count reads "2 of 5 paid".
