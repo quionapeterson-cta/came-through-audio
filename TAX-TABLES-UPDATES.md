@@ -1,9 +1,15 @@
 # Updating the federal tax tables
 
-The Artist Tax Write-Off Estimator prices a year from a year-keyed bracket table. There are two copies, and the live one
-wins: the tax Worker's tables (the version bundled into the Worker plus anything stored in its `TAX_TABLES` KV
-namespace), then the fallback bundled in `src/lib/tax-brackets.ts`. A year nobody holds is priced with the newest table
-at or before it, and the drawer says so above the figures instead of quietly using last year's brackets.
+The Artist Tax Write-Off Estimator prices a year from a year-keyed bracket table, and there are two copies of it. **A
+stored year beats a shipped one:** the Worker serves the table bundled with its code, overlaid by anything in its
+`TAX_TABLES` KV namespace, where a stored entry for a year wins outright; the app then prefers the Worker's answer over
+the copy compiled into `src/lib/tax-brackets.ts`. A year nobody holds is priced with the newest table at or before it,
+and the drawer says so above the figures instead of quietly using last year's brackets.
+
+That precedence is why a test write matters: `PUT /tax/2026` leaves a KV copy of a year the code already ships, and
+from then on that copy — not `src/lib/tax-brackets.ts` — is what 2026 is priced from. Nothing looks wrong while the two
+agree, but editing the code's 2026 table would stop having any effect. Test on a year you mean to add, or clear the
+keys afterwards.
 
 The Worker is `cta-tax-tables` (`workers/cta-tax-tables.ts`, config `workers/wrangler-tax.toml`), served at
 `https://cta-tax-tables.quionapeterson.workers.dev`. The app reads it through `VITE_CTA_TAX_TABLES_URL`.
@@ -58,7 +64,7 @@ Five minutes, no build and no redeploy.
    | `403 …no TAX_ADMIN_TOKEN, so it is read-only.` | No secret is set on the Worker. |
    | `503 No TAX_TABLES KV namespace is bound.` | The deployment lost its `TAX_TABLES` binding. |
 
-5. **Check it**: `curl -s https://cta-tax-tables.quionapeterson.workers.dev/tax | jq '.years'` should list the new year.
+5. **Check it, then clean up any test year**: `curl -s https://cta-tax-tables.quionapeterson.workers.dev/tax | jq '.years'` should list the new year.
    KV is eventually consistent worldwide, so a Worker read can lag by up to about a minute, and the app keeps the
    Worker's answer in `localStorage` (`cta.lab.taxTables.v1`) for a day — clear that key, or open a fresh browser, to see
    a new year immediately.
