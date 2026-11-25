@@ -667,8 +667,8 @@
   color: #fff;
 }
 
-/* One platform at a time: a picker, then Streams · Per stream · Your estimate on one row that fits a
-   390px phone, so the calculator never scrolls sideways. */
+/* One platform at a time: a picker, then the streams, rate and estimate boxes. On a phone the value drops to
+   its own row under them, so the calculator never scrolls sideways. */
 .fl-platform-block {
   margin-top: 0.75rem;
   border: 1px solid #e0eaf7;
@@ -695,8 +695,30 @@
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
-/* "Per stream ($)" takes two lines on a phone, so every label holds two: the three boxes start on one line,
-   and the estimate stretches to the row's control height so every box ends on one line too. */
+/*
+ * A phone column is a third of about 300px, which is narrower than a projected payout: "$480,000,000,000.00" ran
+ * past the panel edge and was clipped by the page. On a phone the value takes its own full-width row under the two
+ * boxes it comes from, so every figure reads whole; the three-across row stays exactly as it is from 640px up
+ * (founder, 2026-11-25).
+ */
+@media (max-width: 639px) {
+  .fl-platform-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fl-platform-grid > .fl-field:last-child {
+    grid-column: 1 / -1;
+  }
+  /* The distributor block carries a money result in the middle of its row, so a phone gives all three boxes
+     the full width: half a panel clipped "Before the cut" at the left. */
+  .fl-distributor .fl-platform-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fl-distributor .fl-platform-grid > .fl-field:last-child {
+    grid-column: auto;
+  }
+}
+/* "Per stream ($)" takes two lines, so every label holds two: the three-across row starts on one line, and the
+   estimate stretches to the row's control height so every box ends on one line too. */
 .fl-platform-grid .fl-field {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -709,6 +731,9 @@
   line-height: 1.2;
 }
 .fl-estimate {
+  /* A money result is one number: it must never run out of its own box and be clipped by the panel edge. */
+  min-width: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -3776,9 +3801,12 @@
 .fl-platform-grid .fl-field label {
   min-height: 1.35em;
 }
-.fl-territory-grid,
-.fl-timeline-grid {
+.fl-territory-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+/* A payout can run to trillions, and two cards across a phone left no room for the amount: one card a row. */
+.fl-timeline-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 @media (min-width: 640px) {
   .fl-territory-grid,
