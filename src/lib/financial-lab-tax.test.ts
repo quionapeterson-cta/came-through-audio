@@ -17,6 +17,7 @@ import {
   taxRowsFromBudget,
   taxSheetEstimate,
   taxSheetTotal,
+  taxSheetYearGap,
   taxWorksheetCsv,
   type TaxSheet,
 } from "./financial-lab-tax";
@@ -256,6 +257,43 @@ describe("reading the worksheet back", () => {
       amount: "1",
     }));
     expect(sanitizeTaxSheet({ rows }).rows).toHaveLength(MAX_TAX_ROWS);
+  });
+});
+
+describe("the year the worksheet asks for", () => {
+  const rows = [{ ...newTaxRow("mix"), amount: "1000" }];
+
+  it("is quiet when the year has its own table", () => {
+    expect(taxSheetYearGap({ ...sheetOf(rows), year: "2027" })).toBeNull();
+    expect(taxSheetYearGap({ ...sheetOf(rows), year: "2026" })).toBeNull();
+  });
+
+  it("names the year it could not price and the one it used instead", () => {
+    expect(taxSheetYearGap({ ...sheetOf(rows), year: "2028" })).toEqual({
+      asked: 2028,
+      used: 2027,
+    });
+  });
+
+  it("uses the calendar year for a blank box, and says so when that year has no table", () => {
+    expect(taxSheetYearGap(sheetOf(rows), undefined, new Date("2028-01-02"))).toEqual({
+      asked: 2028,
+      used: 2027,
+    });
+    expect(taxSheetYearGap(sheetOf(rows), undefined, new Date("2026-06-01"))).toBeNull();
+  });
+
+  it("does not nag about a half-typed year", () => {
+    expect(taxSheetYearGap({ ...sheetOf(rows), year: "20" })).toBeNull();
+    expect(taxSheetYearGap({ ...sheetOf(rows), year: "202" })).toBeNull();
+  });
+
+  it("prints the gap beside the brackets on the downloaded worksheet", () => {
+    const csv = taxWorksheetCsv({ ...sheetOf(rows), year: "2028" }, { song: "Midnight" });
+    expect(csv).toContain("Brackets: 2027 federal");
+    expect(csv).toContain("(no 2028 table yet)");
+    const own = taxWorksheetCsv({ ...sheetOf(rows), year: "2027" }, { song: "Midnight" });
+    expect(own).not.toContain("table yet");
   });
 });
 

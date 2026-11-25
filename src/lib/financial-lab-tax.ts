@@ -262,6 +262,25 @@ export const taxSheetTable = (
   now: Date = new Date(),
 ): TaxYearTable => taxTableFor(taxSheetPlanningYear(sheet, now), tables);
 
+/**
+ * The year the worksheet asked for when no table of that year is on hand: `asked` is the year the member picked (or
+ * the calendar year when the box is blank), `used` the newest table at or before it. `null` when the year has its own
+ * table, and also when the box holds a partial year — a half-typed "20" is not yet a request, so it never nags.
+ */
+export type TaxYearGap = { asked: number; used: number };
+
+export function taxSheetYearGap(
+  sheet: TaxSheet,
+  tables?: TaxYearTable[],
+  now: Date = new Date(),
+): TaxYearGap | null {
+  const asked = taxSheetPlanningYear(sheet, now);
+  const used = taxSheetTable(sheet, tables, now).year;
+  if (asked === used) return null;
+  if (!Number.isInteger(asked) || asked < 2020 || asked > 2100) return null;
+  return { asked, used };
+}
+
 /** The income-tax part of the estimate, held to a real percentage. */
 export const taxSheetIncomeRate = (sheet: TaxSheet): number =>
   Math.min(100, Math.max(0, Number(sheet.rate) || 0));
@@ -474,6 +493,7 @@ export function taxWorksheetCsv(
   const rate = taxSheetIncomeRate(sheet);
   const seRate = taxSheetSelfEmploymentRate(sheet, meta.tables, madeAt);
   const table = taxSheetTable(sheet, meta.tables, madeAt);
+  const gap = taxSheetYearGap(sheet, meta.tables, madeAt);
   const savings = taxSheetEstimate(sheet, meta.tables, madeAt);
   const lines: string[] = [
     "CAME THROUGH AUDIO — TAX WRITE-OFF WORKSHEET",
@@ -481,7 +501,7 @@ export function taxWorksheetCsv(
     "=".repeat(52),
     `Song: ${meta.song?.trim() || "—"}`,
     `Tax year: ${sheet.year || "—"}`,
-    `Brackets: ${table.year} federal, ${table.source}`,
+    `Brackets: ${table.year} federal, ${table.source}${gap ? ` (no ${gap.asked} table yet)` : ""}`,
     ...(sheet.status ? [`Filing status: ${filingStatusLabel(sheet.status)}`] : []),
     `Prepared: ${madeAt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`,
     `Rate used: ${rate > 0 ? `${rate}%` : "—"}${seRate > 0 ? ` + ${seRate}% self-employment` : ""}`,

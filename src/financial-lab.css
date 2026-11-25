@@ -480,6 +480,23 @@
   background: rgb(77 140 255 / 10%);
   color: #dbe7f7;
 }
+/* A year the estimator holds no table for: it sits directly above the figures, because those are the numbers it is
+   talking about, and the small print under the year box is where it used to hide. */
+.fl-year-gap {
+  margin: 0 0 0.55rem;
+  border: 1px solid #e0a92e;
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  background: #fffaeb;
+  color: #6d4a00;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.dark .fl-year-gap {
+  border-color: rgb(240 180 74 / 55%);
+  background: rgb(240 180 74 / 12%);
+  color: #ffe7b5;
+}
 .fl-hint {
   margin-top: 0.45rem;
   color: var(--fl-muted);

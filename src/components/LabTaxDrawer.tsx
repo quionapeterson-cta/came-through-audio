@@ -23,6 +23,7 @@ import {
   taxSheetSelfEmploymentRate,
   taxSheetTable,
   taxSheetTotal,
+  taxSheetYearGap,
   taxWorksheetCsv,
   type SelfEmploymentChoice,
   type TaxCategoryId,
@@ -155,6 +156,7 @@ export function TaxDrawer({
   const { tables, live, checkedAt } = useTaxTables();
   const table = taxSheetTable(sheet, tables);
   const planningYear = taxSheetPlanningYear(sheet);
+  const yearGap = taxSheetYearGap(sheet, tables);
   const brackets = sheet.status ? bracketsFor(table, sheet.status) : [];
   const incomeRate = taxSheetIncomeRate(sheet);
   const seRate = taxSheetSelfEmploymentRate(sheet, tables);
@@ -410,6 +412,14 @@ export function TaxDrawer({
           </p>
         </div>
 
+        {yearGap ? (
+          <p className="fl-year-gap" role="status">
+            You picked {yearGap.asked}, and there is no {yearGap.asked} bracket table here — the
+            figures below use the {yearGap.used} brackets, not {yearGap.asked}&apos;s. Add the{" "}
+            {yearGap.asked} table before you rely on them, and check the numbers with your tax
+            professional.
+          </p>
+        ) : null}
         <div className="fl-drawer-result">
           <span>Deductible total</span>
           <strong>{money(total)}</strong>
