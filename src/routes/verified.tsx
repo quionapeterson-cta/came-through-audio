@@ -61,13 +61,18 @@ function Verified() {
   async function login(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      go();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't log in. Try again.");
+    } finally {
+      setBusy(false);
     }
-    go();
   }
 
   return (

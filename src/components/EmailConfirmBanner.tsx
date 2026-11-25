@@ -17,24 +17,35 @@ export function EmailConfirmBanner({ email }: { email?: string | null | undefine
   async function resend() {
     if (!email) return;
     setBusy(true);
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/verified?next=/workspace` },
-    });
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else toast.success(`Sent again to ${email}.`);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/verified?next=/workspace` },
+      });
+      if (error) toast.error(error.message);
+      else toast.success(`Sent again to ${email}.`);
+    } catch (err) {
+      // A dropped request must not leave the button disabled for the rest of the visit.
+      toast.error(err instanceof Error ? err.message : "Couldn't send it again. Try once more.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function check() {
     setBusy(true);
-    const { data } = await supabase.auth.refreshSession();
-    setBusy(false);
-    if (data.user?.email_confirmed_at) {
-      setDone(true);
-      toast.success("Email confirmed. You're all set.");
-    } else toast.error("Not confirmed yet. Open the link in your inbox, then try again.");
+    try {
+      const { data } = await supabase.auth.refreshSession();
+      if (data.user?.email_confirmed_at) {
+        setDone(true);
+        toast.success("Email confirmed. You're all set.");
+      } else toast.error("Not confirmed yet. Open the link in your inbox, then try again.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't check that. Try once more.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

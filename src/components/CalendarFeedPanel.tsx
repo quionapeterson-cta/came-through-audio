@@ -30,19 +30,24 @@ export function CalendarFeedPanel({ me }: { me: string }) {
       : "";
 
   async function load() {
-    const { data, error } = await supabase
-      .from("calendar_feed_tokens" as never)
-      .select("token")
-      .eq("user_id", me)
-      .maybeSingle();
-    if (error) {
+    try {
+      const { data, error } = await supabase
+        .from("calendar_feed_tokens" as never)
+        .select("token")
+        .eq("user_id", me)
+        .maybeSingle();
+      if (error) {
+        setFailed(true);
+        return;
+      }
+      setFailed(false);
+      setToken((data as { token?: string } | null)?.token ?? null);
+    } catch {
+      // A dropped request reads as a failed section, never as a page still loading.
       setFailed(true);
+    } finally {
       setLoading(false);
-      return;
     }
-    setFailed(false);
-    setToken((data as { token?: string } | null)?.token ?? null);
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -58,17 +63,24 @@ export function CalendarFeedPanel({ me }: { me: string }) {
 
   async function create() {
     setBusy(true);
-    const next = newToken();
-    const { error } = await supabase
-      .from("calendar_feed_tokens" as never)
-      .insert({ user_id: me, token: next } as never);
-    setBusy(false);
-    if (error) {
-      toast.error("Couldn't create your feed link. Try again.");
-      return;
+    try {
+      const next = newToken();
+      const { error } = await supabase
+        .from("calendar_feed_tokens" as never)
+        .insert({ user_id: me, token: next } as never);
+      if (error) {
+        toast.error("Couldn't create your feed link. Try again.");
+        return;
+      }
+      setToken(next);
+      toast.success("Your calendar feed is ready.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Couldn't create your feed link. Try again.",
+      );
+    } finally {
+      setBusy(false);
     }
-    setToken(next);
-    toast.success("Your calendar feed is ready.");
   }
 
   async function rotate() {
@@ -78,18 +90,23 @@ export function CalendarFeedPanel({ me }: { me: string }) {
     });
     if (!ok) return;
     setBusy(true);
-    const next = newToken();
-    const { error } = await supabase
-      .from("calendar_feed_tokens" as never)
-      .update({ token: next } as never)
-      .eq("user_id", me);
-    setBusy(false);
-    if (error) {
-      toast.error("Couldn't replace the link. Try again.");
-      return;
+    try {
+      const next = newToken();
+      const { error } = await supabase
+        .from("calendar_feed_tokens" as never)
+        .update({ token: next } as never)
+        .eq("user_id", me);
+      if (error) {
+        toast.error("Couldn't replace the link. Try again.");
+        return;
+      }
+      setToken(next);
+      toast.success("New feed link created. Add it to your calendar.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't replace the link. Try again.");
+    } finally {
+      setBusy(false);
     }
-    setToken(next);
-    toast.success("New feed link created. Add it to your calendar.");
   }
 
   async function off() {
@@ -99,17 +116,22 @@ export function CalendarFeedPanel({ me }: { me: string }) {
     });
     if (!ok) return;
     setBusy(true);
-    const { error } = await supabase
-      .from("calendar_feed_tokens" as never)
-      .delete()
-      .eq("user_id", me);
-    setBusy(false);
-    if (error) {
-      toast.error("Couldn't turn the feed off. Try again.");
-      return;
+    try {
+      const { error } = await supabase
+        .from("calendar_feed_tokens" as never)
+        .delete()
+        .eq("user_id", me);
+      if (error) {
+        toast.error("Couldn't turn the feed off. Try again.");
+        return;
+      }
+      setToken(null);
+      toast.success("Calendar feed turned off.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't turn the feed off. Try again.");
+    } finally {
+      setBusy(false);
     }
-    setToken(null);
-    toast.success("Calendar feed turned off.");
   }
 
   async function copy() {

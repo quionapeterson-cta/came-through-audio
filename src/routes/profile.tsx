@@ -671,22 +671,27 @@ function PasswordDialog({
       return;
     }
     setBusy(true);
-    if (!(await currentPasswordOk(email, current))) {
+    try {
+      if (!(await currentPasswordOk(email, current))) {
+        toast.error("That isn't your current password.");
+        return;
+      }
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Password updated.");
+      setCurrent("");
+      setPassword("");
+      setConfirm("");
+      onOpenChange(false);
+    } catch (err) {
+      // A dropped request must not leave the dialog's button disabled for good.
+      toast.error(err instanceof Error ? err.message : "Couldn't change your password. Try again.");
+    } finally {
       setBusy(false);
-      toast.error("That isn't your current password.");
-      return;
     }
-    const { error } = await supabase.auth.updateUser({ password });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Password updated.");
-    setCurrent("");
-    setPassword("");
-    setConfirm("");
-    onOpenChange(false);
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -746,27 +751,31 @@ function EmailDialog({
       return;
     }
     setBusy(true);
-    if (!(await currentPasswordOk(email, current))) {
+    try {
+      if (!(await currentPasswordOk(email, current))) {
+        toast.error("That isn't your current password.");
+        return;
+      }
+      const { error } = await supabase.auth.updateUser(
+        { email: address },
+        { emailRedirectTo: `${window.location.origin}/profile` },
+      );
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(
+        `Almost done: click the link we emailed to ${address}. Your email changes once it's confirmed.`,
+        { duration: 10000 },
+      );
+      setCurrent("");
+      setNext("");
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't change your email. Try again.");
+    } finally {
       setBusy(false);
-      toast.error("That isn't your current password.");
-      return;
     }
-    const { error } = await supabase.auth.updateUser(
-      { email: address },
-      { emailRedirectTo: `${window.location.origin}/profile` },
-    );
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(
-      `Almost done: click the link we emailed to ${address}. Your email changes once it's confirmed.`,
-      { duration: 10000 },
-    );
-    setCurrent("");
-    setNext("");
-    onOpenChange(false);
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

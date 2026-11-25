@@ -57,12 +57,27 @@ export function HelpChat() {
     setMessages((m) => [...m, { from: "you", text: q }]);
     setText("");
     setBusy(true);
-    const reply = await askHelpDesk({ message: q, currentRoute: route, history });
-    setMessages((m) => [
-      ...m,
-      { from: "help", text: reply.text, title: reply.title, link: reply.link },
-    ]);
-    setBusy(false);
+    try {
+      const reply = await askHelpDesk({ message: q, currentRoute: route, history });
+      setMessages((m) => [
+        ...m,
+        { from: "help", text: reply.text, title: reply.title, link: reply.link },
+      ]);
+    } catch (err) {
+      // The question stays on screen and the desk answers for itself, rather than the panel sitting busy forever.
+      setMessages((m) => [
+        ...m,
+        {
+          from: "help",
+          text:
+            err instanceof Error
+              ? err.message
+              : "The help desk couldn't answer just now. Try again in a moment.",
+        },
+      ]);
+    } finally {
+      setBusy(false);
+    }
   }
 
   const rate = (i: number, rated: "yes" | "no") =>

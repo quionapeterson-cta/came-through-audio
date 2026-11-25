@@ -1271,19 +1271,24 @@ function Coaching({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
   async function notifyMe() {
     setBusy(true);
-    const { error } = await supabase
-      .from("feature_interest" as never)
-      .upsert({ user_id: userId, feature: "masterclasses" } as never, {
-        onConflict: "user_id,feature",
-        ignoreDuplicates: true,
-      });
-    setBusy(false);
-    if (error) {
-      toast.error("Couldn't save that. Try again.");
-      return;
+    try {
+      const { error } = await supabase
+        .from("feature_interest" as never)
+        .upsert({ user_id: userId, feature: "masterclasses" } as never, {
+          onConflict: "user_id,feature",
+          ignoreDuplicates: true,
+        });
+      if (error) {
+        toast.error("Couldn't save that. Try again.");
+        return;
+      }
+      setAsked(true);
+      toast.success("You're on the list. We'll email you as soon as coaching opens.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save that. Try again.");
+    } finally {
+      setBusy(false);
     }
-    setAsked(true);
-    toast.success("You're on the list. We'll email you as soon as coaching opens.");
   }
   return (
     <div className="mt-6 grid gap-6 md:grid-cols-2">

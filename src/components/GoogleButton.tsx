@@ -49,18 +49,24 @@ export function GoogleButton({
   async function start() {
     setBusy(true);
     onBeforeRedirect?.();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      // The origin the member is on, so a preview, the live site and local development each come back to themselves.
-      options: { redirectTo: googleRedirectUrl(window.location.origin) },
-    });
-    if (!error) return; // The browser is already leaving for Google; keeping "busy" stops a second click.
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        // The origin the member is on, so a preview, the live site and local development each come back to themselves.
+        options: { redirectTo: googleRedirectUrl(window.location.origin) },
+      });
+      if (!error) return; // The browser is already leaving for Google; keeping "busy" stops a second click.
+      // Until the provider is switched on in Supabase, say what to do instead of showing the provider's own wording.
+      const message = /not enabled|unsupported provider/i.test(error.message)
+        ? "Google sign-in isn't switched on yet. Log in with your email and password for now."
+        : error.message;
+      toast.error(message);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Couldn't reach Google. Try again in a moment.",
+      );
+    }
     setBusy(false);
-    // Until the provider is switched on in Supabase, say what to do instead of showing the provider's own wording.
-    const message = /not enabled|unsupported provider/i.test(error.message)
-      ? "Google sign-in isn't switched on yet. Log in with your email and password for now."
-      : error.message;
-    toast.error(message);
   }
 
   return (

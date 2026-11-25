@@ -136,7 +136,7 @@ export function MyQueue({
   );
   const [burst, setBurst] = useState<{ name: string; title: string } | null>(null);
 
-  const load = async () => {
+  const run = async () => {
     setLoading(true);
     const out: Item[] = [];
     const [r, t, k, q] = await Promise.all([
@@ -192,6 +192,18 @@ export function MyQueue({
     setRows((q.data ?? []) as Row[]);
     setLoading(false);
   };
+
+  /** The first load always ends: a dropped request says so instead of leaving the columns on "Loading…". */
+  const load = async () => {
+    try {
+      await run();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't load your queue. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     void load();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

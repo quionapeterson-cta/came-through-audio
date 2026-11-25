@@ -40,7 +40,7 @@ export function useBilling(userId: string | undefined) {
   const [paidTier, setPaidTier] = useState<Tier>("free");
   const env = getPaymentsEnvironment();
 
-  const load = useCallback(async () => {
+  const read = useCallback(async () => {
     if (!userId) return;
     const [subs, buys, paused, lapsed, seats, memberSeats, serverTierRow] = await Promise.all([
       supabase
@@ -147,6 +147,20 @@ export function useBilling(userId: string | undefined) {
     setPurchases(((buys.data ?? []) as Purchase[]).filter((p) => !p.details["refunded_at"]));
     if (!subs.error) setLoaded(true);
   }, [userId, env]);
+
+  /**
+   * Reads the plan, and always ends the wait: a failed read (offline, blocked storage) used to leave `loaded` false, so
+   * every page gating on it sat on "Loading…" until a reload. The 8-second poll below corrects the tier afterwards.
+   */
+  const load = useCallback(async () => {
+    try {
+      await read();
+    } catch {
+      /* keep the free defaults until the next poll */
+    } finally {
+      setLoaded(true);
+    }
+  }, [read]);
 
   useEffect(() => {
     load();

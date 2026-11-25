@@ -74,14 +74,19 @@ function ResetPassword() {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Password updated. You're logged in.");
+      navigate({ to: "/workspace", search: { tab: undefined } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save that password. Try again.");
+    } finally {
+      setBusy(false);
     }
-    toast.success("Password updated. You're logged in.");
-    navigate({ to: "/workspace", search: { tab: undefined } });
   }
 
   async function resend(e: FormEvent) {

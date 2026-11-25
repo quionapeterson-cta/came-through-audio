@@ -275,30 +275,35 @@ export function AdminCalendar({ me, access }: { me: string; access: StaffAccess 
       return;
     }
     setBusy(true);
-    const row = {
-      title: draft.title.trim(),
-      notes: draft.notes.trim(),
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt?.toISOString() ?? null,
-      all_day: draft.allDay,
-      all_day_on: draft.allDay ? draft.date : null,
-      department: draft.calendar === "private" ? null : draft.calendar,
-      updated_at: new Date().toISOString(),
-    };
-    const { error } = draft.id
-      ? await supabase
-          .from("calendar_events" as never)
-          .update(row as never)
-          .eq("id", draft.id)
-      : await supabase.from("calendar_events" as never).insert(row as never);
-    setBusy(false);
-    if (error) {
-      toast.error("Couldn't save that entry.");
-      return;
+    try {
+      const row = {
+        title: draft.title.trim(),
+        notes: draft.notes.trim(),
+        starts_at: startsAt.toISOString(),
+        ends_at: endsAt?.toISOString() ?? null,
+        all_day: draft.allDay,
+        all_day_on: draft.allDay ? draft.date : null,
+        department: draft.calendar === "private" ? null : draft.calendar,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = draft.id
+        ? await supabase
+            .from("calendar_events" as never)
+            .update(row as never)
+            .eq("id", draft.id)
+        : await supabase.from("calendar_events" as never).insert(row as never);
+      if (error) {
+        toast.error("Couldn't save that entry.");
+        return;
+      }
+      setDraft(null);
+      toast.success("Saved to the calendar.");
+      void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save that entry.");
+    } finally {
+      setBusy(false);
     }
-    setDraft(null);
-    toast.success("Saved to the calendar.");
-    void load();
   }
   async function remove(id: string) {
     if (!(await confirmAction({ title: "Delete this entry?" }))) return;

@@ -62,29 +62,34 @@ describe("Personal Branding", () => {
 
   it("Catalog Management includes it; the add-on turns it on for any plan", () => {
     const until = new Date("2027-01-01");
+    // `lab` is the Financial Lab's budget sheet, which carries the same kit as the paperwork (founder, 2026-11-24).
     expect(brandAccess("management", null)).toEqual({
       contracts: true,
       splits: true,
       lyrics: true,
       catalog: true,
+      lab: true,
     });
     expect(brandAccess("free", until)).toEqual({
       contracts: true,
       splits: true,
       lyrics: true,
       catalog: true,
+      lab: true,
     });
     expect(brandAccess("collaborate", until)).toEqual({
       contracts: true,
       splits: true,
       lyrics: true,
       catalog: true,
+      lab: true,
     });
     expect(brandAccess("plus", null)).toEqual({
       contracts: false,
       splits: false,
       lyrics: false,
       catalog: false,
+      lab: false,
     });
   });
 

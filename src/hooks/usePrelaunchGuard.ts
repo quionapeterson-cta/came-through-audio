@@ -31,9 +31,14 @@ export function usePrelaunchGuard() {
       setStored(readTesterState());
     }
     let alive = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (alive) setSignedIn(!!data.session);
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (alive) setSignedIn(!!data.session);
+      })
+      // A failed read leaves this browser on the public view (and the listener still unlocks it on a session), rather
+      // than throwing out of the effect.
+      .catch(() => {});
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
       setSignedIn(!!session),
     );
