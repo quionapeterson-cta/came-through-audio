@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   Camera,
   Check,
+  ChevronDown,
   Clapperboard,
   Download,
   Megaphone,
@@ -16,8 +17,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AllocationDonut, SpentPairs, allocationTone } from "@/components/LabCharts";
 import { downloadBudgetPdf } from "@/lib/budget-pdf";
+import { downloadBudgetXlsx, type SheetFlavor } from "@/lib/budget-xlsx";
 import { myBrand } from "@/lib/brand-load";
 import {
   BUDGET_BLUEPRINTS,
@@ -40,6 +43,17 @@ const money = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 const whole = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+/**
+ * The three ways to take the sheet with you. A plain click menu, not a Radix dropdown: a dropdown opens on pointer-down, so
+ * the pointerup that finishes the same click landed on its first item and downloaded it before the member could choose
+ * (founder, 2026-11-25). A popover opens on click, so the menu is only there once the click is finished.
+ */
+const FORMATS: { id: "pdf" | SheetFlavor; name: string; hint: string }[] = [
+  { id: "pdf", name: "Fillable PDF", hint: "Type what you paid straight into the Actual boxes" },
+  { id: "sheets", name: "Google Sheet", hint: "Opens in Google Sheets with live totals" },
+  { id: "excel", name: "Excel sheet", hint: "Formulas for spent, remaining and the total" },
+];
 
 const PROJECT_ICON: Record<ProjectKind, LucideIcon> = {
   "music-video": Clapperboard,
@@ -93,6 +107,7 @@ export function LabBudgetPlanner({
   const [plan, setPlan] = useState<Plan>(() => openPlan("music-video", Number(target) || 0));
   const [active, setActive] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [formats, setFormats] = useState(false);
 
   const blueprint = blueprintOf(plan.kind);
   const totals = useMemo(() => budgetProgress(plan.rows, plan.target), [plan.rows, plan.target]);
@@ -148,23 +163,32 @@ export function LabBudgetPlanner({
     );
   }
 
-  async function exportSheet() {
+  async function exportSheet(format: "pdf" | SheetFlavor) {
     setExporting(true);
     try {
-      // A member's own brand kit on the sheet when they have one they may print with (Catalog Management, or a paid
-      // kit); otherwise this returns null and the PDF keeps the Came Through Audio header.
-      const brand = await myBrand("lab");
-      await downloadBudgetPdf(
-        {
-          project: blueprint.name,
-          target: plan.target,
-          tip: blueprint.tip,
-          allocated: plan.lines,
-          rows: plan.rows,
-        },
-        brand,
+      const sheet = {
+        project: blueprint.name,
+        target: plan.target,
+        tip: blueprint.tip,
+        allocated: plan.lines,
+        rows: plan.rows,
+      };
+      if (format === "pdf") {
+        // A member's own brand kit on the sheet when they have one they may print with (Catalog Management, or a paid
+        // kit); otherwise this returns null and the PDF keeps the Came Through Audio header.
+        const brand = await myBrand("lab");
+        await downloadBudgetPdf(sheet, brand);
+        toast.success(
+          "Fillable budget PDF downloaded — type what you actually paid in the Actual boxes.",
+        );
+        return;
+      }
+      await downloadBudgetXlsx(sheet, format);
+      toast.success(
+        format === "sheets"
+          ? "Budget sheet downloaded — in Google Sheets, File → Import → Upload, and the totals recalculate."
+          : "Budget sheet downloaded — type an Actual and Excel recalculates spent, remaining and the total.",
       );
-      toast.success("Budget sheet downloaded.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't build the budget sheet.");
     } finally {
@@ -501,19 +525,48 @@ export function LabBudgetPlanner({
             <span className="fl-step-num">5</span> Download the budget sheet
           </div>
           <p className="fl-hint !mt-1">
-            A branded one-page PDF for directors, venues and collaborators: the cap, the split, the
-            checklist and the CTA tip.
+            Take the sheet with you: a fillable PDF for directors, venues and collaborators, or a
+            spreadsheet whose totals recalculate as you type what you really paid.
           </p>
         </div>
-        <button
-          type="button"
-          className="fl-tool-btn"
-          onClick={() => void exportSheet()}
-          disabled={exporting}
-        >
-          <Download className="h-4 w-4" aria-hidden="true" />
-          {exporting ? "Building your sheet…" : "Download budget PDF"}
-        </button>
+        <Popover open={formats} onOpenChange={setFormats}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="fl-tool-btn"
+              disabled={exporting}
+              aria-haspopup="menu"
+              aria-expanded={formats}
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {exporting ? "Building your sheet…" : "Download budget sheet"}
+              <ChevronDown className="h-4 w-4 opacity-70" aria-hidden="true" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" sideOffset={8} className="w-80 p-2">
+            <p className="px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              Choose a format
+            </p>
+            <div role="menu" aria-label="Budget sheet formats">
+              {FORMATS.map((format) => (
+                <button
+                  key={format.id}
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full flex-col items-start gap-0.5 rounded-sm px-2 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-60"
+                  disabled={exporting}
+                  onClick={() => {
+                    setFormats(false);
+                    void exportSheet(format.id);
+                  }}
+                >
+                  <span className="font-semibold">{format.name}</span>
+                  <span className="text-xs text-muted-foreground">{format.hint}</span>
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       </section>
     </div>
   );
