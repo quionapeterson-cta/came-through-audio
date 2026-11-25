@@ -131,7 +131,7 @@ export function PlansPanel() {
   if (!plans.length)
     return (
       <p className="mt-6 max-w-2xl text-muted-foreground">
-        No plans loaded yet. Paste plans-load.sql into the SQL editor to load them.
+        No plans found. Add a PLAN-*.md at the repository root, or paste plans-load.sql into the SQL editor.
       </p>
     );
   return (
@@ -156,12 +156,15 @@ export function PlansPanel() {
             <div className="border-t border-border px-5 pb-6 pt-2">
               <PlanBody body={p.body} />
               <p className="mt-6 text-xs text-muted-foreground">
-                Updated{" "}
-                {new Date(p.updated_at).toLocaleDateString(undefined, {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                {p.file
+                  ? `Read from ${p.file}`
+                  : p.updated_at
+                    ? `Updated ${new Date(p.updated_at).toLocaleDateString(undefined, {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}`
+                    : null}
               </p>
             </div>
           )}

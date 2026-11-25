@@ -1,18 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { mergePlans, type CompanyPlan } from "@/lib/company-plans";
+import { REPO_PLANS } from "@/lib/company-plans.server";
 
-export type CompanyPlan = {
-  slug: string;
-  title: string;
-  status: string;
-  body: string;
-  updated_at: string;
-};
+export type { CompanyPlan };
 
-/** Super admins only: every company plan (Admin → Plans). Row security also limits the table to super admins. */
+/**
+ * Super admins only: every company plan (Admin → Plans). The plans main holds are read from `PLAN-*.md` in the server
+ * bundle, so a merge to main updates the tab with no paste; rows loaded into `company_plans` by hand still show for any
+ * slug the repository does not have. Row security also limits that table to super admins.
+ */
 export const listPlans = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<CompanyPlan[]> => {
     const { data: isSuper } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,
       _role: "super_admin",
@@ -22,6 +22,7 @@ export const listPlans = createServerFn({ method: "GET" })
       .from("company_plans" as never)
       .select("slug, title, status, body, updated_at")
       .order("title");
-    if (error) throw new Error("Couldn't load plans.");
-    return (data ?? []) as unknown as CompanyPlan[];
+    // A database that cannot answer must not hide the plans the repository already has.
+    if (error) return mergePlans(REPO_PLANS, []);
+    return mergePlans(REPO_PLANS, (data ?? []) as unknown as CompanyPlan[]);
   });
