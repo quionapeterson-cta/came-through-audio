@@ -416,3 +416,67 @@ export function budgetProgress(rows: ExpenseRow[], cap: number): BudgetProgress 
     total,
   };
 }
+
+/* ----------------------------------------------------------------------------------------------------------------
+ * The plan as it comes back after a refresh. Only the three things the artist owns are stored — the project, the
+ * target and the rows they edited — because the allocation is worked out from the first two, and a stored copy of it
+ * would be a second source of truth that could disagree with the ring.
+ * --------------------------------------------------------------------------------------------------------------*/
+
+export type StoredPlan = {
+  kind: ProjectKind;
+  target: number;
+  rows: ExpenseRow[];
+};
+
+/** A sanity cap, so a corrupted value cannot open a plan of ten thousand lines. */
+export const MAX_PLAN_ROWS = 60;
+
+const isKind = (value: unknown): value is ProjectKind =>
+  BUDGET_BLUEPRINTS.some((blueprint) => blueprint.id === value);
+
+function expenseRowIn(raw: unknown): ExpenseRow | null {
+  const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const category = typeof o["category"] === "string" ? o["category"].slice(0, 60).trim() : "";
+  if (!category) return null;
+  const budget = Number(o["budget"]);
+  return {
+    id: typeof o["id"] === "string" && o["id"] ? o["id"].slice(0, 64) : newExpenseId(),
+    category,
+    item: typeof o["item"] === "string" ? o["item"].slice(0, 80) : "",
+    budget: Number.isFinite(budget) && budget > 0 ? Math.round(budget * 100) / 100 : 0,
+    actual: typeof o["actual"] === "string" ? o["actual"].slice(0, 24) : "",
+    paid: o["paid"] === true,
+    ...(o["custom"] === true ? { custom: true } : {}),
+  };
+}
+
+/** A stored plan, cleaned; null when there is nothing usable to restore. */
+export function planFromStore(raw: unknown): StoredPlan | null {
+  const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  if (!isKind(o["kind"])) return null;
+  const rows: ExpenseRow[] = [];
+  const seen = new Set<string>();
+  for (const entry of Array.isArray(o["rows"]) ? o["rows"] : []) {
+    if (rows.length >= MAX_PLAN_ROWS) break;
+    const row = expenseRowIn(entry);
+    if (!row || seen.has(row.id)) continue;
+    seen.add(row.id);
+    rows.push(row);
+  }
+  return {
+    kind: o["kind"],
+    target: Math.max(0, Math.round((Number(o["target"]) || 0) * 100) / 100),
+    rows,
+  };
+}
+
+/** Exactly what is written back: the edited rows, never the derived allocation. */
+export function planStore(plan: StoredPlan): StoredPlan {
+  return { kind: plan.kind, target: plan.target, rows: plan.rows };
+}
+
+/** The lines the member has ticked paid, at their actual cost — the ones a tax worksheet can pull across. */
+export function paidPlanRows(raw: unknown): ExpenseRow[] {
+  return (planFromStore(raw)?.rows ?? []).filter((row) => row.paid && expenseActual(row) > 0);
+}

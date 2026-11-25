@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowUpRight,
   Camera,
@@ -32,11 +32,14 @@ import {
   categorySpend,
   customExpenseRow,
   expenseActual,
+  planFromStore,
+  planStore,
   rowsFromAllocation,
   type AllocatedLine,
   type ExpenseRow,
   type ProjectKind,
 } from "@/lib/financial-lab-budgets";
+import { readLabJson, writeLabJson } from "@/lib/financial-lab-scenario";
 import { cn } from "@/lib/utils";
 
 const money = (n: number) =>
@@ -99,23 +102,70 @@ function openPlan(kind: ProjectKind, target: number, previous: ExpenseRow[] = []
   };
 }
 
+/**
+ * The plan this song opens on: the one the member last edited when there is a readable copy, otherwise a fresh
+ * allocation of the target. The allocation itself is never stored — it is worked out from the project and the
+ * target again, so the ring and the rows can never disagree about the same money.
+ */
+function startPlan(storageKey: string | undefined, target: number): { key: string; plan: Plan } {
+  const saved = storageKey ? planFromStore(readLabJson<unknown>(storageKey)) : null;
+  return {
+    key: storageKey ?? "",
+    plan: saved
+      ? {
+          kind: saved.kind,
+          target: saved.target,
+          lines: allocateBudget(saved.target, blueprintOf(saved.kind)),
+          rows: saved.rows,
+        }
+      : openPlan("music-video", target),
+  };
+}
+
 export function LabBudgetPlanner({
   target,
   onTarget,
   onOpenRecoupment,
+  storageKey,
+  taxRate,
 }: {
   /** The target spend lives in the Lab so the recoupment tool can prefill from it. */
   target: string;
   onTarget: (value: string) => void;
   /** Sends the member to the recoupment tool that reads this target spend. */
   onOpenRecoupment?: (() => void) | undefined;
+  /** Where this song's plan is kept, so a refresh brings back the lines that were ticked paid. */
+  storageKey?: string | undefined;
+  /** The rate in the tax worksheet, shown as an after-tax estimate beside what has been paid. */
+  taxRate?: number | undefined;
 }) {
-  const [kind, setKind] = useState<ProjectKind>("music-video");
-  // An unnamed target opens an empty plan rather than a $500 one: nothing here is priced until the artist says so.
-  const [plan, setPlan] = useState<Plan>(() => openPlan("music-video", Number(target) || 0));
+  const planKey = storageKey ?? "";
+  const [state, setState] = useState(() => startPlan(storageKey, Number(target) || 0));
+  const [kind, setKind] = useState<ProjectKind>(state.plan.kind);
+  // A new song opens its own plan before this render commits, so one song's paid lines never flash under another.
+  if (state.key !== planKey) {
+    const next = startPlan(storageKey, Number(target) || 0);
+    setState(next);
+    setKind(next.plan.kind);
+  }
+  const plan = state.plan;
+  function setPlan(next: Plan | ((current: Plan) => Plan)) {
+    setState((current) => ({
+      ...current,
+      plan: typeof next === "function" ? next(current.plan) : next,
+    }));
+  }
   const [active, setActive] = useState("");
   const [exporting, setExporting] = useState(false);
   const [formats, setFormats] = useState(false);
+
+  // Every edit is written back for this song, so the next visit starts from the same plan — and the tax worksheet's
+  // "Pull from my budget" has paid lines to read even when this tab was never opened.
+  useEffect(() => {
+    if (!state.key) return;
+    const timer = window.setTimeout(() => writeLabJson(state.key, planStore(state.plan)), 350);
+    return () => window.clearTimeout(timer);
+  }, [state]);
 
   const blueprint = blueprintOf(plan.kind);
   const totals = useMemo(() => budgetProgress(plan.rows, plan.target), [plan.rows, plan.target]);
@@ -146,6 +196,7 @@ export function LabBudgetPlanner({
   }, [plan.rows, spends]);
   const allocated = useMemo(() => slices.reduce((sum, slice) => sum + slice.budget, 0), [slices]);
   const targetNumber = Number(target) || 0;
+  const rate = Math.max(0, Math.min(100, taxRate ?? 0));
   const stale =
     plan.kind !== kind || Math.round(plan.target * 100) !== Math.round(targetNumber * 100);
 
@@ -417,6 +468,13 @@ export function LabBudgetPlanner({
         >
           <span className="fl-budget-fill" style={{ width: `${totals.spentPercent}%` }} />
         </div>
+        {rate > 0 && totals.spent > 0 ? (
+          <p className="fl-hint">
+            At the {rate}% rate in your write-off worksheet, the {money(totals.spent)} you have paid
+            is about {money(totals.spent * (1 - rate / 100))} after an estimated{" "}
+            {money((totals.spent * rate) / 100)} back. An estimate, not a refund.
+          </p>
+        ) : null}
 
         <div className="mt-3">
           <div className="fl-step-label">

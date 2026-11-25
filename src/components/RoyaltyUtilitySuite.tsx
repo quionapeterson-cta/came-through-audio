@@ -43,6 +43,8 @@ import {
 import { toast } from "sonner";
 import { LabBudgetPlanner } from "@/components/LabBudgetPlanner";
 import { LabMerchCalculator } from "@/components/LabMerchCalculator";
+import { TaxDrawer } from "@/components/LabTaxDrawer";
+import { useTaxSheet } from "@/components/use-tax-sheet";
 import { RecoupmentPanel, RoyaltyPipelinePanel } from "@/components/RoyaltyPipeline";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { Input } from "@/components/ui/input";
@@ -82,10 +84,10 @@ import {
   copyForAgency,
   fullReport,
   projectionCsv,
-  taxSavings,
   breakEvenStreams,
   type CopyContext,
 } from "@/lib/financial-lab-copy";
+import { taxSheetEstimate, taxSheetTotal, type TaxSheet } from "@/lib/financial-lab-tax";
 import {
   emptyTerritoryMix,
   labStorageKey,
@@ -239,6 +241,10 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
   const [merchMargin, setMerchMargin] = useState({ price: 0, cost: 0 });
   // The budget target is kept with the open song too, so a refresh or another tab never empties it.
   const budgetKey = labStorageKey(userId, songId, "budget");
+  // The plan itself and the tax worksheet sit beside the target, keyed to the same member and song: the plan survives
+  // a refresh, and the worksheet's rate reaches the planner and the recoupment read without either panel guessing.
+  const planKey = labStorageKey(userId, songId, "budgetPlan");
+  const [taxSheet, updateTaxSheet] = useTaxSheet(labStorageKey(userId, songId, "tax"));
   useEffect(() => {
     setBudgetCap(readLabJson<string>(budgetKey) ?? "");
   }, [budgetKey]);
@@ -385,6 +391,9 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
                 onBudgetCap={changeBudget}
                 onOpenMerch={() => openTab("merch", "fl-panel-merch")}
                 onOpenBudget={() => openTab("budget", "fl-panel-budget")}
+                taxSheet={taxSheet}
+                onTaxSheet={updateTaxSheet}
+                budgetPlanKey={planKey}
               />
             </div>
           )}
@@ -393,6 +402,8 @@ function FinancialLab({ tracks, userId }: { tracks: CatalogTrack[]; userId: stri
               target={budgetCap}
               onTarget={changeBudget}
               onOpenRecoupment={() => openTab("royalty", "fl-recoupment")}
+              storageKey={planKey}
+              taxRate={Number(taxSheet.rate) || 0}
             />
           )}
           {item.id === "merch" && (
@@ -766,6 +777,9 @@ function Earnings({
   onBudgetCap,
   onOpenMerch,
   onOpenBudget,
+  taxSheet,
+  onTaxSheet,
+  budgetPlanKey,
 }: {
   tracks: CatalogTrack[];
   song: CatalogTrack | undefined;
@@ -777,6 +791,10 @@ function Earnings({
   onBudgetCap: (value: string) => void;
   onOpenMerch?: () => void;
   onOpenBudget?: () => void;
+  taxSheet: TaxSheet;
+  onTaxSheet: (next: TaxSheet | ((current: TaxSheet) => TaxSheet)) => void;
+  /** Where this song's budget plan is kept, so the worksheet can pull its paid lines. */
+  budgetPlanKey: string;
 }) {
   // Everything typed here lives in one store, saved against the open song: the Lab still opens on no streams entered (a
   // pre-filled count would put a projection on screen that isn't the member's own, founder 2026-11-24), and a refresh,
@@ -878,6 +896,10 @@ function Earnings({
   const warning = rateWarning(selected.id, Number(rates[selected.id]) || 0);
   const distributor = Math.min(100, Math.max(0, Number(nums.distributor) || 0));
   const net = r.yours * (1 - distributor / 100);
+  // The worksheet's own figures, read once here so the CSV, the drawer and the recoupment line can never disagree.
+  const taxTotal = taxSheetTotal(taxSheet);
+  const taxEstimate = taxSheetEstimate(taxSheet);
+  const taxRateValue = Math.min(100, Math.max(0, Number(taxSheet.rate) || 0));
 
   function useOwnAverage() {
     if (ownRate === null) return;
@@ -963,8 +985,31 @@ function Earnings({
             };
           }),
         },
+        ...(taxTotal > 0
+          ? {
+              tax: {
+                rate: taxRateValue,
+                deductible: taxTotal,
+                savings: taxEstimate,
+                ...(taxSheet.year ? { year: taxSheet.year } : {}),
+              },
+            }
+          : {}),
       }),
-    [song, r, nums, streams, rates, net, distributor, selectedMix],
+    [
+      song,
+      r,
+      nums,
+      streams,
+      rates,
+      net,
+      distributor,
+      selectedMix,
+      taxTotal,
+      taxEstimate,
+      taxRateValue,
+      taxSheet.year,
+    ],
   );
 
   function downloadProjection() {
@@ -1456,7 +1501,13 @@ function Earnings({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
         <Telemetry r={r} streams={streams} rates={rates} />
-        <MiniDrawers />
+        <MiniDrawers
+          taxSheet={taxSheet}
+          onTaxSheet={onTaxSheet}
+          budgetKey={budgetPlanKey}
+          songTitle={song?.title}
+          breakKey={labStorageKey(userId, songId, "breakeven")}
+        />
       </div>
 
       <RoyaltyPipelinePanel
@@ -1476,6 +1527,7 @@ function Earnings({
         appleRate={Number(rates["apple"]) || 0}
         onOpenMerch={onOpenMerch}
         onOpenBudget={onOpenBudget}
+        taxRate={taxRateValue}
       />
 
       <TotalDock
@@ -1697,58 +1749,57 @@ function Telemetry({
   );
 }
 
-function MiniDrawers() {
-  const [expenses, setExpenses] = useState("");
-  const [taxRate, setTaxRate] = useState("");
-  const [releaseCost, setReleaseCost] = useState("");
-  const [netPerStream, setNetPerStream] = useState("");
-  const tax = taxSavings(expenses, taxRate);
+/** The release break-even check's two numbers, as typed. */
+type BreakEven = { cost: string; net: string };
+
+const breakEvenIn = (raw: unknown): BreakEven => {
+  const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const text = (value: unknown) => (typeof value === "string" ? value.slice(0, 24) : "");
+  return { cost: text(o["cost"]), net: text(o["net"]) };
+};
+
+function MiniDrawers({
+  taxSheet,
+  onTaxSheet,
+  budgetKey,
+  songTitle,
+  breakKey,
+}: {
+  taxSheet: TaxSheet;
+  onTaxSheet: (next: TaxSheet | ((current: TaxSheet) => TaxSheet)) => void;
+  /** Where this song's budget plan is kept, so the worksheet can pull its paid lines. */
+  budgetKey?: string | undefined;
+  songTitle?: string | undefined;
+  /** Where this song's break-even numbers are kept. */
+  breakKey?: string | undefined;
+}) {
+  // Both drawers remember what the member typed for this song: keyed with the values, so a song switch can never
+  // write one song's numbers under another's name.
+  const breakNow = breakKey ?? "";
+  const [state, setState] = useState(() => ({
+    key: breakNow,
+    value: breakEvenIn(readLabJson<unknown>(breakKey ?? "")),
+  }));
+  if (state.key !== breakNow)
+    setState({ key: breakNow, value: breakEvenIn(readLabJson<unknown>(breakKey ?? "")) });
+  const releaseCost = state.value.cost;
+  const netPerStream = state.value.net;
   const streams = breakEvenStreams(releaseCost, netPerStream);
 
+  function setBreak(patch: Partial<BreakEven>) {
+    const value = { ...state.value, ...patch };
+    setState({ key: state.key, value });
+    if (state.key) writeLabJson(state.key, value);
+  }
+
   return (
-    <aside className="space-y-2" aria-label="Financial Lab side drawers">
-      <details className="fl-drawer">
-        <summary>
-          <span className="flex items-center gap-2">
-            <ReceiptText className="h-4 w-4" /> Artist Tax Write-Off Estimator
-          </span>
-          <ChevronDown className="fl-drawer-chevron h-4 w-4" />
-        </summary>
-        <div className="space-y-2">
-          <div className="fl-field">
-            <Label htmlFor="tax-expenses">Deductible expenses ($)</Label>
-            <Input
-              id="tax-expenses"
-              type="number"
-              min={0}
-              className="fl-input fl-mono"
-              value={expenses}
-              onChange={(e) => setExpenses(e.target.value)}
-              placeholder="0"
-            />
-          </div>
-          <div className="fl-field">
-            <Label htmlFor="tax-rate">Your marginal tax rate (%)</Label>
-            <Input
-              id="tax-rate"
-              type="number"
-              min={0}
-              max={100}
-              className="fl-input fl-mono"
-              value={taxRate}
-              onChange={(e) => setTaxRate(e.target.value)}
-              placeholder="0"
-            />
-          </div>
-          <div className="fl-drawer-result">
-            <span>Estimated tax savings</span>
-            <strong>{money(tax)}</strong>
-          </div>
-          <p className="fl-hint">
-            Estimate only. Your tax professional decides what qualifies and your actual rate.
-          </p>
-        </div>
-      </details>
+    <aside className="min-w-0 space-y-2" aria-label="Financial Lab side drawers">
+      <TaxDrawer
+        sheet={taxSheet}
+        onChange={onTaxSheet}
+        budgetKey={budgetKey}
+        songTitle={songTitle}
+      />
       <details className="fl-drawer">
         <summary>
           <span className="flex items-center gap-2">
@@ -1765,7 +1816,7 @@ function MiniDrawers() {
               min={0}
               className="fl-input fl-mono"
               value={releaseCost}
-              onChange={(e) => setReleaseCost(e.target.value)}
+              onChange={(e) => setBreak({ cost: e.target.value })}
               placeholder="0"
             />
           </div>
@@ -1778,7 +1829,7 @@ function MiniDrawers() {
               step="0.0001"
               className="fl-input fl-mono"
               value={netPerStream}
-              onChange={(e) => setNetPerStream(e.target.value)}
+              onChange={(e) => setBreak({ net: e.target.value })}
               placeholder="0.0000"
             />
           </div>

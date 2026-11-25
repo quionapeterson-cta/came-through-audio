@@ -608,6 +608,7 @@ export function RecoupmentPanel({
   appleRate,
   onOpenMerch,
   onOpenBudget,
+  taxRate,
 }: {
   target: string;
   /** The Lab's projected take for the streams and plays already entered, read as money back on the project. */
@@ -620,12 +621,15 @@ export function RecoupmentPanel({
   onOpenMerch?: (() => void) | undefined;
   /** Carries the member to the Budget Planner whose target spend is the prefill this cost starts from. */
   onOpenBudget?: (() => void) | undefined;
+  /** The rate in the tax worksheet, shown as an after-tax read on this project cost. */
+  taxRate?: number | undefined;
 }) {
   const [value, setValue] = useState(target);
   // The Budget Planner's target spend is the prefill: change it there and every target here moves with it.
   useEffect(() => setValue(target), [target]);
   const cost = Number(value) || 0;
   const cut = Math.max(0, Math.min(100, streamCut));
+  const rate = Math.max(0, Math.min(100, taxRate ?? 0));
   const targets = recoupmentTargets({
     cost,
     streamCut: cut,
@@ -725,6 +729,13 @@ export function RecoupmentPanel({
           ? "Prefilled from the Budget Planner's target spend. Change the cost here and every target below follows it."
           : "Name the cost here, or set a target spend in the Budget Planner and it fills in."}
       </p>
+      {rate > 0 && cost > 0 ? (
+        <p className="fl-hint">
+          At the {percent(rate)} rate in your write-off worksheet, a {money(cost)} project could
+          mean about {money((cost * rate) / 100)} back, leaving about{" "}
+          {money(cost * (1 - rate / 100))} to earn. An estimate, not a refund.
+        </p>
+      ) : null}
 
       <div className="fl-step-label mt-3">
         <span className="fl-step-num">2</span> Read what it takes to earn it back

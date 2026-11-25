@@ -50,6 +50,18 @@ export type EarningsSnapshot = {
   territories?: { label: string; share: number }[];
 };
 
+/**
+ * The tax worksheet's totals for the open song, when it has any. Carried on the context so the projection CSV can
+ * end with the deductible total and the estimate at the member's own rate — the same figures the drawer shows.
+ */
+export type TaxSnapshot = {
+  /** The member's own marginal rate in percent. */
+  rate: number;
+  deductible: number;
+  savings: number;
+  year?: string;
+};
+
 export type CopyContext = {
   title: string;
   artist: string;
@@ -64,6 +76,7 @@ export type CopyContext = {
   manual?: { scale: ProScale; value: number };
   master: { share: string; basis: string; performers: string[] };
   earnings?: EarningsSnapshot;
+  tax?: TaxSnapshot;
 };
 
 const pct = (n: number) => `${Math.round(n * 100) / 100}%`;
@@ -90,6 +103,7 @@ export function contextForTrack(
     focus?: string | undefined;
     manual?: { scale: ProScale; value: number } | undefined;
     earnings?: EarningsSnapshot | undefined;
+    tax?: TaxSnapshot | undefined;
   } = {},
 ): CopyContext {
   const m = track?.metadata;
@@ -117,6 +131,7 @@ export function contextForTrack(
         : [],
     },
     ...(options.earnings ? { earnings: options.earnings } : {}),
+    ...(options.tax ? { tax: options.tax } : {}),
   };
 }
 
@@ -237,9 +252,30 @@ const cell = (v: string | number) => {
 };
 
 /**
+ * The worksheet's block for the projection file: the deductible total, the estimate at the member's rate and the year
+ * they named. Empty when there is no worksheet, so a member who never opened the drawer gets exactly the old file.
+ */
+function taxCsvRows(c: CopyContext): string[] {
+  if (!c.tax || c.tax.deductible <= 0) return [];
+  const rows = [
+    "",
+    [c.title, "Deductible expenses (tax worksheet)", "", "", "", c.tax.deductible.toFixed(2)]
+      .map(cell)
+      .join(","),
+    [c.title, `Estimated tax savings at ${c.tax.rate}%`, "", "", "", c.tax.savings.toFixed(2)]
+      .map(cell)
+      .join(","),
+  ];
+  if (c.tax.year)
+    rows.push([c.title, `Tax year ${c.tax.year}`, "", "", "", ""].map(cell).join(","));
+  return rows;
+}
+
+/**
  * The projection as a CSV, for a manager, an accountant or a spreadsheet: one row per platform with the numbers the Lab
  * already shows, then the radio line, the distributor cut and the total. Plain decimals for the rate, so a spreadsheet
- * reads it as a number rather than text.
+ * reads it as a number rather than text. The tax worksheet's block follows whenever the member has one, even before a
+ * single stream has been entered.
  */
 export function projectionCsv(c: CopyContext): string {
   const e = c.earnings;
@@ -248,7 +284,7 @@ export function projectionCsv(c: CopyContext): string {
       .map(cell)
       .join(","),
   ];
-  if (!e) return [...rows, cell(c.title)].join("\n");
+  if (!e) return [...rows, cell(c.title), ...taxCsvRows(c)].join("\n");
   for (const p of e.platforms) {
     rows.push(
       [c.title, p.name, p.streams, p.rate, p.total.toFixed(2), p.yours.toFixed(2)]
@@ -268,6 +304,7 @@ export function projectionCsv(c: CopyContext): string {
     [c.title, "Master share", "", "", "", pct(e.masterShare)].map(cell).join(","),
     [c.title, "Song share", "", "", "", pct(e.songShare)].map(cell).join(","),
   );
+  rows.push(...taxCsvRows(c));
   return rows.join("\n");
 }
 

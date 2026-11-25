@@ -1032,6 +1032,12 @@
     width: calc(100% - 8.5rem);
   }
 }
+/* An open side drawer is taller than the dock's rail, and the dock floated over its last controls: a real click on
+   "Download worksheet" landed on the dock instead (founder, 2026-11-25). While a drawer is open the total sits in its
+   own place at the end of the panel; closing the drawer puts it back on the rail. */
+.fl-earnings:has(.fl-drawer[open]) .fl-dock {
+  position: static;
+}
 
 /* The suite's own surfaces all wear the one rim; Bedazzle Mode still draws over it. */
 .fl-panel,
