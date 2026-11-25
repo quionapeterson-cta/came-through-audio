@@ -670,6 +670,9 @@
 /* One platform at a time: a picker, then the streams, rate and estimate boxes. On a phone the value drops to
    its own row under them, so the calculator never scrolls sideways. */
 .fl-platform-block {
+  /* The row below answers to this block's own width, not the window's: a narrow Lab panel inside a wide window
+     must stack its values just like a phone does. */
+  container-type: inline-size;
   margin-top: 0.75rem;
   border: 1px solid #e0eaf7;
   border-radius: 0.8rem;
@@ -696,19 +699,18 @@
   margin-top: 0.6rem;
 }
 /*
- * A phone column is a third of about 300px, which is narrower than a projected payout: "$480,000,000,000.00" ran
- * past the panel edge and was clipped by the page. On a phone the value takes its own full-width row under the two
- * boxes it comes from, so every figure reads whole; the three-across row stays exactly as it is from 640px up
- * (founder, 2026-11-25).
+ * The row is three across only while this block is wide enough to hold a projected payout. In a narrow block (a
+ * phone, or a narrow Lab panel in a wider window) "$4,000,000,000,000.00" ran over the next box, so the value takes
+ * its own full-width row under the two boxes it comes from and every figure reads whole (founder, 2026-11-25).
  */
-@media (max-width: 639px) {
+@container (max-width: 37rem) {
   .fl-platform-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .fl-platform-grid > .fl-field:last-child {
     grid-column: 1 / -1;
   }
-  /* The distributor block carries a money result in the middle of its row, so a phone gives all three boxes
+  /* The distributor block carries a money result in the middle of its row, so a narrow block gives all three boxes
      the full width: half a panel clipped "Before the cut" at the left. */
   .fl-distributor .fl-platform-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -3804,13 +3806,26 @@
 .fl-territory-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-/* A payout can run to trillions, and two cards across a phone left no room for the amount: one card a row. */
+/* A payout can run to trillions, so the timeline answers to its own width: one card a row until there is room for
+   two, and four only once each card is wide enough for its figure (founder, 2026-11-25). */
+.fl-timeline {
+  container-type: inline-size;
+}
 .fl-timeline-grid {
   grid-template-columns: minmax(0, 1fr);
 }
-@media (min-width: 640px) {
-  .fl-territory-grid,
+@container (min-width: 30rem) {
   .fl-timeline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (min-width: 53rem) {
+  .fl-timeline-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 640px) {
+  .fl-territory-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
