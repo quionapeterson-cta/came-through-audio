@@ -255,3 +255,26 @@ payment state was granted to the demo account to get past the gate.
 The demo account is `demo.lab@camethroughaudio.com` on the Free plan; its password was given in the session that
 created it and is not recorded here. The project has "Confirm email" on, so the sign-up the account came from had to
 be confirmed before the log-in page would accept it — worth knowing when someone makes a test account next time.
+
+### Deployed
+
+`cta-tax-tables` is live at https://cta-tax-tables.quionapeterson.workers.dev — deployed 2026-11-25 through the
+connected Cloudflare account (the script reports `last_deployed_from: api`), on workers.dev as `wrangler-tax.toml` asks.
+
+What was checked against the live Worker, with curl: `GET /` answers 200 with `holds: [2026, 2027]`, `newestYear: 2027`,
+`activeYear: 2026` and `needsUpdate: false`; `GET /tax` and `GET /tax/2026` return the tables and the IRS source line;
+`GET /tax/1999` is a 404. An `Origin: https://camethroughaudio.com` request comes back 200 with
+`access-control-allow-origin` and `access-control-allow-methods: GET, PUT, OPTIONS`; the matching preflight is a 204; a
+foreign origin is a 403. `PUT /tax/2028` with no token answers "no TAX_ADMIN_TOKEN, so it is read-only" — the Worker has
+no secrets, so it serves the bundled years and cannot be written to yet.
+
+The app points at it: `VITE_CTA_TAX_TABLES_URL` is in `.env` (local dev) and `.env.production` (the build), so the
+Financial Lab reads the Worker's tables instead of only the bundled copy. Verified in the cloud browser on `/dev/tax`:
+the page cached years 2026 and 2027 from the Worker (the `cta.lab.taxTables.v1` store filled at 14:28), and a fetch from
+the preview origin returned the same brackets, because `allowedOrigin` accepts `*.style.dev`.
+
+Two steps are still the founder's, and neither changes what a member sees today. The API deploy does not carry the
+config's cron trigger, so the January 1 `scheduled` check has no trigger until `npx wrangler deploy -c
+workers/wrangler-tax.toml` runs once (same code, same name). And no `TAX_TABLES` KV namespace is bound, so a new year
+still needs a redeploy: create the namespace, paste its id into the `[[kv_namespaces]]` block in
+`workers/wrangler-tax.toml`, deploy again, and set `TAX_ADMIN_TOKEN` as a secret.
