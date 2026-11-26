@@ -245,7 +245,7 @@ export function copyForAgency(agency: CopyAgency, c: CopyContext): string {
   lines.push(...agencyRows(c, factor));
   lines.push(
     "",
-    "Prepared from the Came Through Audio catalog. Verify every IPI and legal name before filing.",
+    "Prepared from your Came Through Audio catalog. Verify every IPI and legal name before filing.",
   );
   return lines.join("\n");
 }
