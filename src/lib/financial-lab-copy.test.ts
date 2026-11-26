@@ -3,6 +3,7 @@ import { emptyContributor, emptyMetadata } from "@/lib/metadata";
 import {
   breakEvenStreams,
   contextForTrack,
+  COPY_AGENCIES,
   copyForAgency,
   fullReport,
   projectionCsv,
@@ -66,6 +67,13 @@ describe("financial lab agency copy", () => {
     );
     expect(copyForAgency("soundexchange", context)).toContain("Master share: 100%");
     expect(copyForAgency("soundexchange", context)).toContain("Ann Lee — Featured artist");
+  });
+
+  it("closes every agency copy with the catalog footer", () => {
+    for (const agency of COPY_AGENCIES)
+      expect(copyForAgency(agency.id, context)).toContain(
+        "Prepared from your Came Through Audio catalog. Verify every IPI and legal name before filing.",
+      );
   });
 
   it("puts the itemized earnings and PRO table in the full report", () => {

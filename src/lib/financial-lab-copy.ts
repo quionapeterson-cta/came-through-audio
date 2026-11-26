@@ -88,6 +88,10 @@ const pct = (n: number) => `${Math.round(n * 100) / 100}%`;
 const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 const blank = (v: string | undefined) => (v?.trim() ? v.trim() : "—");
 
+/** The closing line every agency copy carries, so a pasted result says where it came from. */
+const CATALOG_FOOTER =
+  "Prepared from your Came Through Audio catalog. Verify every IPI and legal name before filing.";
+
 export function taxSavings(expenses: string | number, rate: string | number): number {
   return ((Number(expenses) || 0) * (Number(rate) || 0)) / 100;
 }
@@ -219,6 +223,8 @@ export function copyForAgency(agency: CopyAgency, c: CopyContext): string {
     lines.push(
       "",
       "The MLC pays the mechanical side. Publisher shares above are the catalog's publisher half.",
+      "",
+      CATALOG_FOOTER,
     );
     return lines.join("\n");
   }
@@ -234,7 +240,12 @@ export function copyForAgency(agency: CopyAgency, c: CopyContext): string {
     lines.push("", "SPLIT CONTEXT");
     lines.push(`Writer total: ${pct(c.rows.reduce((n, r) => n + r.writer, 0))}`);
     lines.push(`Publisher total: ${pct(c.rows.reduce((n, r) => n + r.publisher, 0))}`);
-    lines.push("", "SoundExchange registers the recording (the master side), not the composition.");
+    lines.push(
+      "",
+      "SoundExchange registers the recording (the master side), not the composition.",
+      "",
+      CATALOG_FOOTER,
+    );
     return lines.join("\n");
   }
 
@@ -243,10 +254,7 @@ export function copyForAgency(agency: CopyAgency, c: CopyContext): string {
     `${AGENCY_LABEL[agency].toUpperCase()} REGISTRATION — ${agency === "bmi" ? "200% (100% writer + 100% publisher)" : "100% (50% writer + 50% publisher)"} SCALE`,
   );
   lines.push(...agencyRows(c, factor));
-  lines.push(
-    "",
-    "Prepared from your Came Through Audio catalog. Verify every IPI and legal name before filing.",
-  );
+  lines.push("", CATALOG_FOOTER);
   return lines.join("\n");
 }
 
