@@ -1,9 +1,20 @@
+import type { Department } from "./departments";
+
 /**
  * Team handbook (PLAN-phase4-order item 10, approved 2026-10-25): what every new team member needs, in Admin →
  * Handbook, searchable together with the customer answer library (help-search.ts). Keep it in step with BRANDING.md,
  * the email routing and the policies; the founder reviews changes.
  */
-export type HandbookSection = { id: string; title: string; body: string[] };
+export type HandbookSection = {
+  id: string;
+  title: string;
+  body: string[];
+  /**
+   * Who may read it (founder, 2026-11-27): a section about keys, costs and deployments belongs to the department that
+   * owns it, not the whole team. No audience means every staff member.
+   */
+  audience?: { departments: Department[] };
+};
 
 export const HANDBOOK: HandbookSection[] = [
   {
@@ -98,6 +109,20 @@ export const HANDBOOK: HandbookSection[] = [
     ],
   },
   {
+    id: "contract-generator",
+    title: "Contract generator: the rules, the limits and the cost",
+    audience: { departments: ["software"] },
+    body: [
+      "The whole contract is drafted by the worker cta-contract-generator on Cloudflare Workers AI (Llama 3.3 70B, max 3,200 output tokens). Every drafting rule lives in SYSTEM_PROMPT in workers/cta-contract-generator.js. Change the rule, never the contract text.",
+      "Cloudflare gives 10,000 neurons a day free, resetting at midnight UTC; on the paid plan it continues at $0.011 per 1,000 neurons. One contract costs about 450 neurons, so about half a cent, and the free day covers about 22 contracts. The Help Desk draws from the same allowance, so budget 15 to 20 a day.",
+      "Projections: 20 contracts a day is free; 100 a day is about $12 a month; 250 a day about $34; 1,000 a day about $145. The worker's own cap is 25 contracts a day per visitor IP, and a paid member is never counted at all: anyone whose plan includes the generator has no limit from us.",
+      "When the day's allowance is gone Cloudflare answers 4006 and the page says we are experiencing high volume and to try again tomorrow, then offers the closest premade contract. Any other failure still says the generator is unavailable and keeps the error detail for us.",
+      "A member who genuinely needs more than 25 drafts in a day is escalated to the Software department lead and a super admin together. Only a super admin approves raising the allowance, only for that member and only for that day. The counter is keyed to the visitor IP, so it is raised by hand.",
+      "Full sheet, including the eighteen required sections, the fairness rules, the deal-type rules and the twenty-two point final check: PLAN-contract-generator.md in the repository root, also listed in Admin → Plans. Its growth plan and prices are super-admin only, so they stay in that plan and never in this handbook.",
+      "Deploy with npx wrangler deploy -c workers/wrangler-contract.toml, then publish the app. Verify with one draft per affected deal type and read sections 5, 7, 8, 10, 12 and 13 — every contradiction found so far was in one of those.",
+    ],
+  },
+  {
     id: "leaving",
     title: "If you leave in your first 90 days",
     body: [
@@ -119,6 +144,16 @@ export const TUTORIALS: { title: string; url?: string }[] = [
   { title: "Using My Queue, the Task Bank and the Calendar" },
   { title: "How royalties work: PROs, The MLC and SoundExchange" },
 ];
+
+/**
+ * The sections this person may read. A section with no audience is for everyone; a super admin holds every department,
+ * so they see everything either way.
+ */
+export function handbookFor(access: { departments: Department[] }): HandbookSection[] {
+  return HANDBOOK.filter(
+    (s) => !s.audience || s.audience.departments.some((d) => access.departments.includes(d)),
+  );
+}
 
 const words = (s: string) =>
   (s.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((w) => w.length > 2);
