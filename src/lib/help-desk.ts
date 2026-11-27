@@ -21,7 +21,14 @@ export type HelpReply = {
   link?: HelpLink;
   /** Where the answer came from: the worker, or the local knowledge base when the worker could not answer. */
   source: "help-desk" | "local";
+  /**
+   * Why a local answer was used, when the worker was configured but could not answer: the visitor's hourly cap, or the
+   * desk being unreachable (including Workers AI's daily free allocation running out). The widget says so plainly.
+   */
+  degraded?: HelpDegraded | undefined;
 };
+
+export type HelpDegraded = "rate-limited" | "offline";
 
 /** The workspace tab (or page) the member is on, from a route like `/workspace?tab=splits`. */
 export function helpTab(route: string): string {
@@ -61,13 +68,17 @@ const QUICK: Record<string, string[]> = {
     "When do I need a split sheet?",
   ],
   pdf: ["How do I fill in and sign a PDF?"],
-  plans: ["Which plan do I need?", "What does Catalog Management include?"],
+  plans: [
+    "How much does Catalog Management cost?",
+    "Which plan do I need?",
+    "What does Catalog Management include?",
+  ],
   profile: ["How do I change my email or password?", "How do I set my embed defaults?"],
 };
 const QUICK_DEFAULT = [
+  "How much does Catalog Management cost?",
+  "Do you sign artists?",
   "What's the difference between © and ℗?",
-  "Can I register a song before it's released?",
-  "How do I split a song with a co-writer?",
 ];
 
 export function quickQuestions(route: string, limit = 3): string[] {
@@ -132,7 +143,7 @@ const KNOWLEDGE: Entry[] = [
     id: "iswc",
     title: "What an ISWC is",
     text: "An ISWC is the international code for a composition — the song itself. Every recording of that song shares the one ISWC, while each recording gets its own ISRC.",
-    terms: ["iswc", "composition", "code", "song", "work"],
+    terms: ["iswc", "composition", "code", "song"],
   },
   {
     id: "isrc",
@@ -190,7 +201,7 @@ const KNOWLEDGE: Entry[] = [
   {
     id: "expert",
     title: "Let us do it for you",
-    text: "Expert Help is our done-for-you service: our team registers the songs for you in Royalties and Registrations → Expert Help, and tells you if a detail is missing. The price and what each order covers are shown there before you buy.",
+    text: "Expert Help is our done-for-you service: our team registers your songs in Royalties and Registrations → Expert Help. Setup is $14.99 for a single or EP (up to 6 songs) or $29.99 for an album (up to 20), plus $4.99 per song, per agency (ASCAP or BMI, The MLC, SoundExchange). We tell you if a detail is missing before work starts.",
     terms: ["expert", "done", "service", "register", "you", "help", "team", "manage"],
     link: { label: "Open Expert Help", to: EXPERT_HELP },
   },
@@ -236,6 +247,143 @@ const KNOWLEDGE: Entry[] = [
     link: { label: "Open a support ticket", to: HELP_DESK_TICKET },
   },
 ];
+
+// The questions the widget is asked most, answered without the worker. Each one matches the live prompt and the pages
+// it points at; the prices are the same figures checkout charges.
+KNOWLEDGE.push(
+  {
+    id: "pricing",
+    title: "Plans and prices",
+    text: "Plans are yearly: Free ($0), Catalog Plus ($24.99), Catalog & Collaborate ($44.99) and Catalog Management ($89.99). Every plan is unlimited, upgrades are prorated, and a full refund can be requested within 30 days of an order.",
+    terms: [
+      "price",
+      "prices",
+      "pricing",
+      "cost",
+      "much",
+      "plan",
+      "plans",
+      "subscription",
+      "yearly",
+      "annual",
+      "pay",
+      "seat",
+      "seats",
+      "artist",
+      "artists",
+    ],
+    link: { label: "Compare plans", to: "/plans" },
+  },
+  {
+    id: "refund",
+    title: "Refunds and cancellations",
+    text: "You can request a full refund within 30 days of an order on plans, AI Protection packages, a branding kit, a contract, and Expert Registration if our team hasn't started. A plan refund after 30 days may be prorated for unused time. Email billing@camethroughaudio.com or open a ticket under Account & billing; approved refunds return to the original card in 5–10 business days.",
+    terms: [
+      "refund",
+      "refunds",
+      "cancel",
+      "cancellation",
+      "money",
+      "charged",
+      "charge",
+      "billing",
+      "invoice",
+    ],
+    link: { label: "Open a support ticket", to: HELP_DESK_TICKET },
+  },
+  {
+    id: "signing",
+    title: "Are we signing artists?",
+    text: "No — we don't sign artists through the platform. Came Through Audio is an independent label offering label services and music-administration tools, and using them creates no recording, publishing, management or distribution agreement. You keep your masters and publishing rights unless a separate custom agreement is signed with our team; for representation or a label-services inquiry, contact our team.",
+    terms: [
+      "sign",
+      "signing",
+      "signed",
+      "label",
+      "labels",
+      "deal",
+      "masters",
+      "ownership",
+      "represent",
+      "representation",
+      "publishing",
+      "acquire",
+      "artists",
+    ],
+    link: { label: "Open a support ticket", to: HELP_DESK_TICKET },
+  },
+  {
+    id: "workflow",
+    title: "The Studio-to-Catalog workflow",
+    text: "Six steps: 1 lock the splits on a split sheet, 2 export the final master, 3 embed your metadata in Embed Metadata, 4 save it to My Catalog, 5 protect it in the AI Protection Hub, then 6 distribute and register (agency exports or Expert Registration). Run a Royalty Health Check a few weeks after release.",
+    terms: [
+      "workflow",
+      "studio",
+      "steps",
+      "step",
+      "process",
+      "order",
+      "release",
+      "distribute",
+      "distribution",
+      "register",
+      "embed",
+    ],
+    link: { label: "Open the Studio-to-Catalog Guide", to: "/docs/studio-to-catalog-guide" },
+  },
+  {
+    id: "tabs",
+    title: "The workspace tabs",
+    text: "The workspace has eight tabs: Embed Metadata, My Catalog, Royalties and Registrations, AI Protection Hub, Split Sheets, Contracts & Blueprints, PDF Fill & Sign and Support. Work them left to right; Support is where you open a ticket.",
+    terms: [
+      "tab",
+      "tabs",
+      "dashboard",
+      "workspace",
+      "navigation",
+      "navigate",
+      "sections",
+      "many",
+      "eight",
+    ],
+    link: { label: "Open your workspace", to: "/workspace" },
+  },
+  {
+    id: "branding",
+    title: "Branding sessions and kits",
+    text: "A Branding Power Session is a guided session with our team that builds your brand guide, branding bible, One Sheet and Artist Menu. Bring your logo files, colours, business or artist name, tagline, bio or photos, and links to your music. The Personal Branding kit ($13.99 a year, included with Catalog Management) puts your branding on contracts, split sheets, lyric sheets and catalog downloads. Scheduling, revision rounds, rescheduling and turnaround are confirmed by the team at booking.",
+    terms: [
+      "branding",
+      "brand",
+      "logo",
+      "session",
+      "sessions",
+      "colours",
+      "colors",
+      "kit",
+      "identity",
+      "guide",
+    ],
+    link: { label: "Open a support ticket", to: HELP_DESK_TICKET },
+  },
+  {
+    id: "aiprotection",
+    title: "AI Protection certificates and prices",
+    text: "AI Protection is one-time per release: $2.99 per song (up to 3), EP $9.99 up to 6 songs, Album $16.99 up to 12, and Album+ $24.99 up to 20. It fingerprints your session recordings, adds a sworn human-authorship attestation and timestamps them on the Bitcoin blockchain. It's evidence a file existed by a date, not proof of ownership by itself.",
+    terms: [
+      "ai",
+      "protection",
+      "certificate",
+      "certificates",
+      "blockchain",
+      "timestamp",
+      "protect",
+      "price",
+      "cost",
+    ],
+    link: { label: "Open the AI Protection Hub", to: "/workspace?tab=protect" },
+  },
+);
 
 const NO_ANSWER: HelpReply = {
   text: "I couldn't find that in our help center. Open a support ticket and our team will answer you by email.",
@@ -359,12 +507,15 @@ export async function askHelpDesk(
       }),
       signal: controller.signal,
     });
-    if (!res.ok) return localAnswer(message);
+    if (!res.ok) {
+      const degraded: HelpDegraded = res.status === 429 ? "rate-limited" : "offline";
+      return { ...localAnswer(message), degraded };
+    }
     const data = (await res.json()) as { reply?: unknown };
     const text = typeof data.reply === "string" ? data.reply.trim() : "";
-    return text ? { text, source: "help-desk" } : localAnswer(message);
+    return text ? { text, source: "help-desk" } : { ...localAnswer(message), degraded: "offline" };
   } catch {
-    return localAnswer(message);
+    return { ...localAnswer(message), degraded: "offline" };
   } finally {
     clearTimeout(timer);
   }
