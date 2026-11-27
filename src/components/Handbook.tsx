@@ -1,16 +1,21 @@
 import { useState } from "react";
 import { PlayCircle, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { HANDBOOK, searchHandbook, TUTORIALS } from "@/lib/handbook";
+import { handbookFor, searchHandbook, TUTORIALS } from "@/lib/handbook";
 import { searchHelp } from "@/lib/help-search";
+import type { StaffAccess } from "@/lib/departments";
 
 /**
  * Admin → Handbook (Phase 4 item 10): the team handbook, tutorial videos (coming soon until recorded) and one search
  * over the handbook and the customer answer library (FAQ, glossary, Help Center), for answering customers fast.
+ *
+ * Sections with an audience (the contract generator's rules and costs, for Software) are shown only to the departments
+ * that own them; a super admin holds every department, so they read everything.
  */
-export function Handbook() {
+export function Handbook({ access }: { access: StaffAccess }) {
   const [q, setQ] = useState("");
-  const inBook = q.trim() ? searchHandbook(q) : [];
+  const sections = handbookFor(access);
+  const inBook = q.trim() ? searchHandbook(q).filter((s) => sections.includes(s)) : [];
   const answers = q.trim() ? searchHelp(q, 5) : [];
   return (
     <div className="mt-4 space-y-8">
@@ -62,7 +67,7 @@ export function Handbook() {
         </section>
       )}
       <section className="grid gap-4 md:grid-cols-2">
-        {HANDBOOK.map((s) => (
+        {sections.map((s) => (
           <article key={s.id} className="rounded-xl border border-border p-4">
             <h3 className="font-bold">{s.title}</h3>
             {s.body.map((b, i) => (
