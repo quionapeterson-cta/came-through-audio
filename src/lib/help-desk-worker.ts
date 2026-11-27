@@ -13,6 +13,22 @@
  */
 export const HELP_DESK_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8-fast";
 
+/**
+ * The desk's main brain (founder, 2026-11-27): Groq's free plan, which answers on `openai/gpt-oss-120b` with 1,000
+ * requests and 200,000 tokens a day, no card, and no training on what is sent. It is OpenAI-compatible, so the Worker
+ * posts the same messages it gives Workers AI. When Groq cannot answer, the widget uses its own help-centre answers and
+ * only then reaches Workers AI — which keeps Cloudflare's daily neurons for contract generation.
+ * Change the model here only; the Worker reads these constants.
+ */
+export const GROQ_MODEL = "openai/gpt-oss-120b";
+export const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+/**
+ * How many Workers AI answers a single visitor IP may trigger in an hour. It is deliberately smaller than the desk's
+ * own window: this stage is the last resort, and its neurons are shared with contract generation.
+ */
+export const CLOUDFLARE_FALLBACK_LIMIT_PER_HOUR = 5;
+
 /** A prompt is one question, not an essay: longer text is refused before any AI work is spent. */
 export const MAX_MESSAGE_CHARS = 500;
 
@@ -78,17 +94,25 @@ export function rateLimitWindow(now: number): string {
   return new Date(now).toISOString().slice(0, 13);
 }
 
-/** The cache key a visitor's hourly count is stored under. The host is a placeholder: the Cache API only needs a URL. */
-export function rateLimitKey(ip: string, now: number): string {
+/**
+ * The cache key a visitor's hourly count is stored under. The host is a placeholder: the Cache API only needs a URL.
+ * Each bucket (the desk's messages, the Workers AI fallback) is counted on its own, so one cannot spend the other's cap.
+ */
+export function rateLimitKey(ip: string, now: number, bucket = "messages"): string {
   const who = encodeURIComponent((ip || "unknown").trim().toLowerCase());
-  return `https://cta-help-desk.internal/rate/${who}/${rateLimitWindow(now)}`;
+  const space = encodeURIComponent(bucket.trim().toLowerCase() || "messages");
+  return `https://cta-help-desk.internal/rate/${who}/${space}/${rateLimitWindow(now)}`;
 }
 
 /** A request is allowed while the count for this window is under the cap. */
-export function rateLimitVerdict(used: number): { allowed: boolean; remaining: number } {
+export function rateLimitVerdict(
+  used: number,
+  limit = RATE_LIMIT_PER_HOUR,
+): { allowed: boolean; remaining: number } {
   const count = Number.isFinite(used) && used > 0 ? Math.floor(used) : 0;
-  const remaining = Math.max(RATE_LIMIT_PER_HOUR - count, 0);
-  return { allowed: count < RATE_LIMIT_PER_HOUR, remaining };
+  const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : RATE_LIMIT_PER_HOUR;
+  const remaining = Math.max(cap - count, 0);
+  return { allowed: count < cap, remaining };
 }
 
 /** Seconds until the current window closes, for the 429's Retry-After. */
