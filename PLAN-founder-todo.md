@@ -174,6 +174,9 @@ The Cloudflare move is planned for the week of Dec 7, after beta ends on Dec 3, 
 
 - [ ] Extend Lovable Pro one month (new lapse date Dec 11) so the beta can run on the current host.
 - [ ] Move hosting to Cloudflare: secrets (now including the 2 Cloudflare AI ones), Stripe webhook URLs, the 4 cron job URLs.
+
+**Super admin task — the two Cloudflare AI values on the live host**
+- [ ] Add `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_AI_TOKEN` to the host that serves the live site (Lovable → Cloud → Secrets today, Cloudflare after the move) — the same pair the Contract Generator Worker already holds. **Why matching needs them:** "Match a blueprint" drafts with Workers AI, so without them it can only rank the closest blueprints by keyword — no draft, and no $3.99 contract, comes out of the matcher. "Draft my contract" is unaffected either way: it calls the Worker, which carries its own copy. Added 2026-11-27, when matching stopped needing the Supabase service-role key — these two are the only thing left before it drafts on any host.
 - [ ] Point camethroughaudio.com at the site, then tell me so I switch every email and certificate link to it.
 - [ ] Stripe live: live lookup keys, live secret key and live webhook.
 - [ ] Lawyer review: contract blueprints, company agreements, AI certificate wording, the Registration Authorization, every disclaimer and the Terms.
