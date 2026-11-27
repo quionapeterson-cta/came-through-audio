@@ -36,10 +36,10 @@ export const LAUNCH_MILESTONES: Milestone[] = [
     body: "One-time prices with those exact lookup keys. Test both checkouts with card 4242.",
   },
   {
-    title: "Add Cloudflare AI secrets for the Contract Generator",
-    importance: "normal",
-    due: at("2026-11-06"),
-    body: "CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_AI_TOKEN in Lovable → Cloud → Secrets.",
+    title: "Super admin: add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_AI_TOKEN to the live host",
+    importance: "top",
+    due: at("2026-12-01"),
+    body: 'Lovable → Cloud → Secrets today, Cloudflare after the move — the same pair the Contract Generator Worker already holds. Matching needs them because "Match a blueprint" drafts with Workers AI: without them it can only rank the closest blueprints by keyword, so no draft — and no $3.99 contract — comes out of the matcher. "Draft my contract" is unaffected either way (it calls the Worker, which carries its own copy). Added 2026-11-27, when matching stopped needing the Supabase service-role key.',
   },
   {
     title: "Create billing@ mailbox and set it as Stripe's support and receipts email",
