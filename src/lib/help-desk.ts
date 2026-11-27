@@ -22,6 +22,11 @@ export type HelpReply = {
   /** Where the answer came from: the worker, or the local knowledge base when the worker could not answer. */
   source: "help-desk" | "local";
   /**
+   * True on the help centre's "I couldn't find that" reply, which is what lets the desk reach Workers AI only when the
+   * help centre genuinely has nothing to say.
+   */
+  notFound?: boolean;
+  /**
    * Why a local answer was used, when the worker was configured but could not answer: the visitor's hourly cap, or the
    * desk being unreachable (including Workers AI's daily free allocation running out). The widget says so plainly.
    */
@@ -388,6 +393,7 @@ KNOWLEDGE.push(
 const NO_ANSWER: HelpReply = {
   text: "I couldn't find that in our help center. Open a support ticket and our team will answer you by email.",
   source: "local",
+  notFound: true,
   link: { label: "Open a support ticket", to: HELP_DESK_TICKET },
 };
 
@@ -479,9 +485,15 @@ type AskOptions = {
   timeoutMs?: number | undefined;
 };
 
+/** Which brain the worker should use: Groq, or the Workers AI last resort. */
+type DeskStage = "primary" | "workers-ai";
+
 /**
- * Ask the Help Desk. The worker is tried first when it is configured; every failure (no URL, 429, a 4xx/5xx, a timeout
- * or a dropped connection) falls through to the local answer, so the member always gets a reply.
+ * Ask the Help Desk, in the order the founder set (2026-11-27):
+ *   1. the worker's main brain (Groq), which answers almost everything;
+ *   2. the help centre's own answers here, which cost nothing when Groq cannot answer;
+ *   3. Workers AI, asked only when the help centre has no answer to give.
+ * Every failure (no URL, 429, a 4xx/5xx, a timeout or a dropped connection) still ends in a reply, never an error.
  */
 export async function askHelpDesk(
   input: { message: string; currentRoute?: string; history?: HelpTurn[] },
@@ -493,30 +505,46 @@ export async function askHelpDesk(
   if (!url) return localAnswer(message);
 
   const call = options.fetchImpl ?? fetch;
-  const timeoutMs = options.timeoutMs ?? 12_000;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await call(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        message,
-        currentRoute: input.currentRoute ?? "",
-        history: (input.history ?? []).slice(-6),
-      }),
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const degraded: HelpDegraded = res.status === 429 ? "rate-limited" : "offline";
-      return { ...localAnswer(message), degraded };
+  const timeoutMs = options.timeoutMs ?? 10_000;
+
+  /** One stage of the worker, and either its answer or why it could not give one. */
+  const ask = async (stage: DeskStage): Promise<{ text?: string; degraded?: HelpDegraded }> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await call(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          message,
+          currentRoute: input.currentRoute ?? "",
+          history: (input.history ?? []).slice(-6),
+          stage,
+        }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        return { degraded: res.status === 429 ? "rate-limited" : "offline" };
+      }
+      const data = (await res.json()) as { reply?: unknown };
+      const text = typeof data.reply === "string" ? data.reply.trim() : "";
+      return text ? { text } : { degraded: "offline" };
+    } catch {
+      return { degraded: "offline" };
+    } finally {
+      clearTimeout(timer);
     }
-    const data = (await res.json()) as { reply?: unknown };
-    const text = typeof data.reply === "string" ? data.reply.trim() : "";
-    return text ? { text, source: "help-desk" } : { ...localAnswer(message), degraded: "offline" };
-  } catch {
-    return { ...localAnswer(message), degraded: "offline" };
-  } finally {
-    clearTimeout(timer);
-  }
+  };
+
+  const primary = await ask("primary");
+  if (primary.text) return { text: primary.text, source: "help-desk" };
+
+  const degraded = primary.degraded ?? "offline";
+  const local = localAnswer(message);
+  if (!local.notFound) return { ...local, degraded };
+
+  // The help centre has nothing for this question, so it is worth the last resort's neurons.
+  const fallback = await ask("workers-ai");
+  if (fallback.text) return { text: fallback.text, source: "help-desk" };
+  return { ...local, degraded: fallback.degraded ?? degraded };
 }
