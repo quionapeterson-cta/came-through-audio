@@ -50,7 +50,13 @@ const EXACT_ORIGINS = [
   "https://www.camethroughaudio.com",
   "https://came-through-audio.vercel.app",
 ];
-const PREVIEW_SUFFIXES = [".style.dev", ".lovable.app", ".camethroughaudio.com"];
+const PREVIEW_SUFFIXES = [
+  ".style.dev",
+  ".lovable.app",
+  // Lovable's editor preview (the project editor's own domain), so the generator can be tested there before the domain moves.
+  ".lovableproject.com",
+  ".camethroughaudio.com",
+];
 /** Vercel's own hostnames for this project only; a stranger's `something.vercel.app` still falls through. */
 const VERCEL_PROJECT_HOST = /^came-through-audio(-[a-z0-9-]+)?-camethroughfam\.vercel\.app$/;
 
