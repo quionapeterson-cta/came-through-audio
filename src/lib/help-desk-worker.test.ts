@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { ARTIST_SEAT_PRICES, PLAN_TIERS } from "./plans";
+import { PACKAGES } from "./proof";
 import {
   allowedOrigin,
   buildMessages,
@@ -120,6 +122,38 @@ describe("history", () => {
     }));
     expect(normaliseHistory(many)).toHaveLength(6);
     expect(normaliseHistory(many).at(-1)).toEqual({ role: "user", content: "turn 8" });
+  });
+});
+
+describe("the knowledge base", () => {
+  it("quotes the exact prices the site sells at, so a change cannot drift", () => {
+    for (const plan of PLAN_TIERS) expect(SYSTEM_PROMPT).toContain(plan.price);
+    for (const seat of ARTIST_SEAT_PRICES) expect(SYSTEM_PROMPT).toContain(seat.price);
+    for (const pack of PACKAGES) expect(SYSTEM_PROMPT).toContain(`$${pack.price.toFixed(2)}`);
+    for (const addOn of ["$13.99", "$3.99", "$1.99", "$4.99", "$14.99", "$29.99"])
+      expect(SYSTEM_PROMPT).toContain(addOn);
+  });
+
+  it("answers as an independent-first label-services company, not a traditional label", () => {
+    expect(SYSTEM_PROMPT).toMatch(/do NOT sign artists/i);
+    expect(SYSTEM_PROMPT).toMatch(/keep their masters/i);
+    expect(SYSTEM_PROMPT).toMatch(/independent-artist-first/i);
+    expect(SYSTEM_PROMPT).toMatch(/not a distributor/i);
+  });
+
+  it("describes the shipped eight tabs and six-step workflow, not an earlier layout", () => {
+    expect(SYSTEM_PROMPT).toMatch(/EIGHT tabs/i);
+    expect(SYSTEM_PROMPT).toMatch(/six steps/i);
+    expect(SYSTEM_PROMPT).toContain("Embed Metadata");
+    expect(SYSTEM_PROMPT).toContain("PDF Fill & Sign");
+    expect(SYSTEM_PROMPT).toContain("Support");
+  });
+
+  it("keeps the guardrails: no invented discounts, no promises, escalate the specific", () => {
+    expect(SYSTEM_PROMPT).toMatch(/never invent a discount/i);
+    expect(SYSTEM_PROMPT).toMatch(/Never promise streams/i);
+    expect(SYSTEM_PROMPT).toContain("billing@camethroughaudio.com");
+    expect(SYSTEM_PROMPT).toMatch(/legal, financial or tax advice/i);
   });
 });
 
