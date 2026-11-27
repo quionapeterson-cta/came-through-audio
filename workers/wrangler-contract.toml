@@ -1,0 +1,30 @@
+# Came Through Audio Contract Generator — a separate Worker (founder, 2026-11-27).
+#
+# This is NOT the Help Desk, the tax tables or one of the email routing workers. Its name is its own, its binding is its
+# own, and deploying it changes no other Worker, route or binding.
+#
+# Two minutes to activate:
+#   1. Deploy from the repo root:   npx wrangler deploy -c workers/wrangler-contract.toml
+#      (the first time, `npx wrangler login` in a terminal on your own machine, or set CLOUDFLARE_API_TOKEN)
+#   2. Workers AI must be switched on for the account once; the model in workers/cta-contract-generator.js
+#      (CONTRACT_MODEL) sits on the free daily allowance. No key is needed; the [ai] binding below is it.
+#   3. Copy the printed URL (https://cta-contract-generator.<your-subdomain>.workers.dev) into the app as
+#      VITE_CTA_CONTRACT_WORKER_URL (for a hosted build, the same name in Sites/Cloudflare → Settings → Variables).
+#
+# Check it without a browser:
+#   curl -i -X POST https://cta-contract-generator.<your-subdomain>.workers.dev \
+#     -H 'Origin: https://camethroughaudio.com' -H 'content-type: application/json' \
+#     -d '{"scenario":"I am paying a producer $500 for an exclusive beat for my song Bloodline."}'
+# A call with no Origin, or with another domain, must answer 403 and spend no AI.
+
+name = "cta-contract-generator"
+main = "cta-contract-generator.js"
+compatibility_date = "2026-11-03"
+workers_dev = true
+
+# Workers AI: the model itself is chosen in workers/cta-contract-generator.js (CONTRACT_MODEL).
+[ai]
+binding = "AI"
+
+[observability]
+enabled = true
