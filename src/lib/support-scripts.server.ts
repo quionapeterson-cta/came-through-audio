@@ -108,6 +108,22 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     body: "Hi {{first_name}},\n\nThanks for your patience. This one belongs with our {{detail}} team, so I've passed it to them with your message and account details — you don't need to write it out again.\n\nThey'll reply from here, on this same ticket.\n\nCame Through Audio Support",
   },
 
+  {
+    id: "support-contract-generator-daily-cap",
+    department: "support",
+    title: "Contract Generator: 25 drafts a day",
+    when: "A member says the generator stopped working, or asks about a limit on how many contracts they can draft.",
+    body: "Hi {{first_name}},\n\nThat message is our daily limit, not an error: the Contract Generator drafts up to twenty-five contracts a day per person, and the count starts again at midnight UTC, so you can keep going tomorrow. There is no limit on how many you draft over time.\n\nWe set it to keep the generator fair and to stop automated scraping, not to slow a real artist down. If your plan includes Contracts, the daily limit does not apply to you at all.\n\nIf you genuinely need more than twenty-five drafts in one day, reply and tell me what you're working on. I'll pass it to our Software lead and a super admin to look at raising it for you for that day.\n\nCame Through Audio Support",
+  },
+  {
+    id: "support-contract-generator-cap-escalation",
+    department: "support",
+    title: "Contract Generator cap: escalating for a higher allowance",
+    when: "A member insists they need more than 25 drafts in a day. Staff only — never send this wording to a member.",
+    internal: true,
+    body: "INTERNAL ONLY — staff note: the cap is 25 drafts a day per visitor IP, and the count resets at midnight UTC.\n\n1. Confirm it is the daily cap, not the AI allowance: the cap says 'You've reached today's 25 contracts'; the AI allowance says 'We're experiencing high volume right now' and offers the closest premade contract.\n2. Ask what they are drafting today. Several drafts of the same deal, or a rate card, is a reason to raise it; a script hitting the endpoint is not.\n3. If it is a real need, escalate to the Software department lead and a super admin together, with the member's email, the time they hit the cap and what they are drafting.\n4. Only a super admin approves raising the allowance, and only for that member for that day. Nothing is raised for an account by a support agent alone.\n5. Until today's counter can be keyed to a member account (it is per IP now), engineering raises it by hand; say so in the escalation so nobody promises a fix we cannot make.",
+  },
+
   // ── Registration ───────────────────────────────────────────────────────────────────────────────────────────────
   {
     id: "registration-missing-writers",
