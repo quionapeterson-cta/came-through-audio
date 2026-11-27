@@ -37,7 +37,13 @@ const EXAMPLE =
 const COMPANY_EXAMPLE =
   "A testimonial from an artist who used the app during beta. We'll use their photo, a short video and their quote on the homepage and social media.";
 
-type Failure = { message: string; status?: number | undefined; detail?: string | undefined };
+type Failure = {
+  message: string;
+  status?: number | undefined;
+  detail?: string | undefined;
+  /** A busy day rather than a fault: no error code, no support line, and the closest blueprints are offered. */
+  soft?: boolean | undefined;
+};
 
 /**
  * Contract Generator (founder, 2026-10-25; full contract from the Worker 2026-11-27): describe the deal and the
@@ -76,16 +82,27 @@ export function ContractGenerator({
     setContract(undefined);
     setResult(undefined);
     try {
-      setContract(await generateContractDocument({ scenario, company }));
+      // A paid member (the plan that unlocks Contracts) is never counted against the daily limit.
+      setContract(await generateContractDocument({ scenario, company, paid: unlocked }));
     } catch (e) {
-      const error =
+      // Out of today's free drafting allowance is a busy day, not a fault: say so and offer the closest premade
+      // contracts (the blueprint matcher answers without Workers AI, so it still works).
+      const limit =
+        e instanceof ContractWorkerError && (e.code === "daily_limit" || e.code === "daily_cap");
+      const error: Failure =
         e instanceof ContractWorkerError
-          ? { message: e.message, status: e.status, detail: e.detail }
+          ? {
+              message: e.message,
+              status: limit ? undefined : e.status,
+              detail: limit ? undefined : e.detail,
+              soft: limit,
+            }
           : {
               message: e instanceof Error ? e.message : "The generator couldn't run. Try again.",
             };
       setFailure(error);
       toast.error(error.message);
+      if (limit) void match();
     } finally {
       setBusy(false);
     }
@@ -208,7 +225,9 @@ export function ContractGenerator({
             <p className="break-words font-mono text-xs text-muted-foreground">{failure.detail}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            If this keeps happening, send this message to support — it names the exact fault.
+            {failure.soft
+              ? "The closest premade contracts are below — start from one of those, or describe your deal again tomorrow."
+              : "If this keeps happening, send this message to support — it names the exact fault."}
           </p>
         </div>
       )}
