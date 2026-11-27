@@ -63,8 +63,9 @@ export default {
     const origin = request.headers.get("Origin");
     const referer = request.headers.get("Referer");
 
-    // 1. Origin lock. Refused before anything is counted or any AI work is spent.
-    if (!allowedOrigin(origin, referer)) return reply({ error: "Forbidden" }, 403, origin);
+    // 1. Origin lock. Refused before anything is counted or any AI work is spent. Pass no origin on the refusal: an
+    //    Access-Control-Allow-Origin header on a 403 would echo a domain we just rejected.
+    if (!allowedOrigin(origin, referer)) return reply({ error: "Forbidden" }, 403, null);
     const allowed = origin as string;
 
     if (request.method === "OPTIONS")
@@ -117,8 +118,8 @@ export default {
           currentRoute: typeof body.currentRoute === "string" ? body.currentRoute : "",
           history: body.history as never,
         }),
-        max_tokens: 350,
-        temperature: 0.3,
+        max_tokens: 500,
+        temperature: 0.25,
       });
       const text = (typeof ai === "string" ? ai : ai?.response)?.trim();
       if (!text) return reply({ error: "No answer. Please try again." }, 502, allowed);
