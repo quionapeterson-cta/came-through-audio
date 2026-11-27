@@ -19,6 +19,7 @@ import {
   CONTRACT_PRICE,
   SCENARIO_MAX,
   SCENARIO_MIN,
+  keywordPick,
   type GeneratedDraft,
   type GeneratorResult,
 } from "@/lib/contract-generator";
@@ -70,6 +71,11 @@ export function ContractGenerator({
   const [matching, setMatching] = useState(false);
   const [contract, setContract] = useState<GeneratedContract>();
   const [failure, setFailure] = useState<Failure>();
+  /**
+   * The closest premade contracts when drafting is unavailable (founder, 2026-11-27). Chosen here, from the blueprints
+   * already on the page, so the offer survives a day when every AI call is spent and the matcher cannot answer.
+   */
+  const [nearby, setNearby] = useState<Blueprint[]>();
   const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<GeneratorResult>();
   const byId = (id: string) => blueprints.find((b) => b.id === id);
@@ -80,6 +86,7 @@ export function ContractGenerator({
     setBusy(true);
     setFailure(undefined);
     setContract(undefined);
+    setNearby(undefined);
     setResult(undefined);
     try {
       // A paid member (the plan that unlocks Contracts) is never counted against the daily limit.
@@ -101,8 +108,15 @@ export function ContractGenerator({
               message: e instanceof Error ? e.message : "The generator couldn't run. Try again.",
             };
       setFailure(error);
+      if (limit) {
+        const picks = keywordPick(scenario, blueprints, 3);
+        setNearby(
+          (picks.length ? picks : blueprints.slice(0, 3).map((b) => b.id))
+            .map(byId)
+            .filter((b): b is Blueprint => !!b),
+        );
+      }
       toast.error(error.message);
-      if (limit) void match();
     } finally {
       setBusy(false);
     }
@@ -229,6 +243,31 @@ export function ContractGenerator({
               ? "The closest premade contracts are below — start from one of those, or describe your deal again tomorrow."
               : "If this keeps happening, send this message to support — it names the exact fault."}
           </p>
+        </div>
+      )}
+
+      {nearby && nearby.length > 0 && (
+        <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+          <p className="text-sm font-semibold">The closest premade contracts</p>
+          <ul className="grid gap-2">
+            {nearby.map((b) => (
+              <li
+                key={b.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold">{b.name}</p>
+                  <p className="text-xs text-muted-foreground">{b.summary}</p>
+                </div>
+                {(unlocked || company) && (
+                  <Button size="sm" variant="outline" onClick={() => onUse(b)}>
+                    <PenLine className="h-4 w-4" />
+                    Use this
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
