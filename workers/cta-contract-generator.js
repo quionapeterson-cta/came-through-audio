@@ -126,9 +126,11 @@ OUTPUT RULES
 - Return ONLY the contract document. No greeting, no introduction, no explanation before it, no summary after it.
 - Never write an AI disclaimer, a "not legal advice" notice, a "consult an attorney" line, or any note about how the document was produced.
 - Plain text only: no markdown, no asterisks, no # symbols, no code fences.
-- Start with the title in capitals, then "This Agreement is made on [Effective Date] between ...".
+- The title must name the deal specifically, for example "EXCLUSIVE BEAT PURCHASE AND PRODUCER AGREEMENT" or "PRODUCER AGREEMENT FOR THREE MASTERS". Never a generic "AGREEMENT" or "PRODUCTION AGREEMENT" on its own.
+- Then "This Agreement is made on [Effective Date] between ...".
 - End with the signature blocks for every party (name, signature line, title if any, date). Nothing follows them.
 - Do not invent names, amounts, percentages, dates, cities or states. Use a bracketed placeholder such as [ARTIST LEGAL NAME], [AMOUNT], [PERCENTAGE], [STATE] and keep drafting.
+- Every payment clause says when the money is due: [DATE] or "on delivery". Every notices clause states [ARTIST ADDRESS] and [PRODUCER ADDRESS]. Never refer to details "set out below" without giving them.
 - 1,000–2,000 words. Never omit or shorten a required section to stay brief.
 
 REQUIRED SECTIONS — number them 1 to 18, in this order, with no gaps:
@@ -154,19 +156,27 @@ REQUIRED SECTIONS — number them 1 to 18, in this order, with no gaps:
 FAIRNESS RULES — the contract protects the artist and is never predatory:
 - Section 7 must say, in substance: the Artist keeps one hundred percent (100%) of the writer's share; the Producer receives only the percentage of the publisher's share stated in the deal, for the named composition only; the Producer does not own the composition and has no claim to any other song.
 - The artist owns the Master unless the description says it is sold outright, and then only the named recordings.
-- Every exclusive grant, licence or option has a stated term and a sunset date, after which rights revert to the artist in writing. No perpetuity.
+- NO CONTRADICTIONS. Section 10 sets the term of exclusivity and any option. It must NOT cancel, shorten or take back anything granted in Sections 6, 7 or 8: state there that the Artist's ownership of the Masters continues, and that the Producer's stated publisher's share and master royalty are unaffected by the sunset and continue for the life of the copyright in the named recordings. The sunset ends only exclusivity, options or administration rights, and reverts those to the Artist in writing. A share of income is not a grant and is never swept away. No perpetuity in any grant from the artist.
 - No 360: no share of touring, merchandise, brand deals or unrelated income unless the description explicitly says so, and then only that one stream.
 - Section 8: recoupment covers only costs this agreement names, is recouped only from the income stream this agreement covers, is never cross-collateralised and is never open-ended; the Producer receives statements at least twice a year and may audit on reasonable notice.
-- Section 12: termination only for material breach after written notice and a [NUMBER]-day cure period. The Producer may never cancel a fully paid purchase for convenience, and the Artist's ownership of the Master survives termination.
+- Section 12: termination only for a material breach that is not cured, using ONE notice period and ONE cure period, never both. The Producer may never cancel a fully paid purchase for convenience, and the Artist's ownership of the Masters survives termination.
 - Section 11: the Producer warrants the work is original, that all samples are cleared, and that no third-party rights encumber it.
 - Section 13: liability limits never excuse fraud, wilful misconduct, or a party's indemnity obligations.
 - No hidden fees, no unilateral amendment, no automatic renewal, no non-compete, no exclusivity beyond the described scope, no waiver of statutory royalties, no rights over the artist's name, likeness, voice or AI training.
+- No open-ended work for either party: any approval or revision right is capped (for example [NUMBER] rounds of revision).
 - If the description asks for something one-sided, draft the fair version and put any note in brackets inside that clause only.
 
 HOUSE STYLE
 - Define each party once ("Artist", "Producer", "Company") and use the term throughout.
 - Use clause numbers (1., 1.1, 1.2) consistently.
-- Governing law: the state the description gives, otherwise [STATE].`;
+- Governing law: the state the description gives, otherwise [STATE].
+
+FINAL CHECK — before you answer, silently verify every point and fix anything that fails:
+1. The title names the deal; it is never just "AGREEMENT" or "PRODUCTION AGREEMENT".
+2. Section 10 does not take back the Artist's Masters or the Producer's stated publisher's share or royalty. It ends only exclusivity, options and administration rights.
+3. Section 12 has one notice period and one cure period, and no termination for convenience.
+4. Every fact the deal did not give is a bracketed placeholder, and no clause refers to a detail it never supplies.
+5. There is no disclaimer, no introduction and no note after the signatures.`;
 
 /**
  * A short nudge to keep the document focused on what the person actually described.
@@ -203,7 +213,7 @@ export function cleanContract(raw) {
   const NOISE =
     /(disclaimer|not legal advice|does not constitute legal advice|for informational purposes only|consult (a|an|your) (qualified )?(attorney|lawyer)|i am an ai|as an ai|language model|this document was (generated|produced)|no attorney-client relationship)/i;
   const INTRO =
-    /^(sure|certainly|of course|here('s| is)|below is|i('ve| have) (drafted|prepared)|this (contract|agreement) (is|was) (drafted|prepared))/i;
+    /^(sure|certainly|of course|here('s| is)|below is|i'Ã¢â‚¬â„¢ve| have) (drafted|prepared)|this (contract|agreement) (is|was) (drafted|prepared))/i;
 
   const lines = text.split("\n");
   // Anything before the document's own first line (title, or "This Agreement") is chatter.
@@ -348,7 +358,7 @@ export default {
           { role: "user", content: userPrompt(scenario, company) },
         ],
         max_tokens: 3200,
-        temperature: 0.3,
+        temperature: 0.15,
       });
       const raw = typeof ai === "string" ? ai : ai && ai.response;
       const contract = cleanContract(raw);
