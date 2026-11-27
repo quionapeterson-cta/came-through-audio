@@ -3,30 +3,36 @@
 # This is NOT one of the email routing workers. Its name is its own, its binding is its own, and deploying it changes no
 # Email Routing rule and no address.
 #
-# Two minutes to activate:
+# Three minutes to activate:
 #   1. Deploy from the repo root:   npx wrangler deploy -c workers/wrangler.toml
 #      (the first time, `npx wrangler login` in a terminal on your own machine, or set CLOUDFLARE_API_TOKEN)
-#   2. Workers AI must be switched on for the account once: dashboard → Workers AI → the model in HELP_DESK_MODEL
-#      (src/lib/help-desk-worker.ts) sits on the free daily allowance. No key is needed; the [ai] binding below is it.
-#      Cloudflare retired @cf/meta/llama-3.1-8b-instruct-fp8 on 2026-11-20, so the desk runs the -fp8-fast build.
+#   2. Give it its main brain — one secret, pasted at the prompt and never written to a file:
+#      npx wrangler secret put GROQ_API_KEY -c workers/wrangler.toml
+#      A free key from console.groq.com/keys. Without it the Worker answers 503 and the widget uses the help centre, so
+#      nothing breaks; with it, Groq answers almost everything and Cloudflare's AI is barely touched.
 #   3. Copy the printed URL (https://cta-help-desk.<your-subdomain>.workers.dev) into the app as
 #      VITE_CTA_HELP_WORKER_URL (for a hosted build, the same name in Sites/Cloudflare → Settings → Variables).
 #      Without it the Help Desk still answers from the local knowledge base, so nothing goes down while you set it up.
+#
+# The answer order (founder, 2026-11-27): Groq (workers/cta-help-desk.ts, GROQ_MODEL) → the help centre's own answers
+# in the app → Workers AI, which is asked only when the help centre has nothing and has its own small hourly cap. That
+# keeps the daily Workers AI neurons for contract generation.
 #
 # Check it without a browser:
 #   curl -i -X POST https://cta-help-desk.<your-subdomain>.workers.dev \
 #     -H 'Origin: https://camethroughaudio.com' -H 'content-type: application/json' \
 #     -d '{"message":"What is the difference between (c) and (p)?"}'
-# A call with no Origin, or with another domain, must answer 403 and spend no AI.
+# A call with no Origin, or with another domain, must answer 403 and spend nothing.
 
 name = "cta-help-desk"
 main = "cta-help-desk.ts"
 compatibility_date = "2026-11-03"
 workers_dev = true
 
-# Workers AI: the model itself is chosen in workers/cta-help-desk.ts (HELP_DESK_MODEL). The free allowance is 10,000
-# neurons a day; once it is used up the AI call fails (4006/429) and this Worker answers 503, so the widget falls back to
-# its local answers until the daily reset. Nothing else about the desk breaks.
+# Workers AI is now the last resort, not the brain: it is reached only when Groq is unavailable and the help centre has
+# no answer, and at most CLOUDFLARE_FALLBACK_LIMIT_PER_HOUR times an hour per visitor. The free allowance is 10,000
+# neurons a day, shared with contract generation; when it runs out the AI call fails (4006/429), this Worker answers
+# 503, and the widget shows its help-centre answer instead. Nothing else about the desk breaks.
 [ai]
 binding = "AI"
 
