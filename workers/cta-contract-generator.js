@@ -213,7 +213,7 @@ export function cleanContract(raw) {
   const NOISE =
     /(disclaimer|not legal advice|does not constitute legal advice|for informational purposes only|consult (a|an|your) (qualified )?(attorney|lawyer)|i am an ai|as an ai|language model|this document was (generated|produced)|no attorney-client relationship)/i;
   const INTRO =
-    /^(sure|certainly|of course|here('s| is)|below is|i(\u0027ve| have) (drafted|prepared)|this (contract|agreement) (is|was) (drafted|prepared))/i;
+    /^(sure|certainly|of course|here('s| is)|below is|i.ve (drafted|prepared)|i have (drafted|prepared)|this (contract|agreement) (is|was) (drafted|prepared))/i;
 
   const lines = text.split("\n");
   // Anything before the document's own first line (title, or "This Agreement") is chatter.
