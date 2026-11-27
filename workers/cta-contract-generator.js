@@ -13,7 +13,7 @@
  * What protects it, in the order it happens:
  *   1. Origin lock   — only camethroughaudio.com (and our preview hosts / a loopback dev server) may call it.
  *   2. Method + size — POST only, one scenario of 20–4000 characters.
- *   3. Rate limit    — 8 contracts an hour per visitor IP, counted in the Cache API.
+ *   3. Rate limit    — 25 contracts a day per visitor IP, counted in the Cache API; paid members are not counted.
  *   4. Workers AI    — @cf/meta/llama-3.3-70b-instruct-fp8-fast with the drafting rules in SYSTEM_PROMPT.
  *
  * The answer is the contract itself and nothing else: no introduction, no disclaimer, no closing note. Anything the
@@ -34,8 +34,12 @@ export const CONTRACT_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 export const MIN_SCENARIO_CHARS = 20;
 export const MAX_SCENARIO_CHARS = 4000;
 
-/** Contracts a single visitor IP may generate in one hour. */
-export const RATE_LIMIT_PER_HOUR = 8;
+/**
+ * Contracts a visitor IP may generate in one UTC day, free of charge (founder, 2026-11-27: 25, because the generator is
+ * mostly used by Catalog Management members and a real artist drafts a handful a month, never twenty-five a day).
+ * A paid member is not counted at all: the page says so and the Worker skips the count for that request.
+ */
+export const RATE_LIMIT_PER_DAY = 25;
 
 /**
  * The sites allowed to call the Worker: the live domain and its subdomains, the preview hosts our builds run on, and a
@@ -85,9 +89,9 @@ export function allowedOrigin(origin, referer) {
   return PREVIEW_SUFFIXES.some((suffix) => host.endsWith(suffix) && host.length > suffix.length);
 }
 
-/** @param {number} now */
+/** The UTC day the count belongs to, so the allowance comes back at midnight UTC. @param {number} now */
 export function rateLimitWindow(now) {
-  return new Date(now).toISOString().slice(0, 13);
+  return new Date(now).toISOString().slice(0, 10);
 }
 
 /**
@@ -99,9 +103,10 @@ export function rateLimitKey(ip, now) {
   return `https://cta-contract-generator.internal/rate/${who}/${rateLimitWindow(now)}`;
 }
 
-/** @param {number} now */
+/** Seconds until midnight UTC, when a fresh day's contracts open. @param {number} now */
 export function secondsUntilNextWindow(now) {
-  const end = (Math.floor(now / 3_600_000) + 1) * 3_600_000;
+  const d = new Date(now);
+  const end = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
   return Math.max(Math.ceil((end - now) / 1000), 1);
 }
 
@@ -367,6 +372,12 @@ export default {
       );
     }
     const company = !!body && body.company === true;
+    /**
+     * The page sends this only for a member whose plan includes the generator. The Worker cannot verify a plan on its
+     * own (it holds no session), so this is a courtesy flag: the origin lock keeps strangers out, and the worst a forged
+     * true can cost is the price of the drafts it produces, about half a cent each.
+     */
+    const paid = !!body && body.paid === true;
 
     // 3. Per-IP, per-hour cap in the Cache API.
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
@@ -375,17 +386,25 @@ export default {
     const key = new Request(rateLimitKey(ip, now), { method: "GET" });
     const hit = await cache.match(key);
     const used = hit ? Number.parseInt(await hit.text(), 10) || 0 : 0;
-    if (used >= RATE_LIMIT_PER_HOUR) {
-      return reply({ error: "Too many contracts this hour. Try again shortly." }, 429, allowed, {
-        "Retry-After": String(secondsUntilNextWindow(now)),
-      });
+    if (!paid) {
+      if (used >= RATE_LIMIT_PER_DAY) {
+        return reply(
+          {
+            error: `You've reached today's ${RATE_LIMIT_PER_DAY} contracts. Try again tomorrow, or open one of our ready-made contracts.`,
+            code: "daily_cap",
+          },
+          429,
+          allowed,
+          { "Retry-After": String(secondsUntilNextWindow(now)) },
+        );
+      }
+      await cache.put(
+        key,
+        new Response(String(used + 1), {
+          headers: { "cache-control": "max-age=86400", "content-type": "text/plain" },
+        }),
+      );
     }
-    await cache.put(
-      key,
-      new Response(String(used + 1), {
-        headers: { "cache-control": "max-age=3600", "content-type": "text/plain" },
-      }),
-    );
 
     // 4. Workers AI with the drafting rules.
     try {
