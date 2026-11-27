@@ -26,6 +26,8 @@ export class ContractWorkerError extends Error {
     message: string,
     public status?: number,
     public detail?: string,
+    /** The Worker's own code for this failure; "daily_limit" means today's free drafting allowance is spent. */
+    public code?: string,
   ) {
     super(message);
     this.name = "ContractWorkerError";
@@ -40,6 +42,7 @@ type WorkerBody = {
   model?: unknown;
   error?: unknown;
   detail?: unknown;
+  code?: unknown;
 };
 
 /**
@@ -47,7 +50,7 @@ type WorkerBody = {
  * Throws ContractWorkerError with the status and the Worker's message whenever the answer is not a contract.
  */
 export async function generateContractDocument(
-  input: { scenario: string; company?: boolean },
+  input: { scenario: string; company?: boolean; paid?: boolean },
   options: { signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<GeneratedContract> {
   const url = contractWorkerUrl();
@@ -63,7 +66,11 @@ export async function generateContractDocument(
         method: "POST",
         mode: "cors",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ scenario: input.scenario, company: input.company === true }),
+        body: JSON.stringify({
+          scenario: input.scenario,
+          company: input.company === true,
+          paid: input.paid === true,
+        }),
         signal: controller.signal,
       });
     } catch (e) {
@@ -79,6 +86,22 @@ export async function generateContractDocument(
 
     const body = (await res.json().catch(() => null)) as WorkerBody | null;
     if (!res.ok) {
+      // Out of today's free Workers AI allowance (Cloudflare error 4006: "you have used up your daily free allocation
+      // of 10,000 neurons"). That is a busy day, not a fault: say so and let the page offer the closest premade
+      // contracts instead of a dead end.
+      const outOfAllowance =
+        body?.code === "daily_limit" ||
+        /4006|daily free allocation|used up your daily free/i.test(
+          typeof body?.detail === "string" ? body.detail : "",
+        );
+      if (outOfAllowance) {
+        throw new ContractWorkerError(
+          "We're experiencing high volume right now. Try again tomorrow.",
+          res.status,
+          typeof body?.detail === "string" ? body.detail : undefined,
+          "daily_limit",
+        );
+      }
       const reason =
         typeof body?.error === "string" && body.error.trim()
           ? body.error.trim()
@@ -89,6 +112,7 @@ export async function generateContractDocument(
         reason,
         res.status,
         typeof body?.detail === "string" ? body.detail : undefined,
+        typeof body?.code === "string" ? body.code : undefined,
       );
     }
 
