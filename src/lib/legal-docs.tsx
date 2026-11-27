@@ -158,6 +158,14 @@ export const TERMS: LegalDoc = {
             a time stamp and verification hash as described in each document; you are responsible
             for making sure electronic signing is acceptable for your agreement where you live.
           </p>
+          <p>
+            To keep the generator fair and to stop automated scraping, a visitor can draft up to
+            twenty-five (25) contracts a day. That is a daily limit, not a total one: the count
+            starts again at midnight UTC, so you can keep creating contracts the next day and there
+            is no limit on how many you draft over time. If your plan includes Contracts, this daily
+            limit does not apply to you. If you genuinely need more than twenty-five drafts in one
+            day, contact support and we will look at it with you.
+          </p>
         </>
       ),
     },
