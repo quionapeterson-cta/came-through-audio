@@ -598,7 +598,7 @@ function AdminPage() {
                   )}
                   {show("handbook") && (
                     <TabsContent value="handbook">
-                      <Handbook />
+                      <Handbook access={access} />
                     </TabsContent>
                   )}
                   {show("staff-plan") && (
