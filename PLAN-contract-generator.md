@@ -72,7 +72,7 @@ Cloudflare answers error **4006** — "you have used up your daily free allocati
 
 - The panel says **"We're experiencing high volume right now. Try again tomorrow."**
 - It hides the HTTP code, the raw quota text and the "send this to support" line.
-- It automatically offers the **closest premade contract** (the blueprint matcher, which needs no AI to answer), with a "Use this" button on each.
+- It automatically offers the **closest premade contracts**, chosen on the page itself from our own blueprints (`keywordPick` in `src/lib/contract-generator.ts`), so the offer still appears on a day when every AI call is spent and the server-side matcher cannot answer. Each one has a "Use this" button.
 - Any other AI failure still reads "The contract generator is unavailable right now" and keeps the detail line, so real breakage stays diagnosable.
 
 Anything else that changes the message must change `src/lib/contract-generator-api.ts` (the mapping) and, if the worker is touched, the same code in the worker.
