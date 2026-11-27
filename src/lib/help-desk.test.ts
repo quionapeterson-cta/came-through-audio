@@ -90,6 +90,38 @@ describe("local knowledge base", () => {
     expect(answer.link?.to).toBe(HELP_DESK_TICKET);
     expect(answer.text).toMatch(/support ticket/i);
   });
+
+  it("quotes the real plan prices without the worker", () => {
+    const answer = localAnswer("how much does catalog management cost?");
+    expect(answer.text).toContain("$89.99");
+    expect(answer.text).toContain("$24.99");
+    expect(localAnswer("how much is a plan").text).toContain("$44.99");
+  });
+
+  it("answers the signing question honestly", () => {
+    const answer = localAnswer("do you sign artists?");
+    expect(answer.text).toMatch(/don't sign artists|do not sign artists/i);
+    expect(answer.text).toMatch(/masters/i);
+    expect(answer.text).toMatch(/custom agreement/i);
+  });
+
+  it("explains the studio-to-catalog workflow and the tab count", () => {
+    expect(localAnswer("what is the studio to catalog workflow?").text).toMatch(/Six steps/i);
+    expect(localAnswer("how many tabs are in the dashboard?").text).toMatch(/eight tabs/i);
+  });
+
+  it("answers refunds and AI Protection prices", () => {
+    const refund = localAnswer("how do refunds work?");
+    expect(refund.text).toMatch(/30 days/i);
+    expect(refund.text).toContain("billing@camethroughaudio.com");
+    const ai = localAnswer("how much is AI Protection?");
+    expect(ai.text).toContain("$2.99");
+    expect(ai.text).toContain("$24.99");
+  });
+
+  it("keeps an artist-seat question on plans, not on signing", () => {
+    expect(localAnswer("how do artist seats work?").title).toBe("Plans and prices");
+  });
 });
 
 describe("asking the Help Desk", () => {
@@ -133,6 +165,7 @@ describe("asking the Help Desk", () => {
     );
     expect(rateLimited.source).toBe("local");
     expect(rateLimited.text).toContain("ISRC");
+    expect(rateLimited.degraded).toBe("rate-limited");
 
     const empty = await askHelpDesk(
       { message: "what is an isrc" },
@@ -151,6 +184,7 @@ describe("asking the Help Desk", () => {
     );
     expect(boom.source).toBe("local");
     expect(boom.text).toContain("ISRC");
+    expect(boom.degraded).toBe("offline");
   });
 
   it("keeps the question within the worker's limit", async () => {

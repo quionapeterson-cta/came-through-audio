@@ -18,13 +18,22 @@ type Message = {
   text: string;
   title?: string | undefined;
   link?: HelpLink | undefined;
+  /** Why the live desk could not answer this one, when it could not. */
+  notice?: string | undefined;
   rated?: "yes" | "no" | undefined;
+};
+
+const DEGRADED: Record<"rate-limited" | "offline", string> = {
+  "rate-limited":
+    "You've reached the live desk's hourly limit, so this answer came from our help center. Try again in a little while, or open a ticket.",
+  offline:
+    "The live desk isn't reachable right now, so this answer came from our help center. Open a ticket if you'd like a person to follow up.",
 };
 
 const HIDDEN = [/^\/admin/, /^\/verify\//, /^\/contract\//, /^\/sign\//, /^\/unlock/];
 const HELLO: Message = {
   from: "help",
-  text: "Ask about embedding, ISRC and ISWC, registrations, splits, contracts or Expert Help. A person can take over from the Help Center.",
+  text: "Ask about plans and pricing, refunds, embedding, ISRC and ISWC, registrations, splits, contracts, branding or label services. A person can take over from the Help Center.",
 };
 
 /**
@@ -61,7 +70,13 @@ export function HelpChat() {
       const reply = await askHelpDesk({ message: q, currentRoute: route, history });
       setMessages((m) => [
         ...m,
-        { from: "help", text: reply.text, title: reply.title, link: reply.link },
+        {
+          from: "help",
+          text: reply.text,
+          title: reply.title,
+          link: reply.link,
+          notice: reply.degraded ? DEGRADED[reply.degraded] : undefined,
+        },
       ]);
     } catch (err) {
       // The question stays on screen and the desk answers for itself, rather than the panel sitting busy forever.
@@ -157,6 +172,9 @@ export function HelpChat() {
               >
                 {m.link.label}
               </a>
+            )}
+            {m.notice && (
+              <p className="text-[11px] leading-snug text-muted-foreground">{m.notice}</p>
             )}
             {m.from === "help" && i > 0 && (
               <div className="flex flex-wrap items-center gap-2 border-t border-border pt-1.5 text-[11px] text-muted-foreground">
