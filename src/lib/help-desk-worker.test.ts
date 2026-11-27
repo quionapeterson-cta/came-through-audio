@@ -4,6 +4,9 @@ import { PACKAGES } from "./proof";
 import {
   allowedOrigin,
   buildMessages,
+  CLOUDFLARE_FALLBACK_LIMIT_PER_HOUR,
+  GROQ_CHAT_URL,
+  GROQ_MODEL,
   MAX_MESSAGE_CHARS,
   normaliseHistory,
   normaliseMessage,
@@ -80,6 +83,18 @@ describe("per-IP window", () => {
     expect(rateLimitVerdict(Number.NaN)).toEqual({ allowed: true, remaining: RATE_LIMIT_PER_HOUR });
   });
 
+  it("caps each bucket on its own, so the fallback has its own budget", () => {
+    expect(rateLimitVerdict(4, CLOUDFLARE_FALLBACK_LIMIT_PER_HOUR)).toEqual({
+      allowed: true,
+      remaining: 1,
+    });
+    expect(rateLimitVerdict(5, CLOUDFLARE_FALLBACK_LIMIT_PER_HOUR).allowed).toBe(false);
+    expect(rateLimitKey("203.0.113.9", noon, "cloudflare")).not.toBe(
+      rateLimitKey("203.0.113.9", noon),
+    );
+    expect(CLOUDFLARE_FALLBACK_LIMIT_PER_HOUR).toBeLessThan(RATE_LIMIT_PER_HOUR);
+  });
+
   it("tells a refused visitor when the window rolls over", () => {
     expect(secondsUntilNextWindow(Date.UTC(2026, 10, 20, 12, 59, 0))).toBe(60);
     expect(secondsUntilNextWindow(Date.UTC(2026, 10, 20, 12, 0, 0))).toBe(3600);
@@ -122,6 +137,13 @@ describe("history", () => {
     }));
     expect(normaliseHistory(many)).toHaveLength(6);
     expect(normaliseHistory(many).at(-1)).toEqual({ role: "user", content: "turn 8" });
+  });
+});
+
+describe("the brains", () => {
+  it("asks Groq at the endpoint and model its free plan actually serves", () => {
+    expect(GROQ_CHAT_URL).toBe("https://api.groq.com/openai/v1/chat/completions");
+    expect(GROQ_MODEL).toBe("openai/gpt-oss-120b");
   });
 });
 

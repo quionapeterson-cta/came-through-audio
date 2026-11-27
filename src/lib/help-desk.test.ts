@@ -124,6 +124,59 @@ describe("local knowledge base", () => {
   });
 });
 
+describe("the answer order", () => {
+  it("answers from the worker when the main brain answers, and asks nothing else", async () => {
+    const fetchImpl = vi.fn(async () => ok({ reply: "Groq's answer.", source: "groq" }));
+    const reply = await askHelpDesk(
+      { message: "what is a master" },
+      { url: "https://w.example", fetchImpl: fetchImpl as never },
+    );
+    expect(reply).toEqual({ text: "Groq's answer.", source: "help-desk" });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers from the help centre before spending Workers AI", async () => {
+    const fetchImpl = vi.fn(async () => ok({ error: "unavailable" }, 503));
+    const reply = await askHelpDesk(
+      { message: "what is an isrc" },
+      { url: "https://w.example", fetchImpl: fetchImpl as never },
+    );
+    expect(reply.text).toContain("ISRC");
+    expect(reply.source).toBe("local");
+    expect(reply.degraded).toBe("offline");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks Workers AI only when the help centre has no answer", async () => {
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      const stage = JSON.parse(String(init?.body)).stage;
+      return stage === "workers-ai"
+        ? ok({ reply: "From Workers AI.", source: "cloudflare" })
+        : ok({ error: "unavailable" }, 503);
+    });
+    const reply = await askHelpDesk(
+      { message: "zzzz qqqq" },
+      { url: "https://w.example", fetchImpl: fetchImpl as never },
+    );
+    expect(reply).toEqual({ text: "From Workers AI.", source: "help-desk" });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    const second = fetchImpl.mock.calls[1] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(second[1].body)).stage).toBe("workers-ai");
+  });
+
+  it("keeps the ticket answer when every layer is down", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("offline");
+    });
+    const reply = await askHelpDesk(
+      { message: "zzzz qqqq" },
+      { url: "https://w.example", fetchImpl: fetchImpl as never },
+    );
+    expect(reply.link?.to).toBe(HELP_DESK_TICKET);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("asking the Help Desk", () => {
   it("answers locally when the worker is not configured yet", async () => {
     const fetchImpl = vi.fn();
