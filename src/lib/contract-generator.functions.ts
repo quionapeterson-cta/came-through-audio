@@ -26,8 +26,20 @@ import {
  * Runs on Cloudflare Workers AI's free daily allowance (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_AI_TOKEN). When the AI
  * isn't set up, is over its daily allowance or can't decide, people get the closest blueprints instead of an error.
  */
-async function admin() {
-  return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+
+/**
+ * The service-role client, or undefined on a host that has no SUPABASE_SERVICE_ROLE_KEY (Vercel today).
+ * The client is a Proxy that builds itself on first use, so reading a property is what reports a missing key; asking for
+ * the client directly would throw before the matcher ever runs.
+ */
+async function adminOrUndefined() {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    void supabaseAdmin.from;
+    return supabaseAdmin;
+  } catch {
+    return undefined;
+  }
 }
 
 class AiUnavailable extends Error {
@@ -112,7 +124,7 @@ export const generateContract = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<GeneratorResult> => {
-    const db = await admin();
+    const db = await adminOrUndefined();
     const { data: isSuper } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,
       _role: "super_admin",
@@ -122,12 +134,18 @@ export const generateContract = createServerFn({ method: "POST" })
     // Customers on any plan can draft; opening the contract is $3.99 (createCheckoutSession kind "contract").
     const list: Blueprint[] = data.company ? COMPANY_BLUEPRINTS : BLUEPRINTS;
 
-    const { count } = await db
-      .from("contract_generations" as never)
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId)
-      .gte("created_at", startOfUtcDay());
-    const used = count ?? 0;
+    // Drafts are counted and kept for checkout with the service-role client. Without it nothing can be drafted or bought
+    // here, so the matcher still answers — with the closest blueprints, chosen without the AI — instead of failing. That
+    // keeps the button working on every host, not only the one that holds the key (founder, 2026-11-27).
+    const used = db
+      ? ((
+          await db
+            .from("contract_generations" as never)
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", context.userId)
+            .gte("created_at", startOfUtcDay())
+        ).count ?? 0)
+      : 0;
     const suggest = (
       reason: string,
       left = Math.max(0, GENERATIONS_PER_DAY - used),
@@ -137,6 +155,11 @@ export const generateContract = createServerFn({ method: "POST" })
       reason,
       left,
     });
+    if (!db)
+      return suggest(
+        "Automatic drafting isn't set up on this site, so here are the closest blueprints — open one to start from it.",
+        0,
+      );
     if (used >= GENERATIONS_PER_DAY)
       return suggest(
         `You've used today's ${GENERATIONS_PER_DAY} drafts. Here are the closest blueprints; drafting opens again tomorrow.`,
