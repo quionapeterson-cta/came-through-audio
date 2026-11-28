@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  CalendarClock,
   CreditCard,
   Leaf,
   PauseCircle,
@@ -20,19 +19,13 @@ import {
 } from "@/components/ui/dialog";
 import { confirmAction } from "@/components/ConfirmHost";
 import { openBilling, openCheckout } from "@/lib/checkout";
-import {
-  keepCatalogOnFree,
-  needMoreTime,
-  resumeNow,
-  setPlanCancelling,
-} from "@/lib/retention.functions";
+import { keepCatalogOnFree, resumeNow, setPlanCancelling } from "@/lib/retention.functions";
 import { hasTier, PLAN_TIERS, refundDaysLeft, TIER_LABEL, type Tier } from "@/lib/plans";
 import { proratedRefundCents } from "@/lib/billing-console";
 import {
   canRenewEarly,
   currentPause,
   earlyRenewalTarget,
-  extendedRenewal,
   inGrace,
   keptOnFree,
   offers,
@@ -54,7 +47,8 @@ type Account = { sub: PlanSub | null; lapse: Lapse | null; pauses: Pause[]; onCh
 /**
  * Need more time, Pause and Resume, shared by Profile and the workspace banner. They're plan B (PLAN-catalog-emptying
  * §9–12): offered when someone tries to cancel, when a renewal payment fails, and in the countdown after a plan ends.
- * The server re-checks every rule.
+ * Need more time opens Pause: $1.99 a month for as long as they need it. Free time is Support's to offer, never the
+ * screen's. The server re-checks every rule.
  */
 function useRetention({ sub, lapse, pauses, onChanged }: Account) {
   const [busy, setBusy] = useState(false);
@@ -77,36 +71,6 @@ function useRetention({ sub, lapse, pauses, onChanged }: Account) {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function extend() {
-    const until = sub?.stripe_subscription_id
-      ? extendedRenewal(sub)
-      : lapse
-        ? new Date(new Date(lapse.empty_after).getTime() + 30 * 86_400_000)
-        : null;
-    const plan = !!sub?.stripe_subscription_id;
-    if (
-      !until ||
-      !(await confirmAction({
-        tone: "primary",
-        action: "Give me 30 days",
-        cancel: "Not now",
-        title: plan
-          ? `Move your renewal to ${longDate(until)}?`
-          : `Keep your catalog until ${longDate(until)}?`,
-        text: plan
-          ? "30 more days with full access, free. Nothing is charged until then. Need more time can be used once every 12 months."
-          : "Your catalog stays read-only for 30 more days, so you can download it or renew. Need more time can be used once every 12 months.",
-      }))
-    )
-      return;
-    await act(
-      () => needMoreTime(),
-      plan
-        ? `Your plan now renews on ${longDate(until)}.`
-        : `Your catalog is kept until ${longDate(until)}.`,
-    );
   }
 
   async function keepFree() {
@@ -165,7 +129,6 @@ function useRetention({ sub, lapse, pauses, onChanged }: Account) {
     pause,
     busy,
     act,
-    extend,
     keepFree,
     resume,
     updateCard,
@@ -174,23 +137,14 @@ function useRetention({ sub, lapse, pauses, onChanged }: Account) {
   };
 }
 
-/** Plan B buttons: Need more time and Pause, when they're available. */
+/** Plan B button: Need more time opens Pause at the Vault fee, when a pause is available. */
 function OfferButtons({ r }: { r: ReturnType<typeof useRetention> }) {
+  if (!r.o.canPause) return null;
   return (
-    <>
-      {r.o.canExtend && (
-        <Button variant="outline" disabled={r.busy} onClick={() => void r.extend()}>
-          <CalendarClock />
-          Need more time
-        </Button>
-      )}
-      {r.o.canPause && (
-        <Button variant="outline" disabled={r.busy} onClick={r.openPause}>
-          <PauseCircle />
-          Pause
-        </Button>
-      )}
-    </>
+    <Button variant="outline" disabled={r.busy} onClick={r.openPause}>
+      <PauseCircle />
+      Need more time
+    </Button>
   );
 }
 
@@ -209,7 +163,7 @@ function FailingNotice({
         <span className="font-semibold">Your renewal payment didn't go through.</span>{" "}
         <span className="text-muted-foreground">
           Update your card to keep your plan. You keep full access while Stripe retries. Need a
-          little longer? Move your renewal back 30 days, or pause.
+          little longer? Pause for {money(VAULT_PRICE)} a month, for as long as you need.
         </span>
       </p>
       <Button disabled={r.busy} onClick={() => void r.updateCard()}>
@@ -370,10 +324,6 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
         sub={sub}
         offers={r.o}
         paused={!!pause}
-        onExtend={() => {
-          setCancelOpen(false);
-          void r.extend();
-        }}
         onPause={() => {
           setCancelOpen(false);
           r.openPause();
@@ -467,7 +417,10 @@ function PauseDialog({
   );
 }
 
-/** Before cancelling: Need more time, Pause, a cheaper plan, then Cancel anyway. Offers not available right now are left out. */
+/**
+ * Before cancelling: Need more time (which pauses for $1.99 a month), a cheaper plan, then Cancel anyway. Offers not
+ * available right now are left out. A free month is never offered here: that is Support's to give, by a person.
+ */
 function CancelPlanDialog({
   open,
   onOpenChange,
@@ -475,7 +428,6 @@ function CancelPlanDialog({
   sub,
   offers: o,
   paused,
-  onExtend,
   onPause,
   onCancelled,
 }: {
@@ -485,7 +437,6 @@ function CancelPlanDialog({
   sub: PlanSub | null;
   offers: ReturnType<typeof offers>;
   paused: boolean;
-  onExtend: () => void;
   onPause: () => void;
   onCancelled: () => void;
 }) {
@@ -569,17 +520,10 @@ function CancelPlanDialog({
           </p>
         )}
         <div className="space-y-3">
-          {o.canExtend &&
-            offer(
-              "Need more time?",
-              "Move your renewal back 30 days, free, with full access.",
-              "Get 30 days",
-              onExtend,
-            )}
           {o.canPause &&
             offer(
-              "Take a break",
-              `Pause for as long as you need, billed monthly and stopped the moment you resume. No plan charge, catalog kept safe, downloads still work. Vault fee ${money(VAULT_PRICE)} a month.`,
+              "Need more time?",
+              `Pause for as long as you need for ${money(VAULT_PRICE)} a month, billed monthly and stopped the moment you resume. No plan charge while you're paused, catalog kept safe, downloads still work.`,
               "Pause",
               onPause,
             )}
