@@ -50,6 +50,15 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     body: "Hi {{first_name}},\n\nJust so there are no surprises: pausing stops the plan billing for as long as you need it, then your plan renews from the day you resume. It isn't a cancellation.\n\nThe Vault fee is $1.99 a month while you're paused: charged monthly, with no end date, and stopped the moment you resume, so nothing is taken after that. There's no plan charge while it runs. Your catalog stays read-only and kept, and your masters, artwork and PDFs stay downloadable; embedding, uploads, new songs, split sheets, contracts and the other paid tools wait until you resume. The month in progress isn't refunded if you resume early, and if a monthly Vault charge can't be collected after our payment provider's retries, the pause ends and the account moves to the Free plan — never a free pause.\n\nIf you meant to cancel, reply to this email and we'll do it for you — and if the renewal has already charged you after a pause you thought was a cancellation, we'll refund the unused time.\n\nCame Through Audio",
   },
   {
+    // Support-only (founder, 2026-11-28): the free month is offered by a person to someone trying to cancel, never on
+    // the site, in the help centre or in the chat desk. This script is where the offer is written down.
+    id: "billing-free-month-support-only",
+    department: "billing",
+    title: "Free month (support-only offer)",
+    when: "A person is offering the free month to a member who is trying to cancel. Never advertised, and never offered unprompted.",
+    body: "Hi {{first_name}},\n\nI've put a free month on your account — 30 days at no charge, with full access — so nothing is lost while you decide. Nothing is charged during it, and on {{date}} your plan renews at its normal price.\n\nYour catalog stays exactly as it is, and you can pause or cancel at any point before then.\n\nCame Through Audio",
+  },
+  {
     id: "billing-cancelled-what-happens",
     department: "billing",
     title: "Cancelled — what happens to the music",

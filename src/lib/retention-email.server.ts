@@ -102,7 +102,7 @@ function render(e: RetentionEmail): { subject: string; html: string } {
           e.reminder ? "Your renewal still didn't go through" : "Your renewal didn't go through",
           [
             `We couldn't charge your card for ${plan}. Update your card to keep your plan; Stripe will try again over the next few weeks, and you keep full access meanwhile.`,
-            "Need a little longer? You can take a free month — 30 days at no charge, with full access — or pause for as long as you need for $1.99 a month, from Profile.",
+            "Need a little longer? You can pause for as long as you need for $1.99 a month, from Profile.",
             "If it's never paid, your plan ends and your catalog stays read-only on Free. Nothing is emptied, and you can start a paid plan whenever you're ready.",
           ],
           [profile, "Update my card"],
