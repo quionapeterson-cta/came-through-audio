@@ -279,21 +279,19 @@ export const TERMS: LegalDoc = {
       ),
     },
     {
-      heading: "18. Need more time and Pause",
+      heading: "18. Pausing your plan",
       body: (
         <p>
-          Need more time? You may take a free month — 30 days at no charge, with full access — and
-          your plan then renews at its normal price. Separately, you may pause your plan for as long
-          as you need, for a Vault fee of $1.99 per month. The fee is billed monthly for as long as
-          the pause runs and stops the moment you resume; there is no end date and no later month is
-          charged. Resuming ends the pause, not the plan, and your plan renews from that day for a
-          fresh year. The month in progress is not refunded if you end the pause early. While paused
-          your catalog is read-only and is not emptied, and you can still download your masters,
-          artwork and PDFs; embedding, uploads, new or edited catalog entries, split sheets,
-          contracts and the other paid tools wait until you resume. Pausing is not cancelling;
-          cancelling the plan while paused does end the pause and stops the Vault fee at once. If a
-          monthly Vault fee cannot be collected after the payment provider's retries, the pause ends
-          and the account moves to the Free plan.
+          You may pause your plan for as long as you need, for a Vault fee of $1.99 per month. The
+          fee is billed monthly for as long as the pause runs and stops the moment you resume; there
+          is no end date and no later month is charged. Resuming ends the pause, not the plan, and
+          your plan renews from that day for a fresh year. The month in progress is not refunded if
+          you end the pause early. While paused your catalog is read-only and is not emptied, and
+          you can still download your masters, artwork and PDFs; embedding, uploads, new or edited
+          catalog entries, split sheets, contracts and the other paid tools wait until you resume.
+          Pausing is not cancelling; cancelling the plan while paused does end the pause and stops
+          the Vault fee at once. If a monthly Vault fee cannot be collected after the payment
+          provider's retries, the pause ends and the account moves to the Free plan.
         </p>
       ),
     },
