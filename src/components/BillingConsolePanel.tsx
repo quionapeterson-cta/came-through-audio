@@ -529,16 +529,22 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
   const [member, setMember] = useState<BillingMember | null>(null);
   const [busy, setBusy] = useState(false);
   const [searched, setSearched] = useState(false);
+  // Why the lookup failed, kept on screen beside the form (founder, 2026-11-28). A failed lookup used to leave the box
+  // saying "No account with that email" — the same words whether nobody had that address or the server couldn't reach the
+  // database at all — which sends Support hunting for the wrong email. The server's own words are shown instead.
+  const [problem, setProblem] = useState<string | null>(null);
 
   async function search(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
     setBusy(true);
     setSearched(true);
+    setProblem(null);
     try {
       setMember(await lookup({ data: { email: email.trim() } }));
     } catch (err) {
       setMember(null);
+      setProblem(msg(err));
       toast.error(msg(err));
     } finally {
       setBusy(false);
@@ -585,10 +591,8 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
         </form>
       </section>
 
-      {searched && !member && !busy && (
-        <p className="text-sm text-muted-foreground">
-          No account with that email. Try the address on the receipt.
-        </p>
+      {searched && !member && !busy && problem && (
+        <p className="text-sm text-destructive">{problem}</p>
       )}
 
       {member && (
@@ -644,9 +648,9 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
           The last 25 billing actions, refusals included, newest first.
         </p>
         {log.isError ? (
-          <p className="mt-3 text-sm text-destructive">
-            Couldn't load the log. Has migration 20261105150000 been run?
-          </p>
+          // The reason itself, not a guess about migrations: a missing server key reads nothing like a missing table, and
+          // staff can only act on the real one (founder, 2026-11-28).
+          <p className="mt-3 text-sm text-destructive">Couldn't load the log. {msg(log.error)}</p>
         ) : !log.data?.length ? (
           <p className="mt-3 text-sm text-muted-foreground">Nothing yet.</p>
         ) : (
