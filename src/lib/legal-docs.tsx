@@ -9,7 +9,7 @@ import type { LegalDoc } from "@/components/LegalPage";
 export const TERMS: LegalDoc = {
   doc: "terms",
   title: "Terms of Service",
-  updated: "November 21, 2026",
+  updated: "November 28, 2026",
   intro: (
     <p>
       Welcome to Came Through Audio. By accessing or continuing to use our website, internal portal,
@@ -282,18 +282,18 @@ export const TERMS: LegalDoc = {
       heading: "18. Need more time and Pause",
       body: (
         <p>
-          Once every 12 months you may move your renewal back 30 days at no charge. Separately, once
-          every 12 months you may pause your plan for as long as you need, for a Vault fee of $1.99
-          per month. The fee is billed monthly for as long as the pause runs and stops the moment
-          you resume; there is no end date and no later month is charged. Resuming ends the pause,
-          not the plan, and your plan renews from that day for a fresh year. The month in progress
-          is not refunded if you end the pause early. While paused your catalog is read-only and is
-          not emptied, and you can still download your masters, artwork and PDFs; embedding,
-          uploads, new or edited catalog entries, split sheets, contracts and the other paid tools
-          wait until you resume. Pausing is not cancelling; cancelling the plan while paused does
-          end the pause and stops the Vault fee at once. If a monthly Vault fee cannot be collected
-          after the payment provider's retries, the pause ends and the account moves to the Free
-          plan.
+          Need more time? You may take a free month — 30 days at no charge, with full access — and
+          your plan then renews at its normal price. Separately, you may pause your plan for as long
+          as you need, for a Vault fee of $1.99 per month. The fee is billed monthly for as long as
+          the pause runs and stops the moment you resume; there is no end date and no later month is
+          charged. Resuming ends the pause, not the plan, and your plan renews from that day for a
+          fresh year. The month in progress is not refunded if you end the pause early. While paused
+          your catalog is read-only and is not emptied, and you can still download your masters,
+          artwork and PDFs; embedding, uploads, new or edited catalog entries, split sheets,
+          contracts and the other paid tools wait until you resume. Pausing is not cancelling;
+          cancelling the plan while paused does end the pause and stops the Vault fee at once. If a
+          monthly Vault fee cannot be collected after the payment provider's retries, the pause ends
+          and the account moves to the Free plan.
         </p>
       ),
     },
@@ -620,7 +620,7 @@ export const PRIVACY: LegalDoc = {
 export const REFUNDS: LegalDoc = {
   doc: "refunds",
   title: "Refund Policy",
-  updated: "November 21, 2026",
+  updated: "November 28, 2026",
   intro: (
     <p>
       We want you to have complete peace of mind when organizing your music. We offer a 30-day
@@ -693,15 +693,15 @@ export const REFUNDS: LegalDoc = {
       body: (
         <p>
           A pause is not a plan and not a purchase of one: it stops the plan charge for as long as
-          you need it to, once every 12 months, while the Vault fee of $1.99 per month covers your
-          catalog and downloads. The fee is billed monthly for as long as the pause runs and stops
-          the moment you resume; there is no end date, so no later month is charged. If you resume,
-          the month in progress is not refunded and the next month's charge is stopped, and your
-          plan renews from that day for a fresh year. A pause that never starts charges nothing, and
-          any fee taken for one is refunded. Pausing is not cancelling. If a monthly Vault fee
-          cannot be collected after the payment provider's retries, the pause ends and the account
-          moves to the Free plan. While paused your catalog is read-only and is not emptied, your
-          masters, artwork and PDFs stay downloadable, and the paid tools wait until you resume.
+          you need it to, while the Vault fee of $1.99 per month covers your catalog and downloads.
+          The fee is billed monthly for as long as the pause runs and stops the moment you resume;
+          there is no end date, so no later month is charged. If you resume, the month in progress
+          is not refunded and the next month's charge is stopped, and your plan renews from that day
+          for a fresh year. A pause that never starts charges nothing, and any fee taken for one is
+          refunded. Pausing is not cancelling. If a monthly Vault fee cannot be collected after the
+          payment provider's retries, the pause ends and the account moves to the Free plan. While
+          paused your catalog is read-only and is not emptied, your masters, artwork and PDFs stay
+          downloadable, and the paid tools wait until you resume.
         </p>
       ),
     },
