@@ -39,9 +39,10 @@ const HELLO: Message = {
 };
 
 /**
- * The Came Through Audio Help Desk (founder, 2026-11-20): a small chat bubble at the foot of every page that opens a
- * studio drawer. Answers come from our Cloudflare Worker when it is configured, and from the same knowledge base here
- * when it is not. Never described as an AI or a chatbot — it is the help desk, and a person is always one click away.
+ * The Came Through Audio Help Desk (founder, 2026-11-20): a small chat bubble at the bottom right of every page that
+ * opens a studio drawer. Answers come from our Cloudflare Worker when it is configured, and from the same knowledge
+ * base here when it is not. Never described as an AI or a chatbot — it is the help desk, and a person is always one
+ * click away.
  */
 export function HelpChat() {
   const route = useRouterState({ select: (s) => s.location.href });
@@ -116,11 +117,12 @@ export function HelpChat() {
 
   if (!open)
     return (
-      // At the foot of the page, in the page's own flow rather than floating over it (founder, 2026-11-28): a small
-      // chat bubble, nothing pinned to the viewport, so no paragraph, picture or dock has to dodge it at any scroll
-      // position. Cobalt in the light theme, white with cobalt lettering in Studio Mode; the name is its accessible
-      // label and its hover title, since the bubble carries no words.
-      <div ref={trigger} className="flex justify-center px-4 pb-10 pt-6">
+      // At the foot of the page in the bottom-right corner, in the page's own flow rather than floating over it
+      // (founder, 2026-11-28): a small chat bubble, nothing pinned to the viewport, so no paragraph, picture or dock has
+      // to dodge it at any scroll position. It sits in the same column as the page's content, so its right edge lines up
+      // with the page rather than the screen. Cobalt in the light theme, white with cobalt lettering in Studio Mode; the
+      // name is its accessible label and its hover title, since the bubble carries no words.
+      <div ref={trigger} className="mx-auto flex w-full max-w-7xl justify-end px-6 pb-8 pt-6">
         <button
           type="button"
           onClick={() => setOpen(true)}

@@ -22,6 +22,8 @@ describe("Help Desk", () => {
     // A bubble only: no words on it, and a name for a reader that needs one.
     expect(badge.textContent).toBe("");
     expect(badge).toHaveAttribute("title", "Open the Came Through Audio Help Desk");
+    // Bottom-right of the page's own column, not the middle of it.
+    expect(badge.parentElement?.className).toContain("justify-end");
     // Never cobalt directly on black: the bubble turns white with cobalt lettering in the dark theme.
     expect(badge.className).toContain("dark:bg-white");
     expect(badge.className).toContain("dark:text-[#004AAD]");
