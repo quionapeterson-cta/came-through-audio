@@ -140,7 +140,7 @@ const ASKED: HelpAnswer[] = [
   {
     id: "price-vault",
     title: "How much is the Vault (pause)?",
-    text: `Once every 12 months you can pause your plan for as long as you need, for ${money(VAULT_PRICE)} a month. It is charged monthly while you're paused and stops the moment you resume, so there is no end date and you're never charged past it. There is no plan charge while you're paused, and when you resume your plan renews from that day for a fresh year. Your catalog stays safe and read-only and your masters, artwork and PDFs stay downloadable, but embedding, uploads, new songs, split sheets and the other paid tools wait until you resume. Pausing is never cancelling. If a monthly Vault fee can't be collected after the payment provider's retries, the pause ends and the account moves to the Free plan.`,
+    text: `You can pause your plan for as long as you need, for ${money(VAULT_PRICE)} a month. It is charged monthly while you're paused and stops the moment you resume, so there is no end date and you're never charged past it. There is no plan charge while you're paused, and when you resume your plan renews from that day for a fresh year. Your catalog stays safe and read-only and your masters, artwork and PDFs stay downloadable, but embedding, uploads, new songs, split sheets and the other paid tools wait until you resume. Pausing is never cancelling. If a monthly Vault fee can't be collected after the payment provider's retries, the pause ends and the account moves to the Free plan.`,
     source: "FAQ",
   },
   {
@@ -164,7 +164,7 @@ const ASKED: HelpAnswer[] = [
   {
     id: "ask-cancel",
     title: "How do I cancel or pause my plan?",
-    text: `Profile → Account. Turning off renewal runs your plan to the end of the year you have paid for, and the catalog stays. Before you go, three ways to stay: pause for as long as you need with the Vault for ${money(VAULT_PRICE)} a month, billed monthly and stopped when you resume; push your renewal back 30 days once a year at no charge; or ask our team to keep the same plan for one more year at your tier's artist-seat price (${ARTIST_SEAT_PRICES.map((s) => `${s.price} ${TIER_LABEL[s.tier]}`).join(", ")}). Your masters, artwork and PDFs stay downloadable while you're paused, and pausing is never cancelling.`,
+    text: `Profile → Account. Turning off renewal runs your plan to the end of the year you have paid for, and the catalog stays. Before you go, three ways to stay: pause for as long as you need with the Vault for ${money(VAULT_PRICE)} a month, billed monthly and stopped when you resume; take a free month — 30 days at no charge, then renew at your normal price; or ask our team to keep the same plan for one more year at your tier's artist-seat price (${ARTIST_SEAT_PRICES.map((s) => `${s.price} ${TIER_LABEL[s.tier]}`).join(", ")}). Your masters, artwork and PDFs stay downloadable while you're paused, and pausing is never cancelling.`,
     link: { label: "Go to Profile", to: "/profile" },
     source: "FAQ",
   },
