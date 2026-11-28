@@ -257,6 +257,35 @@ const KNOWLEDGE: Entry[] = [
 // it points at; the prices are the same figures checkout charges.
 KNOWLEDGE.push(
   {
+    id: "label",
+    title: "Running your own label",
+    text: "We are an independent label-services company and we do not sign artists through the platform, but you can run your own label on it. The Start and Operate an Independent Record Label blueprint is the step-by-step checklist for the business; extra artist seats give each artist on the roster their own login and catalog ($16.99 Catalog Plus, $34.99 Catalog & Collaborate, $69.99 Catalog Management a year, up to 10 in one purchase); each artist's songs go through the same Royalty Health Check, agency exports or Expert Registration; and you can create and e-sign split sheets and contracts with everyone from the Split Sheets and Contracts & Blueprints tabs. Branding Power Sessions are booked with our team, and Group Power Sessions for a whole roster are in development.",
+    terms: ["label", "labels", "roster", "imprint"],
+    link: { label: "Open Contracts & Blueprints", to: "/workspace?tab=learn" },
+  },
+  {
+    // First, so a cancellation question that also says "subscription" is answered with the ways to stay rather than prices.
+    id: "staying",
+    title: "Thinking about cancelling",
+    text: "If you are thinking about leaving, there are three ways to stay and none of them touches your catalog. Pause keeps everything — catalog, masters, split sheets, contracts and certificates — read-only and downloadable for $1.99 a month, once every 12 months, for as long as you need. Need More Time moves the renewal back 30 days at no charge, once every 12 months, then renews by autopay at your normal price. If neither fits, a person can set one more year at your tier's artist-seat price: $16.99 on Catalog Plus, $34.99 on Catalog & Collaborate, $69.99 on Catalog Management. Open a support ticket and the team will apply whichever you choose. Cancelling itself runs to the end of the year you have paid for, and your catalog is kept.",
+    terms: [
+      "cancel",
+      "canceling",
+      "cancelling",
+      "canceled",
+      "cancelled",
+      "leave",
+      "leaving",
+      "stay",
+      "quit",
+      "discount",
+      "pause",
+      "pausing",
+      "cheaper",
+    ],
+    link: { label: "Open a support ticket", to: HELP_DESK_TICKET },
+  },
+  {
     id: "pricing",
     title: "Plans and prices",
     text: "Plans are yearly: Free ($0), Catalog Plus ($24.99), Catalog & Collaborate ($44.99) and Catalog Management ($89.99). Every plan is unlimited, upgrades are prorated, and a full refund can be requested within 30 days of an order.",
@@ -411,6 +440,13 @@ const words = (s: string) =>
       .match(/[a-z0-9]+/g) ?? []
   ).filter((w) => w.length > 1 && !NOISE.has(w));
 
+/**
+ * "I have my own record label" is a question about running a label, not about being signed. The signing entry's
+ * "ownership" would otherwise outscore it on the word "own", so the two are told apart here rather than by term weights.
+ */
+const RUNS_LABEL =
+  /\b(my|our|own|a) (own |record )?label\b|\b(run|running|start|starting|operate|operating|manage|managing) (a |my |our )?(record )?label\b/i;
+
 /** "Can you do it for me?" is the done-for-you desk, whatever else the words look like. */
 const DONE_FOR_YOU =
   /\b(do (it|this) for me|done[- ]for[- ]you|expert help|let us do it|(can|could|would|will) you (register|handle|do)|your team (register|handle|do))\b/i;
@@ -434,6 +470,15 @@ export function localAnswer(question: string): HelpReply {
       text: expert.text,
       source: "local",
       ...(expert.link ? { link: expert.link } : {}),
+    };
+  }
+  const label = KNOWLEDGE.find((e) => e.id === "label");
+  if (label && RUNS_LABEL.test(question)) {
+    return {
+      title: label.title,
+      text: label.text,
+      source: "local",
+      ...(label.link ? { link: label.link } : {}),
     };
   }
   const copyright = KNOWLEDGE.find((e) => e.id === "copyright");

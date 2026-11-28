@@ -177,6 +177,51 @@ describe("the knowledge base", () => {
     expect(SYSTEM_PROMPT).toContain("billing@camethroughaudio.com");
     expect(SYSTEM_PROMPT).toMatch(/legal, financial or tax advice/i);
   });
+
+  it("keeps the corrections the founder made after the 110-question audit", () => {
+    // 1. Cancelling keeps access to the end of the paid year; only a refund ends a plan at once.
+    expect(SYSTEM_PROMPT).toMatch(/CANCELLING is not a refund and is not immediate/i);
+    expect(SYSTEM_PROMPT).toMatch(/end of the year already paid for/i);
+    // 2. We never obtain an ISRC; it comes from the distributor or the ISRC agency.
+    expect(SYSTEM_PROMPT).toMatch(/nothing we sell issues, requests or assigns one/i);
+    // 3. A blueprint is a checklist, not a contract template.
+    expect(SYSTEM_PROMPT).toMatch(/step-by-step checklist/i);
+    // 4. Free does not include uploads, embedding or master downloads.
+    expect(SYSTEM_PROMPT).toMatch(/Free does not include catalog uploads/i);
+    // 5. billing@ is only for money; everything else goes to Support.
+    expect(SYSTEM_PROMPT).toMatch(/only for a charge, an invoice, a refund or a billing change/i);
+    // 6. No invented button names, gating or turnarounds.
+    expect(SYSTEM_PROMPT).toMatch(/Invent nothing you were not told/i);
+    // The allow-list is explicit, and a label is never promised a view into an artist's own catalog.
+    expect(SYSTEM_PROMPT).toMatch(/name no button you were not given/i);
+    expect(SYSTEM_PROMPT).toMatch(/never tell a label it can see, edit or manage an artist's own catalog/i);
+  });
+
+  it("names the real contract templates and blueprints, not just a count", () => {
+    expect(SYSTEM_PROMPT).toMatch(/HOW EACH TAB WORKS/);
+    expect(SYSTEM_PROMPT).toContain("Producer Agreement");
+    expect(SYSTEM_PROMPT).toContain("Sample Clearance");
+    expect(SYSTEM_PROMPT).toContain("Label Services Agreement");
+    expect(SYSTEM_PROMPT).toContain("Start and Operate an Independent Record Label");
+    // The label answer must not promise a view into every artist's catalog, and group sessions are not live yet.
+    expect(SYSTEM_PROMPT).toMatch(/not a view into every artist's catalog/i);
+    expect(SYSTEM_PROMPT).toMatch(/Group Power Sessions for a whole roster are in development/i);
+  });
+
+  it("keeps the retention ladder in one order, at the artist-seat prices", () => {
+    const pause = SYSTEM_PROMPT.indexOf("RUNG 1, PAUSE");
+    const freeMonth = SYSTEM_PROMPT.indexOf("RUNG 2, A FREE MONTH");
+    const year = SYSTEM_PROMPT.indexOf("RUNG 3, ONE YEAR AT THE ARTIST-SEAT PRICE");
+    expect(pause).toBeGreaterThan(-1);
+    expect(freeMonth).toBeGreaterThan(pause);
+    expect(year).toBeGreaterThan(freeMonth);
+    expect(SYSTEM_PROMPT).toContain("$1.99/month Vault fee");
+    for (const seat of ARTIST_SEAT_PRICES) expect(SYSTEM_PROMPT).toContain(seat.price);
+    // Only these three, and a person applies them — the desk cannot grant one itself.
+    expect(SYSTEM_PROMPT).toMatch(/only discounts that exist/i);
+    expect(SYSTEM_PROMPT).toMatch(/a person on the team sets the pause or the price/i);
+    expect(SYSTEM_PROMPT).toMatch(/never a negotiation tool/i);
+  });
 });
 
 describe("buildMessages", () => {
@@ -191,7 +236,7 @@ describe("buildMessages", () => {
     expect(messages.at(-1)).toEqual({ role: "user", content: "What is an ISWC?" });
   });
 
-  it("keeps the member's earlier questions but never lets the browser speak as the Help Desk", () => {
+  it("carries the conversation between the instructions and the new question", () => {
     const messages = buildMessages({
       message: "and a cover?",
       currentRoute: "/workspace",
@@ -200,8 +245,7 @@ describe("buildMessages", () => {
         { role: "assistant", content: "The recording." },
       ],
     });
-    expect(messages.map((m) => m.role)).toEqual(["system", "user", "user"]);
-    expect(messages.some((m) => m.content === "The recording.")).toBe(false);
+    expect(messages.map((m) => m.role)).toEqual(["system", "user", "assistant", "user"]);
   });
 
   it("knows the difference between a workspace tab, a page and an unknown route", () => {
