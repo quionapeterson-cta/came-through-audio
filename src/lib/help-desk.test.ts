@@ -10,6 +10,27 @@ import {
   quickQuestions,
 } from "./help-desk";
 
+describe("staying", () => {
+  it("answers a cancellation with the three ways to stay, pause first", () => {
+    const reply = localAnswer("I want to cancel my subscription");
+    expect(reply.text).toMatch(/\$1\.99/);
+    expect(reply.text).toMatch(/Catalog Management/);
+    expect(reply.text.indexOf("Pause")).toBeLessThan(reply.text.indexOf("Need More Time"));
+    expect(reply.text.indexOf("Need More Time")).toBeLessThan(
+      reply.text.indexOf("artist-seat price"),
+    );
+  });
+});
+
+describe("running a label", () => {
+  it("answers a label question with the label blueprint and the seat prices", () => {
+    const reply = localAnswer("I have my own record label, can I use this platform to run it?");
+    expect(reply.text).toMatch(/Independent Record Label/);
+    expect(reply.text).toMatch(/\$69\.99/);
+    expect(reply.text).toMatch(/Group Power Sessions/);
+  });
+});
+
 const ok = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 

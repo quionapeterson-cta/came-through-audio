@@ -164,7 +164,7 @@ const ASKED: HelpAnswer[] = [
   {
     id: "ask-cancel",
     title: "How do I cancel or pause my plan?",
-    text: "Profile → Account. You can turn off renewal, push your renewal back 30 days once a year at no charge, or pause for as long as you need with the Vault for ${money(VAULT_PRICE)} a month, billed monthly and stopped when you resume. Your masters, artwork and PDFs stay downloadable while you're paused.",
+    text: `Profile → Account. Turning off renewal runs your plan to the end of the year you have paid for, and the catalog stays. Before you go, three ways to stay: pause for as long as you need with the Vault for ${money(VAULT_PRICE)} a month, billed monthly and stopped when you resume; push your renewal back 30 days once a year at no charge; or ask our team to keep the same plan for one more year at your tier's artist-seat price (${ARTIST_SEAT_PRICES.map((s) => `${s.price} ${TIER_LABEL[s.tier]}`).join(", ")}). Your masters, artwork and PDFs stay downloadable while you're paused, and pausing is never cancelling.`,
     link: { label: "Go to Profile", to: "/profile" },
     source: "FAQ",
   },
