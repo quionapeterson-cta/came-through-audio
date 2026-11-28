@@ -194,7 +194,9 @@ describe("the knowledge base", () => {
     expect(SYSTEM_PROMPT).toMatch(/Invent nothing you were not told/i);
     // The allow-list is explicit, and a label is never promised a view into an artist's own catalog.
     expect(SYSTEM_PROMPT).toMatch(/name no button you were not given/i);
-    expect(SYSTEM_PROMPT).toMatch(/never tell a label it can see, edit or manage an artist's own catalog/i);
+    expect(SYSTEM_PROMPT).toMatch(
+      /never tell a label it can see, edit or manage an artist's own catalog/i,
+    );
   });
 
   it("names the real contract templates and blueprints, not just a count", () => {
