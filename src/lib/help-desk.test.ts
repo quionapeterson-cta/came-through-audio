@@ -11,17 +11,14 @@ import {
 } from "./help-desk";
 
 describe("staying", () => {
-  it("answers a cancellation with the three ways to stay, pause first", () => {
+  it("answers a cancellation with the two ways to stay, pause first", () => {
     const reply = localAnswer("I want to cancel my subscription");
     expect(reply.text).toMatch(/\$1\.99/);
     expect(reply.text).toMatch(/Catalog Management/);
-    expect(reply.text.indexOf("Pause")).toBeLessThan(reply.text.indexOf("Need More Time"));
-    expect(reply.text.indexOf("Need More Time")).toBeLessThan(
-      reply.text.indexOf("artist-seat price"),
-    );
-    // Encouraging wording: no yearly limit recited, and the free month is sold as a free month.
+    expect(reply.text.indexOf("Pause")).toBeLessThan(reply.text.indexOf("artist-seat price"));
+    // No yearly limit recited, and the support-only free month is never put to a member here.
     expect(reply.text).not.toMatch(/once every 12 months|once a year|pushed back/i);
-    expect(reply.text).toMatch(/free month/i);
+    expect(reply.text).not.toMatch(/free month|30 days at no charge|Need More Time/i);
   });
 });
 

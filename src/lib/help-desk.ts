@@ -267,7 +267,7 @@ KNOWLEDGE.push(
     // First, so a cancellation question that also says "subscription" is answered with the ways to stay rather than prices.
     id: "staying",
     title: "Thinking about cancelling",
-    text: "If you are thinking about leaving, there are three ways to stay and none of them touches your catalog. Pause keeps everything — catalog, masters, split sheets, contracts and certificates — read-only and downloadable for $1.99 a month, for as long as you need. Need More Time gives you a free month — 30 days at no charge, with full access — and then your plan renews at your normal price. If neither fits, a person can set one more year at your tier's artist-seat price: $16.99 on Catalog Plus, $34.99 on Catalog & Collaborate, $69.99 on Catalog Management. Open a support ticket and the team will apply whichever you choose. Cancelling itself runs to the end of the year you have paid for, and your catalog is kept.",
+    text: "If you are thinking about leaving, there are two ways to stay and neither one touches your catalog. Pause keeps everything — catalog, masters, split sheets, contracts and certificates — read-only and downloadable for $1.99 a month, for as long as you need. If that does not fit, a person can set one more year at your tier's artist-seat price: $16.99 on Catalog Plus, $34.99 on Catalog & Collaborate, $69.99 on Catalog Management. Open a support ticket and the team will apply whichever you choose. Cancelling itself runs to the end of the year you have paid for, and your catalog is kept.",
     terms: [
       "cancel",
       "canceling",

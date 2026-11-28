@@ -212,38 +212,32 @@ describe("the knowledge base", () => {
 
   it("keeps the retention ladder in one order, at the artist-seat prices", () => {
     const pause = SYSTEM_PROMPT.indexOf("RUNG 1, PAUSE");
-    const freeMonth = SYSTEM_PROMPT.indexOf("RUNG 2, A FREE MONTH");
-    const year = SYSTEM_PROMPT.indexOf("RUNG 3, ONE YEAR AT THE ARTIST-SEAT PRICE");
+    const year = SYSTEM_PROMPT.indexOf("RUNG 2, ONE YEAR AT THE ARTIST-SEAT PRICE");
     expect(pause).toBeGreaterThan(-1);
-    expect(freeMonth).toBeGreaterThan(pause);
-    expect(year).toBeGreaterThan(freeMonth);
+    expect(year).toBeGreaterThan(pause);
     expect(SYSTEM_PROMPT).toContain("$1.99/month Vault fee");
     for (const seat of ARTIST_SEAT_PRICES) expect(SYSTEM_PROMPT).toContain(seat.price);
-    // Only these three, and a person applies them — the desk cannot grant one itself.
+    // Only these two, and a person applies them — the desk cannot grant one itself.
     expect(SYSTEM_PROMPT).toMatch(/only discounts that exist/i);
     expect(SYSTEM_PROMPT).toMatch(/a person on the team sets the pause or the price/i);
     expect(SYSTEM_PROMPT).toMatch(/never a negotiation tool/i);
   });
 
-  it("sells pause and the free month without reciting a yearly limit", () => {
+  it("sells pause without reciting a yearly limit, and leaves the free month to support", () => {
     const rung1 = SYSTEM_PROMPT.slice(
       SYSTEM_PROMPT.indexOf("RUNG 1, PAUSE"),
       SYSTEM_PROMPT.indexOf("RUNG 2"),
     );
     expect(rung1).toContain("$1.99 a month");
     expect(rung1).not.toMatch(/once every 12 months|once a year/i);
-    const rung2 = SYSTEM_PROMPT.slice(
-      SYSTEM_PROMPT.indexOf("RUNG 2"),
-      SYSTEM_PROMPT.indexOf("RUNG 3"),
-    );
-    expect(rung2).toMatch(/30 days at no charge/i);
-    expect(rung2).toMatch(/free month|free trial/i);
-    expect(rung2).toMatch(/normal full price/i);
-    expect(rung2).not.toMatch(/once every 12 months|once a year|pushed back/i);
+    // The free month is a support offer: the desk never pitches it, names it or states its terms.
+    expect(SYSTEM_PROMPT).not.toMatch(/RUNG 2, A FREE MONTH/);
+    expect(SYSTEM_PROMPT).not.toMatch(/30 days at no charge/i);
+    expect(SYSTEM_PROMPT).not.toMatch(/NEED MORE TIME: 30 days/i);
+    expect(SYSTEM_PROMPT).toMatch(/A FREE MONTH IS SUPPORT-ONLY/);
     // The rules still exist; they are just never the pitch.
     expect(SYSTEM_PROMPT).toMatch(/those limits stay rules on the account/i);
     expect(SYSTEM_PROMPT).not.toMatch(/PAUSE: once every 12 months/);
-    expect(SYSTEM_PROMPT).not.toMatch(/NEED MORE TIME: once every 12 months/);
   });
 });
 
