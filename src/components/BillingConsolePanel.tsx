@@ -41,6 +41,7 @@ import {
   type PaymentInfo,
   type PlanChargeInfo,
 } from "@/lib/billing.functions";
+import { grantFreeMonth } from "@/lib/billing-free-month.functions";
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : "That didn't go through.");
 const day = (iso: string | null) => (iso ? iso.slice(0, 10) : "—");
@@ -256,7 +257,9 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
   const preview = useServerFn(latestPlanCharge);
   const refund = useServerFn(refundLatestPlanCharge);
   const cancel = useServerFn(setSubscriptionCancellation);
+  const giveFreeMonth = useServerFn(grantFreeMonth);
   const [charge, setCharge] = useState<PlanChargeInfo | null>(null);
+  const [free, setFree] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function toggle(next: boolean) {
@@ -270,6 +273,22 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
           ? "The plan stops at its renewal date. They keep it until then."
           : "The plan renews again.",
       );
+      onDone();
+    } catch (e) {
+      toast.error(msg(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function grantFreeMonthNow() {
+    setBusy(true);
+    try {
+      const { until } = await giveFreeMonth({
+        data: { subscriptionId: sub.id, requestId: crypto.randomUUID() },
+      });
+      toast.success(`30 days free — the plan now renews ${day(until)}.`);
+      setFree(false);
       onDone();
     } catch (e) {
       toast.error(msg(e));
@@ -330,6 +349,9 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => setFree(true)}>
+            Give 30 days free…
+          </Button>
           <Button size="sm" variant="outline" disabled={busy} onClick={() => void openRefund()}>
             Refund last charge…
           </Button>
@@ -343,6 +365,24 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
           </Button>
         </div>
       </div>
+      {free && (
+        <div className="mt-3 rounded-xl border border-border bg-muted/40 p-3">
+          <p className="text-sm font-semibold">Give 30 days free?</p>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            This is the Support offer for someone who is trying to cancel. The renewal moves back 30
+            days at no charge, the plan keeps renewing at its normal price afterwards, and they get
+            the confirmation email. It can only be used once every 12 months.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button size="sm" disabled={busy} onClick={() => void grantFreeMonthNow()}>
+              Give 30 days free
+            </Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setFree(false)}>
+              Not now
+            </Button>
+          </div>
+        </div>
+      )}
       {charge && (
         <RefundBox
           maxCents={Math.max(0, charge.paidCents - charge.refundedCents)}
@@ -469,6 +509,7 @@ const ACTION_LABEL: Record<string, string> = {
   cancel_plan: "stopped a plan renewing",
   resume_plan: "let a plan renew",
   pause_alert: "couldn't stop a pause's Vault charge, so the pause was left open",
+  free_month: "gave 30 days free",
 };
 
 /**
@@ -521,7 +562,9 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
         <h3 className="text-lg font-bold">Refunds and plan changes</h3>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Look a member up by the email they paid with, then refund a charge or stop a plan from
-          renewing. The card is refunded right here; nobody needs a dashboard login, and every
+          renewing. Support also gives the free month from here when someone is trying to cancel: it
+          is never advertised on the site, and the plan keeps renewing at its normal price when the
+          free days end. The card is refunded right here; nobody needs a dashboard login, and every
           action below is logged. Refund up to what they paid, with no fixed ceiling. Past 30 days
           it still goes through but needs a note, because a dispute costs more than the refund.
           {isSuper ? " As founder, every refund is yours to approve." : ""}
