@@ -3645,8 +3645,10 @@ export type Database = {
     }
     Functions: {
       _confirmed_email: { Args: never; Returns: string }
+      _founder_raw: { Args: { _user_id: string }; Returns: boolean }
       _invite_email_ok: { Args: { _email: string }; Returns: boolean }
       _may_probe: { Args: { _uid: string }; Returns: boolean }
+      _paused_raw: { Args: { _uid: string }; Returns: boolean }
       _tier_at_least: {
         Args: { _needed: string; _uid: string }
         Returns: boolean
