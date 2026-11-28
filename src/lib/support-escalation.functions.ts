@@ -58,6 +58,29 @@ function mayEscalate(access: ReturnType<typeof resolveAccess>): boolean {
   );
 }
 
+/**
+ * Whether this caller may work this one ticket. Support and super admins work the whole queue; a receiving
+ * department's lead reaches only a thread already handed to their department (founder, 2026-11-19), so a lead can
+ * never read, mark, or write on another team's ticket by naming its id.
+ */
+async function mayWorkTicket(
+  access: ReturnType<typeof resolveAccess>,
+  ticketId: string,
+): Promise<boolean> {
+  if (!access || !mayEscalate(access)) return false;
+  if (access.role === "super_admin" || access.departments.includes("support")) return true;
+  const tags = leadTagsFor(access);
+  if (!tags.length) return false;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("support_ticket_escalations" as never)
+    .select("id")
+    .eq("ticket_id", ticketId)
+    .in("tag", tags as never)
+    .limit(1);
+  return !error && ((data ?? []) as unknown[]).length > 0;
+}
+
 export type TicketEscalation = {
   id: string;
   tag: EscalationTag;
@@ -90,6 +113,8 @@ export const escalateTicket = createServerFn({ method: "POST" })
       ...(data.founder ? (["founder"] as const) : []),
     ];
     if (!tags.length) throw new Error("Choose Marketing, The Founder, or both.");
+    if (!(await mayWorkTicket(access, data.ticketId)))
+      throw new Error("That thread isn't yours to escalate.");
     if (
       data.founder &&
       access?.role !== "super_admin" &&
@@ -168,7 +193,8 @@ export const listTicketEscalations = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<TicketEscalation[]> => {
     const { access } = await accessOf(context as unknown as Ctx);
-    if (!mayEscalate(access)) throw new Error("That thread isn't yours to read.");
+    if (!(await mayWorkTicket(access, data.ticketId)))
+      throw new Error("That thread isn't yours to read.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await supabaseAdmin
       .from("support_ticket_escalations" as never)
@@ -347,7 +373,7 @@ export const markTicketViewing = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { access, name } = await accessOf(context as unknown as Ctx);
-    if (!mayEscalate(access)) return { ok: false as const };
+    if (!(await mayWorkTicket(access, data.ticketId))) return { ok: false as const };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("support_ticket_viewers" as never).upsert(
       {
@@ -366,7 +392,7 @@ export const listTicketViewers = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<TicketViewer[]> => {
     const { access } = await accessOf(context as unknown as Ctx);
-    if (!mayEscalate(access)) return [];
+    if (!(await mayWorkTicket(access, data.ticketId))) return [];
     const since = new Date(Date.now() - VIEWING_WINDOW_SECONDS * 1000).toISOString();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await supabaseAdmin

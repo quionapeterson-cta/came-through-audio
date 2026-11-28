@@ -273,10 +273,12 @@ export const requestStepChange = createServerFn({ method: "POST" })
     const { client } = await tables();
     const { data: found } = await client
       .from("task_steps")
-      .select("id, title, lock_mode")
+      .select("id, title, lock_mode, user_id")
       .eq("id", data.id);
     const step = found?.[0];
     if (!step) throw new Error("That step is gone.");
+    // A change request is the step owner's own ask; nobody files one against a teammate's checklist.
+    if (step.user_id !== me(context)) throw new Error("That step isn't yours.");
     if (step.lock_mode === "open") throw new Error("That step is editable — change it directly.");
     const { error } = await client.from("step_change_requests").insert({
       step_id: data.id,

@@ -191,7 +191,7 @@ describe("buildMessages", () => {
     expect(messages.at(-1)).toEqual({ role: "user", content: "What is an ISWC?" });
   });
 
-  it("carries the conversation between the instructions and the new question", () => {
+  it("keeps the member's earlier questions but never lets the browser speak as the Help Desk", () => {
     const messages = buildMessages({
       message: "and a cover?",
       currentRoute: "/workspace",
@@ -200,7 +200,8 @@ describe("buildMessages", () => {
         { role: "assistant", content: "The recording." },
       ],
     });
-    expect(messages.map((m) => m.role)).toEqual(["system", "user", "assistant", "user"]);
+    expect(messages.map((m) => m.role)).toEqual(["system", "user", "user"]);
+    expect(messages.some((m) => m.content === "The recording.")).toBe(false);
   });
 
   it("knows the difference between a workspace tab, a page and an unknown route", () => {

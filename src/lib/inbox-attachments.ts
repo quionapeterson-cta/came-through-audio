@@ -133,3 +133,50 @@ export function threadSubjectKey(subject: string): string {
     .toLowerCase()
     .slice(0, 200);
 }
+
+/**
+ * The file kinds an inbound email may leave in the inbox, by extension, each with the content type it is stored under.
+ * The sender's declared type is never trusted: an executable, script or web page is refused, and an allowed file is
+ * stored as the type its extension names, so a renamed HTML page can't be served back as a page.
+ */
+const INBOUND_TYPES: Record<string, string> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  csv: "text/csv",
+  txt: "text/plain",
+  rtf: "application/rtf",
+  odt: "application/vnd.oasis.opendocument.text",
+  ods: "application/vnd.oasis.opendocument.spreadsheet",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  heic: "image/heic",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  aif: "audio/aiff",
+  aiff: "audio/aiff",
+  flac: "audio/flac",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
+  ogg: "audio/ogg",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  m4v: "video/mp4",
+  webm: "video/webm",
+  zip: "application/zip",
+};
+
+/** The content type to store an inbound attachment under, or null when its kind is not accepted. */
+export function inboundContentType(filename: string): string | null {
+  const ext = /\.([a-z0-9]+)$/i.exec(filename.trim())?.[1]?.toLowerCase();
+  return ext ? (INBOUND_TYPES[ext] ?? null) : null;
+}

@@ -349,7 +349,7 @@ export default {
       try {
         await message.forward(forwardTo);
       } catch (error) {
-        console.error(`Admin inbox: stored, but the copy to ${forwardTo} failed.`, error);
+        console.error("Admin inbox: stored, but the forwarded copy failed.", error instanceof Error ? error.message : "unknown error");
       }
     }
   },

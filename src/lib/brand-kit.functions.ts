@@ -98,7 +98,8 @@ async function brandFor(
   const kit = usable.find((k) => k.id && k.id === kitId) ?? usable[0] ?? null;
   if (!kit || !kitReady(kit)) return null;
   let logo: PdfBrand["logo"] = null;
-  if (kit.logoPath) {
+  // The saved path is the member's own to write, so only a file inside their own folder is ever read for them.
+  if (kit.logoPath && kit.logoPath.startsWith(`${userId}/`) && !kit.logoPath.includes("..")) {
     const { data: file } = await db.storage.from("brand-logos").download(kit.logoPath);
     if (file) {
       const type = file.type === "image/jpeg" ? "image/jpeg" : "image/png";

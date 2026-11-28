@@ -11,6 +11,9 @@ import {
   type StaffAccess,
 } from "@/lib/departments";
 import { emailLayout, escapeHtml, ADMIN_EMAIL, SITE_URL } from "@/lib/email-layout";
+
+/** The company's own mail domain: the only place a signed copy may go besides its signer. */
+const COMPANY_MAIL_DOMAIN = "camethroughaudio.com";
 import { trustedOrigin } from "@/lib/invite-limits";
 import { mailKey, mailboxAddress, resendKey, sendMail } from "@/lib/mailer";
 import { packetEmailHtml, packetEmailSubject } from "@/lib/packet-email";
@@ -745,6 +748,14 @@ export const emailPacketCopy = createServerFn({ method: "POST" })
     const packet = row as unknown as PacketRow;
     if (packet.status !== "completed")
       throw new Error("Only a fully executed packet can be sent as a PDF.");
+    // A signed copy goes back to the person who signed it or to a company mailbox (payroll, legal, the HR file), never
+    // to an address typed in from outside, so the copy tool can't carry a signed agreement off the company.
+    const to = data.email.trim().toLowerCase();
+    const signer = String(packet.recipient_email ?? "").trim().toLowerCase();
+    if (to !== signer && !to.endsWith(`@${COMPANY_MAIL_DOMAIN}`))
+      throw new Error(
+        `A signed copy can go to the signer or a @${COMPANY_MAIL_DOMAIN} address only.`,
+      );
     const link = await packetEmailLink(packet.id);
     const delivery = await deliverCompleted(packet, link, data.email, crypto.randomUUID());
     // Every send is a real email, so it gets its own delivery row and bounce report like the completion email.

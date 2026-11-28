@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   INBOX_BUCKET,
   INBOX_FILE_LIMIT_LABEL,
+  inboundContentType,
   inboundStoragePath,
   MAX_INBOX_FILE_BYTES,
 } from "@/lib/inbox-attachments";
@@ -81,6 +82,9 @@ export const Route = createFileRoute("/api/public/email/attachment")({
         }
         const filename = decoded(request.headers.get("x-filename")).trim().slice(0, 300);
         if (!filename) return new Response("Missing filename", { status: 400 });
+        // The type comes from our own list, never from the sender's header.
+        const storedType = inboundContentType(filename);
+        if (!storedType) return new Response("File type not accepted", { status: 415 });
 
         const declared = Number(request.headers.get("content-length") ?? "0");
         if (declared > MAX_INBOX_FILE_BYTES) {
@@ -103,11 +107,10 @@ export const Route = createFileRoute("/api/public/email/attachment")({
         }
 
         const path = inboundStoragePath({ mailbox, messageKey, index, filename });
-        const mimeType = (request.headers.get("content-type") ?? "").trim() || undefined;
         const { error } = await db()
           .storage.from(INBOX_BUCKET)
           .upload(path, bytes, {
-            contentType: mimeType ?? "application/octet-stream",
+            contentType: storedType,
             // The same mail retried by the worker writes the same key again, which must not be an error.
             upsert: true,
           });

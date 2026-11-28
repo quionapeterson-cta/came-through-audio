@@ -269,8 +269,10 @@ export function buildMessages(input: {
       content: `${SYSTEM_PROMPT}\n\nWHERE THEY ARE\n${routeNote(input.currentRoute)}`,
     },
   ];
+  // Earlier turns come from the browser, so none of them may speak as the assistant: they are quoted back as the
+  // member's own context, never as words the Help Desk said.
   for (const turn of normaliseHistory(input.history))
-    messages.push({ role: turn.role, content: turn.content });
+    if (turn.role === "user") messages.push({ role: "user", content: turn.content });
   messages.push({ role: "user", content: input.message });
   return messages;
 }
