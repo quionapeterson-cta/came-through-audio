@@ -19,6 +19,9 @@ describe("staying", () => {
     expect(reply.text.indexOf("Need More Time")).toBeLessThan(
       reply.text.indexOf("artist-seat price"),
     );
+    // Encouraging wording: no yearly limit recited, and the free month is sold as a free month.
+    expect(reply.text).not.toMatch(/once every 12 months|once a year|pushed back/i);
+    expect(reply.text).toMatch(/free month/i);
   });
 });
 

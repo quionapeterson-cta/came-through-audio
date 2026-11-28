@@ -224,6 +224,27 @@ describe("the knowledge base", () => {
     expect(SYSTEM_PROMPT).toMatch(/a person on the team sets the pause or the price/i);
     expect(SYSTEM_PROMPT).toMatch(/never a negotiation tool/i);
   });
+
+  it("sells pause and the free month without reciting a yearly limit", () => {
+    const rung1 = SYSTEM_PROMPT.slice(
+      SYSTEM_PROMPT.indexOf("RUNG 1, PAUSE"),
+      SYSTEM_PROMPT.indexOf("RUNG 2"),
+    );
+    expect(rung1).toContain("$1.99 a month");
+    expect(rung1).not.toMatch(/once every 12 months|once a year/i);
+    const rung2 = SYSTEM_PROMPT.slice(
+      SYSTEM_PROMPT.indexOf("RUNG 2"),
+      SYSTEM_PROMPT.indexOf("RUNG 3"),
+    );
+    expect(rung2).toMatch(/30 days at no charge/i);
+    expect(rung2).toMatch(/free month|free trial/i);
+    expect(rung2).toMatch(/normal full price/i);
+    expect(rung2).not.toMatch(/once every 12 months|once a year|pushed back/i);
+    // The rules still exist; they are just never the pitch.
+    expect(SYSTEM_PROMPT).toMatch(/those limits stay rules on the account/i);
+    expect(SYSTEM_PROMPT).not.toMatch(/PAUSE: once every 12 months/);
+    expect(SYSTEM_PROMPT).not.toMatch(/NEED MORE TIME: once every 12 months/);
+  });
 });
 
 describe("buildMessages", () => {
