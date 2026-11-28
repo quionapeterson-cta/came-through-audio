@@ -67,9 +67,8 @@ function render(e: RetentionEmail): { subject: string; html: string } {
           e.plan ? `Your plan now renews on ${d}` : `Your catalog is kept until ${d}`,
           [
             e.plan
-              ? "You have 30 more days, free, with full access. Nothing is charged until then."
+              ? "You have 30 more days, free, with full access. Nothing is charged until then, and your plan renews at its normal price after that."
               : "Your catalog stays read-only for 30 more days, so you can download it or renew.",
-            "Need more time can be used once every 12 months.",
           ],
           [profile, "Open Profile"],
         ),
@@ -103,7 +102,7 @@ function render(e: RetentionEmail): { subject: string; html: string } {
           e.reminder ? "Your renewal still didn't go through" : "Your renewal didn't go through",
           [
             `We couldn't charge your card for ${plan}. Update your card to keep your plan; Stripe will try again over the next few weeks, and you keep full access meanwhile.`,
-            "Need a little longer? You can move your renewal back 30 days free, or pause for as long as you need for $1.99 a month, from Profile.",
+            "Need a little longer? You can take a free month — 30 days at no charge, with full access — or pause for as long as you need for $1.99 a month, from Profile.",
             "If it's never paid, your plan ends and your catalog stays read-only on Free. Nothing is emptied, and you can start a paid plan whenever you're ready.",
           ],
           [profile, "Update my card"],
@@ -154,7 +153,7 @@ function render(e: RetentionEmail): { subject: string; html: string } {
                 ? `Your plan resumes and renews on ${end}. Want it back sooner? Use Resume now in Profile.`
                 : "Your plan waits for you: resume any time in Profile and it renews from that day, for a fresh year."
               : "Renew whenever you're ready to keep your catalog.",
-            `The Vault fee is $1.99 a month for as long as you're paused, charged monthly and stopped the moment you resume${end ? ", with nothing taken after the pause ends" : ""}. It isn't refundable once the month starts, and pausing is never cancelling. Pause can be used once every 12 months.`,
+            `The Vault fee is $1.99 a month for as long as you're paused, charged monthly and stopped the moment you resume${end ? ", with nothing taken after the pause ends" : ""}. It isn't refundable once the month starts, and pausing is never cancelling.`,
           ],
           [profile, "Open Profile"],
         ),
