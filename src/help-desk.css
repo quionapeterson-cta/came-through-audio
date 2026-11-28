@@ -1,0 +1,11 @@
+/*
+ * The Help Desk button moved out of the bottom-right corner and into the foot of each page (founder, 2026-11-28).
+ *
+ * The royalty suite's dock used to stop short of that corner so the floating badge kept its own lane at every scroll
+ * position: 3.6rem on a phone, 8.5rem once the desktop pill appeared. With nothing floating there any more, the bar runs
+ * the panel's full width at every size. `.fl-earnings` in front of the name is deliberate — financial-lab.css sets the
+ * width on `.fl-dock` alone, and this has to win whichever of the two sheets the browser loads first.
+ */
+.fl-earnings .fl-dock {
+  width: 100%;
+}

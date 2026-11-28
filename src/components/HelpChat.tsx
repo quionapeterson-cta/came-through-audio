@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { LifeBuoy, Minus, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { LifeBuoy, MessageCircle, Minus, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +12,8 @@ import {
   quickQuestions,
   type HelpLink,
 } from "@/lib/help-desk";
+// The royalty dock kept a lane free for the corner badge this button used to be; this sheet gives the bar its width back.
+import "@/help-desk.css";
 
 type Message = {
   from: "you" | "help";
@@ -37,9 +39,9 @@ const HELLO: Message = {
 };
 
 /**
- * The Came Through Audio Help Desk (founder, 2026-11-20): a compact corner badge that opens a small studio drawer.
- * Answers come from our Cloudflare Worker when it is configured, and from the same knowledge base here when it is not.
- * Never described as an AI or a chatbot — it is the help desk, and a person is always one click away.
+ * The Came Through Audio Help Desk (founder, 2026-11-20): a chat button at the foot of every page that opens a small
+ * studio drawer. Answers come from our Cloudflare Worker when it is configured, and from the same knowledge base here
+ * when it is not. Never described as an AI or a chatbot — it is the help desk, and a person is always one click away.
  */
 export function HelpChat() {
   const route = useRouterState({ select: (s) => s.location.href });
@@ -51,6 +53,18 @@ export function HelpChat() {
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
   }, [messages, open, busy]);
+
+  // The button lives at the page's end now, so closing the drawer brings it back into view instead of leaving the reader
+  // with nothing to reopen. Only after the desk has been opened once, or landing on a page would jump to its foot.
+  const trigger = useRef<HTMLDivElement>(null);
+  const openedBefore = useRef(false);
+  useEffect(() => {
+    if (open) {
+      openedBefore.current = true;
+      return;
+    }
+    if (openedBefore.current) trigger.current?.scrollIntoView({ block: "nearest" });
+  }, [open]);
 
   const path = (route || "").split("?")[0] ?? "";
   if (HIDDEN.some((r) => r.test(path))) return null;
@@ -102,17 +116,20 @@ export function HelpChat() {
 
   if (!open)
     return (
-      // A low, compact badge: 40px round on a phone, a 36px pill on desktop, and never cobalt directly on black
-      // (white badge with cobalt lettering and an electric halo in Studio Mode).
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={`Open the ${HELP_DESK_NAME}`}
-        className="cta-help-desk-badge fixed bottom-20 right-3 z-40 flex h-10 w-10 items-center justify-center gap-1.5 rounded-full border border-[#004AAD] bg-[#004AAD] px-0 text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#003a88] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D8CFF] focus-visible:ring-offset-2 focus-visible:ring-offset-background md:bottom-4 md:right-4 md:h-9 md:w-auto md:px-3.5 dark:border-white dark:bg-white dark:text-[#004AAD] dark:shadow-[0_0_12px_rgba(77,140,255,0.45)] dark:hover:bg-[#E5E4E2] dark:hover:text-[#004AAD]"
-      >
-        <LifeBuoy className="h-5 w-5 md:h-4 md:w-4" />
-        <span className="hidden text-xs font-bold md:inline">Help Desk</span>
-      </button>
+      // At the foot of the page, in the page's own flow rather than floating over it (founder, 2026-11-28): nothing is
+      // covered at any scroll position, so no paragraph, picture or dock has to dodge it. A chat bubble says what it
+      // does; never cobalt directly on black, so the button turns white with cobalt lettering in Studio Mode.
+      <div ref={trigger} className="flex justify-center px-4 pb-10 pt-6">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={`Open the ${HELP_DESK_NAME}`}
+          className="cta-help-desk-badge inline-flex items-center gap-2 rounded-full border border-[#004AAD] bg-[#004AAD] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003a88] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D8CFF] focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white dark:bg-white dark:text-[#004AAD] dark:hover:bg-[#E5E4E2] dark:hover:text-[#004AAD]"
+        >
+          <MessageCircle className="h-4 w-4" aria-hidden="true" />
+          <span>Chat with the Help Desk</span>
+        </button>
+      </div>
     );
 
   return (
