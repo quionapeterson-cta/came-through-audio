@@ -4,6 +4,7 @@ import {
   dropFilesProblem,
   dropStoragePath,
   fileProblem,
+  inboundContentType,
   inboundStoragePath,
   INBOX_FILE_LIMIT_LABEL,
   MAX_DROP_FILES,
@@ -17,6 +18,26 @@ import {
 const MB = 1024 * 1024;
 
 describe("inbox attachments", () => {
+  it("stores documents and masters using server-owned types", () => {
+    expect(inboundContentType("Signed Agreement.PDF")).toBe("application/pdf");
+    expect(inboundContentType("master.wav")).toBe("audio/wav");
+    expect(inboundContentType("credits.xlsx")).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+  });
+
+  it("refuses executable files and active web attachments", () => {
+    for (const name of [
+      "attack.exe",
+      "attack.html",
+      "attack.svg",
+      "attack.js",
+      "file",
+      "file.constructor",
+    ]) {
+      expect(inboundContentType(name)).toBeNull();
+    }
+  });
   it("caps a file at 10 MB, and says so in the same words the copy uses", () => {
     expect(MAX_INBOX_FILE_BYTES).toBe(10 * MB);
     expect(INBOX_FILE_LIMIT_LABEL).toBe("10 MB");

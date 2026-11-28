@@ -152,6 +152,9 @@ const INBOUND_TYPES: Record<string, string> = {
   rtf: "application/rtf",
   odt: "application/vnd.oasis.opendocument.text",
   ods: "application/vnd.oasis.opendocument.spreadsheet",
+  pages: "application/octet-stream",
+  numbers: "application/octet-stream",
+  key: "application/octet-stream",
   png: "image/png",
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
@@ -178,5 +181,5 @@ const INBOUND_TYPES: Record<string, string> = {
 /** The content type to store an inbound attachment under, or null when its kind is not accepted. */
 export function inboundContentType(filename: string): string | null {
   const ext = /\.([a-z0-9]+)$/i.exec(filename.trim())?.[1]?.toLowerCase();
-  return ext ? (INBOUND_TYPES[ext] ?? null) : null;
+  return ext && Object.hasOwn(INBOUND_TYPES, ext) ? (INBOUND_TYPES[ext] ?? null) : null;
 }

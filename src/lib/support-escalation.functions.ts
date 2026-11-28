@@ -196,12 +196,14 @@ export const listTicketEscalations = createServerFn({ method: "GET" })
     if (!(await mayWorkTicket(access, data.ticketId)))
       throw new Error("That thread isn't yours to read.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("support_ticket_escalations" as never)
       .select("id, tag, note, by_name, created_at, read_at")
-      .eq("ticket_id", data.ticketId)
-      .order("created_at", { ascending: false })
-      .limit(50);
+      .eq("ticket_id", data.ticketId);
+    // Reading a Marketing handoff never grants access to the founder's notes on the same thread.
+    if (access?.role !== "super_admin" && !access?.departments.includes("support"))
+      query = query.in("tag", leadTagsFor(access) as never);
+    const { data: rows } = await query.order("created_at", { ascending: false }).limit(50);
     return (
       (rows ?? []) as unknown as {
         id: string;

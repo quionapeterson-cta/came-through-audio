@@ -1,4 +1,8 @@
 # Tasks
+- [x] Selected security fixes: verified live pause/founder guards and expired seat links.
+- [ ] Packet-mail findings: preserve HR sending; recipient restrictions require founder approval.
+- [x] Verify and clear 15 selected findings with regression tests; signed-in checks unavailable for the user-managed account service.
+- [ ] Deploy updated Help Desk and incoming-email workers (blocked: external deployment not verified).
 - [x] Verify login recovery from interrupted page-loading requests without bypassing the passcode gate.
 - [x] Check shared recovery across entry pages and verify passcode-page interruptions safely recover.
 - [x] Add Embed Metadata forms and tagged MP3 downloads inside My Catalog.

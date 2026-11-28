@@ -348,8 +348,9 @@ export default {
     if (forwardTo) {
       try {
         await message.forward(forwardTo);
-      } catch (error) {
-        console.error("Admin inbox: stored, but the forwarded copy failed.", error instanceof Error ? error.message : "unknown error");
+      } catch {
+        // Provider errors can repeat the destination address; neither it nor the error text belongs in diagnostics.
+        console.error("Admin inbox: stored, but the forwarded copy failed.");
       }
     }
   },
