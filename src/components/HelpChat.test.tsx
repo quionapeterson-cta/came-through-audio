@@ -12,15 +12,17 @@ beforeAll(() => {
 });
 
 describe("Help Desk", () => {
-  it("sits at the foot of the page instead of floating over it", () => {
+  it("is a small chat bubble at the foot of the page, not a floating badge", () => {
     render(<HelpChat />);
     const badge = screen.getByRole("button", { name: /Open the Came Through Audio Help Desk/ });
     // In the page's own flow: nothing pinned to the viewport, nothing anchored to a corner.
     expect(badge.className).not.toContain("fixed");
     expect(badge.className).not.toContain("bottom-20");
     expect(badge.className).not.toContain("right-3");
-    expect(badge).toHaveTextContent("Chat with the Help Desk");
-    // Never cobalt directly on black: the button turns white with cobalt lettering in the dark theme.
+    // A bubble only: no words on it, and a name for a reader that needs one.
+    expect(badge.textContent).toBe("");
+    expect(badge).toHaveAttribute("title", "Open the Came Through Audio Help Desk");
+    // Never cobalt directly on black: the bubble turns white with cobalt lettering in the dark theme.
     expect(badge.className).toContain("dark:bg-white");
     expect(badge.className).toContain("dark:text-[#004AAD]");
   });

@@ -39,7 +39,7 @@ const HELLO: Message = {
 };
 
 /**
- * The Came Through Audio Help Desk (founder, 2026-11-20): a chat button at the foot of every page that opens a small
+ * The Came Through Audio Help Desk (founder, 2026-11-20): a small chat bubble at the foot of every page that opens a
  * studio drawer. Answers come from our Cloudflare Worker when it is configured, and from the same knowledge base here
  * when it is not. Never described as an AI or a chatbot — it is the help desk, and a person is always one click away.
  */
@@ -116,18 +116,19 @@ export function HelpChat() {
 
   if (!open)
     return (
-      // At the foot of the page, in the page's own flow rather than floating over it (founder, 2026-11-28): nothing is
-      // covered at any scroll position, so no paragraph, picture or dock has to dodge it. A chat bubble says what it
-      // does; never cobalt directly on black, so the button turns white with cobalt lettering in Studio Mode.
+      // At the foot of the page, in the page's own flow rather than floating over it (founder, 2026-11-28): a small
+      // chat bubble, nothing pinned to the viewport, so no paragraph, picture or dock has to dodge it at any scroll
+      // position. Cobalt in the light theme, white with cobalt lettering in Studio Mode; the name is its accessible
+      // label and its hover title, since the bubble carries no words.
       <div ref={trigger} className="flex justify-center px-4 pb-10 pt-6">
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-label={`Open the ${HELP_DESK_NAME}`}
-          className="cta-help-desk-badge inline-flex items-center gap-2 rounded-full border border-[#004AAD] bg-[#004AAD] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#003a88] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D8CFF] focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white dark:bg-white dark:text-[#004AAD] dark:hover:bg-[#E5E4E2] dark:hover:text-[#004AAD]"
+          title={`Open the ${HELP_DESK_NAME}`}
+          className="cta-help-desk-badge grid h-11 w-11 place-items-center rounded-full border border-[#004AAD] bg-[#004AAD] text-white shadow-sm transition hover:bg-[#003a88] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D8CFF] focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white dark:bg-white dark:text-[#004AAD] dark:hover:bg-[#E5E4E2]"
         >
-          <MessageCircle className="h-4 w-4" aria-hidden="true" />
-          <span>Chat with the Help Desk</span>
+          <MessageCircle className="h-5 w-5" aria-hidden="true" />
         </button>
       </div>
     );
